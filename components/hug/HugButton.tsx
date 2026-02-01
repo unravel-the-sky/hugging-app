@@ -134,7 +134,6 @@ export default function HugButton({
         </Animated.View>
       </Animated.View>
       <Pressable
-        disabled={hugProgress.value > 0.98}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
         pressRetentionOffset={50}

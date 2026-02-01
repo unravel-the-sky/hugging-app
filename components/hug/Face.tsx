@@ -1,7 +1,7 @@
 import { MAIN_COLOR } from "@/constants";
 import Animated, {
   SharedValue,
-  useAnimatedProps
+  useAnimatedProps,
 } from "react-native-reanimated";
 import Svg, { G, Path } from "react-native-svg";
 

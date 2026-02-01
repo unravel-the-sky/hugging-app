@@ -60,6 +60,9 @@ export default function HugController() {
 
   const onHugIsSent = (val: boolean) => {
     console.log("whoa it is sent ", val);
+    if (val === true) {
+      // here send an even to the parent and do an update on the firebase and such
+    }
     setHugPhase(val ? "thrown" : "idle");
   };
 

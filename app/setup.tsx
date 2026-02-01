@@ -16,9 +16,6 @@ export default function SetupScreen() {
   };
 
   return (
-    // <View>
-    //   <Text style={{ color: "white" }}>Yello</Text>
-    // </View>
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
