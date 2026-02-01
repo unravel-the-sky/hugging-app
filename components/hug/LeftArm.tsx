@@ -2,6 +2,7 @@ import {
   BUTTON_SIZE,
   FANCY_ARM_WIDTH,
   LEFT_SHOULDER_OFFSET,
+  MAIN_COLOR,
 } from "@/constants";
 import { StyleSheet } from "react-native";
 import Animated, {
@@ -54,7 +55,7 @@ export default function LeftArm({ hugProgress }: HugArmProps) {
         <Svg width={140} height={31} viewBox="0 0 139 31">
           <Path
             d="M138.038 25.8436L-1.84773e-05 30.9993L0.207241 -1.02365e-05L136.364 6.98889L138.038 25.8436Z"
-            fill="#ff9c6b"
+            fill={MAIN_COLOR}
           />
         </Svg>
       </Animated.View>

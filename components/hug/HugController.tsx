@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Animated, {
+  Extrapolation,
+  interpolate,
   interpolateColor,
   useAnimatedStyle,
   useSharedValue,
@@ -32,7 +34,7 @@ export default function HugController() {
     console.log("starting to hugggg");
     setHugPhase("hugging");
     hugPress.value = withTiming(
-      1,
+      2,
       {
         duration: 1800,
       },
@@ -56,6 +58,11 @@ export default function HugController() {
     );
   };
 
+  const onHugIsSent = (val: boolean) => {
+    console.log("whoa it is sent ", val);
+    setHugPhase(val ? "thrown" : "idle");
+  };
+
   const bgStyle = useAnimatedStyle(() => {
     const bg = interpolateColor(
       translateY.value,
@@ -73,8 +80,36 @@ export default function HugController() {
     if (hugPhase === "thrown") return "Hug is thrown!";
   }, [hugPhase]);
 
+  const progressBarStyle = useAnimatedStyle(() => {
+    const backgroundColor = interpolateColor(
+      hugPress.value,
+      [0, 1, 1.8, 2],
+      [
+        "#f8efcb", // yellow (charging)
+        "#6BCF63", // green (sweet spot)
+        "#6BCF63", // red (overhug)
+        "#FF3B3B",
+      ],
+    );
+
+    const progressPercent = interpolate(
+      hugPress.value,
+      [0, 2],
+      [0, 200],
+      Extrapolation.CLAMP,
+    );
+
+    return {
+      backgroundColor,
+      width: `${progressPercent}%`,
+    };
+  });
+
   return (
     <Animated.View style={[styles.container, bgStyle]}>
+      <View style={styles.progressContainer}>
+        <Animated.View style={[styles.progressBar, progressBarStyle]} />
+      </View>
       <View style={styles.statusContainer}>
         <Text style={styles.statusText}>{getHugPhaseStatusText()}</Text>
       </View>
@@ -83,6 +118,7 @@ export default function HugController() {
         hugPhase={hugPhase}
         onPressIn={startHug}
         onPressOut={releaseHug}
+        onHugIsSent={onHugIsSent}
       />
     </Animated.View>
   );
@@ -94,6 +130,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#fff",
+    height: "100%",
   },
   statusContainer: {
     marginBottom: 16,
@@ -103,5 +140,17 @@ const styles = StyleSheet.create({
   },
   releaseText: {
     fontSize: 16,
+  },
+  progressContainer: {
+    height: 15,
+    width: "70%",
+    top: -150,
+    backgroundColor: "#eee",
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  progressBar: {
+    height: "100%",
+    borderRadius: 4,
   },
 });

@@ -1,6 +1,7 @@
 import {
   BUTTON_SIZE,
   FANCY_ARM_WIDTH,
+  MAIN_COLOR,
   RIGHT_SHOULDER_OFFSET,
 } from "@/constants";
 import { StyleSheet } from "react-native";
@@ -53,7 +54,10 @@ export default function RightArm({ hugProgress }: HugArmProps) {
     <Animated.View style={[styles.rightArm, animatedRightArmStyle]}>
       <Animated.View style={wristStyle}>
         <Svg width={140} height={31} viewBox="0 0 139 31">
-          <Path d="M0 6.07843L138 0V31L1.8 24.9216L0 6.07843Z" fill="#ff9c6b" />
+          <Path
+            d="M0 6.07843L138 0V31L1.8 24.9216L0 6.07843Z"
+            fill={MAIN_COLOR}
+          />
         </Svg>
       </Animated.View>
     </Animated.View>

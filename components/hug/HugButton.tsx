@@ -13,6 +13,7 @@ import HugArms from "./HugArms";
 
 import { BUTTON_SIZE } from "@/constants";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { scheduleOnRN } from "react-native-worklets";
 import { HugPhase } from "./HugController";
 
 type HugButtonProps = {
@@ -20,6 +21,7 @@ type HugButtonProps = {
   hugPhase: HugPhase;
   onPressIn: () => void;
   onPressOut: () => void;
+  onHugIsSent: (val: boolean) => void;
 };
 
 export default function HugButton({
@@ -27,6 +29,7 @@ export default function HugButton({
   hugPhase,
   onPressIn,
   onPressOut,
+  onHugIsSent,
 }: HugButtonProps) {
   const translateY = useSharedValue(0);
   const isDragging = useSharedValue(false);
@@ -34,8 +37,8 @@ export default function HugButton({
 
   const panGesture = Gesture.Pan()
     .onUpdate((event) => {
-      // console.log("hugPhase ", hugPhase);
-      if (hugPhase !== "formed") return;
+      // if (hugPhase !== "formed") return;
+      if (hugProgress.value < 0.99 || hugProgress.value > 1.5) return;
 
       console.log("translateY.value is: ", translateY.value);
 
@@ -50,11 +53,20 @@ export default function HugButton({
 
       if (canRelease.value) {
         // throw the slingshotttt
-        translateY.value = withSpring(-600, {
-          velocity: -1200,
-          damping: 14,
-          stiffness: 160,
-        });
+        scheduleOnRN(onHugIsSent, true);
+        translateY.value = withSpring(
+          -800,
+          {
+            velocity: -2200,
+            // damping: 14,
+            // stiffness: 160,
+          },
+          () => {
+            translateY.value = 0;
+            hugProgress.value = 0;
+            scheduleOnRN(onHugIsSent, false);
+          },
+        );
       } else {
         // snap it back
         translateY.value = withSpring(0);
@@ -86,8 +98,10 @@ export default function HugButton({
       Extrapolation.CLAMP,
     );
 
+    const jiggleX = Math.sin(hugProgress.value * Math.PI * 8) * 2;
+
     return {
-      transform: [{ scale }],
+      transform: [{ scale }, { translateX: jiggleX }],
     };
   });
 
@@ -130,7 +144,6 @@ export default function HugButton({
             style={{
               width: 100,
               height: 130,
-              backgroundColor: "green",
               alignItems: "center",
               justifyContent: "center",
             }}

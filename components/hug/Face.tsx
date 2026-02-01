@@ -1,3 +1,4 @@
+import { MAIN_COLOR } from "@/constants";
 import Animated, {
   SharedValue,
   useAnimatedProps
@@ -34,7 +35,7 @@ export function Face({ hugProgress }: FaceProps) {
       {/* Face background here  */}
       <Path
         d="M109.5 0C159.044 0 200.535 31.1795 211.288 73.0234C216.263 83.5352 219 94.9988 219 107C219 157.81 169.975 199 109.5 199C49.0248 199 0 157.81 0 107C0 94.9989 2.7361 83.5351 7.71094 73.0234C18.4644 31.1793 59.9555 0 109.5 0Z"
-        fill="#ff9c6b"
+        fill={MAIN_COLOR}
       />
 
       {/* Eyes here */}
