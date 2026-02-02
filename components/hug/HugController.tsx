@@ -11,7 +11,6 @@ import Animated, {
 } from "react-native-reanimated";
 import HugButton from "./HugButton";
 
-import * as Haptics from "expo-haptics";
 import { scheduleOnRN } from "react-native-worklets";
 
 export type HugPhase = "idle" | "hugging" | "formed" | "thrown";
@@ -22,10 +21,6 @@ export default function HugController() {
 
   const [hugPhase, setHugPhase] = useState<HugPhase>("idle");
 
-  const triggerHaptic = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-  };
-
   useEffect(() => {
     console.log("yello2");
   }, []);
@@ -34,7 +29,7 @@ export default function HugController() {
     console.log("starting to hugggg");
     setHugPhase("hugging");
     hugPress.value = withTiming(
-      2,
+      1,
       {
         duration: 1800,
       },
@@ -45,8 +40,7 @@ export default function HugController() {
   };
 
   const releaseHug = () => {
-    // if (hugPhase === "formed") return;
-    console.log("Lifted");
+    console.log("Lifted, hugPhase ", hugPhase);
     hugPress.value = withSpring(
       0,
       {

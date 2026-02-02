@@ -37,8 +37,8 @@ export default function HugButton({
 
   const panGesture = Gesture.Pan()
     .onUpdate((event) => {
-      // if (hugPhase !== "formed") return;
-      if (hugProgress.value < 0.99 || hugProgress.value > 1.5) return;
+      if (hugPhase !== "formed") return;
+      // if (hugProgress.value < 0.99 || hugProgress.value > 1.5) return;
 
       console.log("translateY.value is: ", translateY.value);
 
@@ -98,7 +98,7 @@ export default function HugButton({
       Extrapolation.CLAMP,
     );
 
-    const jiggleX = Math.sin(hugProgress.value * Math.PI * 8) * 2;
+    const jiggleX = Math.sin(hugProgress.value * Math.PI * 18) * 2;
 
     return {
       transform: [{ scale }, { translateX: jiggleX }],
