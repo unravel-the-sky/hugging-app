@@ -9,10 +9,9 @@ import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
-  const [userId, setUserId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
 
-  const { user, loading, connected } = useCurrentUser(userId);
+  const { user, loading } = useCurrentUser();
 
   useEffect(() => {
     checkAndLoadUsername();
@@ -32,7 +31,7 @@ export default function HomeScreen() {
         // No username, go to setup
         router.replace("/setup");
       } else {
-        setUserId(storedUserId);
+        // setUserId(storedUserId);
       }
     } catch (error) {
       console.error("Error loading username:", error);

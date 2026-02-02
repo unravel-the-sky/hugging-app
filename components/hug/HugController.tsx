@@ -11,6 +11,9 @@ import Animated, {
 } from "react-native-reanimated";
 import HugButton from "./HugButton";
 
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { auth } from "@/lib/firebaseConfig";
+import { Hug, sendHug } from "@/lib/handleHugs";
 import { scheduleOnRN } from "react-native-worklets";
 
 export type HugPhase = "idle" | "hugging" | "formed" | "thrown";
@@ -20,6 +23,8 @@ export default function HugController() {
   const translateY = useSharedValue(0);
 
   const [hugPhase, setHugPhase] = useState<HugPhase>("idle");
+
+  const { user, loading, connected } = useCurrentUser();
 
   useEffect(() => {
     console.log("yello2");
@@ -52,10 +57,21 @@ export default function HugController() {
     );
   };
 
-  const onHugIsSent = (val: boolean) => {
+  const onHugIsSent = async (val: boolean) => {
     console.log("whoa it is sent ", val);
     if (val === true) {
       // here send an even to the parent and do an update on the firebase and such
+      console.log(
+        "hug is sent now, we are here, gonna make a hug object and send",
+      );
+      console.log("user is: ", user);
+      const hug: Hug = {
+        fromUid: auth.currentUser?.uid || "lol",
+        fromName: user?.displayName || "",
+        toName: "boom",
+        toUid: "gB0QFCYLjdRj92eLP2KQ9YJUE332",
+      };
+      sendHug(hug);
     }
     setHugPhase(val ? "thrown" : "idle");
   };

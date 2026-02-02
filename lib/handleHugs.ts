@@ -11,7 +11,8 @@ export type Hug = {
   toUid: string;
   fromName: string;
   toName: string;
-  createdAt: FieldValue;
+  createdAt?: FieldValue;
+  seenAt?: FieldValue;
 };
 
 export async function sendHug(hug: Hug) {

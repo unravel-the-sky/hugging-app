@@ -11,8 +11,8 @@ import { auth, db } from "./firebaseConfig";
 
 export type User = {
   displayName: string;
-  createdAt: FieldValue;
   friends: string[];
+  createdAt?: FieldValue;
   pushToken?: string;
   stats: {
     hugsSent: number;
@@ -58,11 +58,14 @@ export async function createUserWithUsername(
 ): Promise<string> {
   const normalized = normalizeUsername(displayName); // just in case
 
+  console.log("we are at createUserWithUsername");
+  console.log("auth.currentUser: ", auth.currentUser);
   const authResult = auth.currentUser
     ? { user: auth.currentUser }
     : await signInAnonymously(auth);
 
   const user = authResult.user;
+  console.log("authResult.user: ", authResult.user);
 
   const userRef = doc(db, "users", user.uid);
   const usernameRef = doc(db, "usernames", normalized);
