@@ -1,3 +1,4 @@
+import { createUserWithUsername } from "@/lib/createUser";
 import React, { useState } from "react";
 import {
   Alert,
@@ -9,7 +10,7 @@ import {
 } from "react-native";
 
 interface UsernameSetupProps {
-  onUsernameSet: (username: string) => void;
+  onUsernameSet: (userId: string, username: string) => void;
 }
 
 export default function UsernameSetup({ onUsernameSet }: UsernameSetupProps) {
@@ -42,12 +43,15 @@ export default function UsernameSetup({ onUsernameSet }: UsernameSetupProps) {
 
     try {
       // TODO: Check if username exists in Firebase here
-
       const trimmedUsername = username.trim().toLowerCase();
-      onUsernameSet(trimmedUsername);
-    } catch (error) {
-      Alert.alert("Error", "Failed to save username. Please try again.");
-      console.error(error);
+      const userId = await createUserWithUsername(trimmedUsername);
+      onUsernameSet(userId, trimmedUsername);
+    } catch (error: any) {
+      if (error?.message === "USERNAME_TAKEN") {
+        Alert.alert("Error", "Username taken! Try another one pls tenks");
+      } else {
+        console.error("Error saving username:", error);
+      }
       setIsLoading(false);
     }
   };

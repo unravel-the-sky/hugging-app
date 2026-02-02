@@ -1,4 +1,5 @@
 import HugController from "@/components/hug/HugController";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -8,16 +9,14 @@ import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
-  const [username, setUsername] = useState<string>("");
+  const [userId, setUserId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
+
+  const { user, loading, connected } = useCurrentUser(userId);
 
   useEffect(() => {
     checkAndLoadUsername();
   }, []);
-
-  const resetUser = async () => {
-    await AsyncStorage.removeItem("username");
-  };
 
   // useEffect(() => {
   //   resetUser().then(() => {
@@ -27,12 +26,13 @@ export default function HomeScreen() {
 
   const checkAndLoadUsername = async () => {
     try {
-      const storedUsername = await AsyncStorage.getItem("username");
-      if (!storedUsername) {
+      const storedUsername = await AsyncStorage.getItem("displayName");
+      const storedUserId = await AsyncStorage.getItem("userId");
+      if (!storedUsername || !storedUserId) {
         // No username, go to setup
         router.replace("/setup");
       } else {
-        setUsername(storedUsername);
+        setUserId(storedUserId);
       }
     } catch (error) {
       console.error("Error loading username:", error);
@@ -42,7 +42,7 @@ export default function HomeScreen() {
     }
   };
 
-  if (isLoading) {
+  if (loading || isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#FF6B6B" />
@@ -56,7 +56,7 @@ export default function HomeScreen() {
         <GestureHandlerRootView style={{ flex: 1 }}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.usernameText}>@{username}</Text>
+            <Text style={styles.usernameText}>@{user?.displayName || ""}</Text>
           </View>
 
           {/* Hug stuff */}

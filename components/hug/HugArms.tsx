@@ -27,5 +27,6 @@ const styles = StyleSheet.create({
     height: BUTTON_SIZE,
     alignItems: "center",
     justifyContent: "center",
+    top: 25,
   },
 });

@@ -7,3 +7,4 @@ export const BUTTON_SIZE = 96;
 
 export const MAIN_COLOR = "#ffc8ba";
 export const STROKE_COLOR = "#E08A5F";
+export const HAIR_COLOR = "#7F440D";
