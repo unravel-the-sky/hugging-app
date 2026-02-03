@@ -1,14 +1,31 @@
 import HugController from "@/components/hug/HugController";
-import React from "react";
-import { StyleSheet } from "react-native";
+import { router, useLocalSearchParams } from "expo-router";
+import React, { useEffect } from "react";
+import { Alert, StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
+  const { toUid, toName } = useLocalSearchParams<{
+    toUid: string;
+    toName: string;
+  }>();
+
+  console.log({ toUid, toName });
+
+  useEffect(() => {
+    if (!toUid) {
+      Alert.alert("Oh nou", "Pls select a friend to send hug to, tenks");
+      router.push({
+        pathname: "/(tabs)/friends",
+      });
+    }
+  }, [toUid]);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <HugController />
+      <HugController toUid={toUid || ""} toDisplayName={toName || ""} />
     </GestureHandlerRootView>
   );
 }

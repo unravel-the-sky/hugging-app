@@ -10,7 +10,7 @@ import {
   Platform,
 } from "react-native";
 import { router } from "expo-router";
-import { addFriendByUsername } from "@/lib/addFriend";
+import { addFriendByUsername } from "@/lib/handleFriends";
 
 export default function AddUserScreen() {
   const [username, setUsername] = useState("");
