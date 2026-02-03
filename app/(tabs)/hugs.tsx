@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 
 interface Hug {
@@ -111,57 +110,41 @@ export default function HugsListScreen() {
     </View>
   );
 
-  return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Received Hugs</Text>
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#FF6B6B" />
       </View>
+    );
+  }
 
-      {/* Content */}
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FF6B6B" />
-        </View>
-      ) : hugs.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyEmoji}>🤗</Text>
-          <Text style={styles.emptyTitle}>No hugs yet</Text>
-          <Text style={styles.emptySubtitle}>
-            Add friends and start sending hugs!
-          </Text>
-          <TouchableOpacity
-            style={styles.addFriendButton}
-            onPress={() => router.push("/add-user")}
-          >
-            <Text style={styles.addFriendButtonText}>Add Friends</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <FlatList
-          data={hugs}
-          renderItem={renderHugItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
-        />
-      )}
-
-      {/* Footer Navigation */}
-      <View style={styles.footer}>
+  if (hugs.length === 0) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyEmoji}>🤗</Text>
+        <Text style={styles.emptyTitle}>No hugs yet</Text>
+        <Text style={styles.emptySubtitle}>
+          Add friends and start sending hugs!
+        </Text>
         <TouchableOpacity
-          style={styles.footerButton}
-          onPress={() => router.push("/")}
+          style={styles.addFriendButton}
+          onPress={() => router.push("./(tabs)/add-user")}
         >
-          <Text style={styles.footerEmoji}>🤗</Text>
-          <Text style={styles.footerText}>Send Hug</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={[styles.footerButton]}>
-          <Text style={styles.footerEmoji}>📬</Text>
-          <Text style={[styles.footerText, styles.footerTextActive]}>Hugs</Text>
+          <Text style={styles.addFriendButtonText}>Add Friends</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={hugs}
+        renderItem={renderHugItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContainer}
+      />
+    </View>
   );
 }
 
@@ -170,27 +153,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FAFAFA",
   },
-  header: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#1A1A1A",
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#FAFAFA",
   },
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 40,
+    backgroundColor: "#FAFAFA",
   },
   emptyEmoji: {
     fontSize: 80,
@@ -283,30 +257,5 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontSize: 16,
     fontWeight: "bold",
-  },
-  footer: {
-    flexDirection: "row",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#E0E0E0",
-    backgroundColor: "#FFF",
-  },
-  footerButton: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 8,
-  },
-  footerEmoji: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  footerText: {
-    fontSize: 12,
-    color: "#999",
-  },
-  footerTextActive: {
-    color: "#FF6B6B",
-    fontWeight: "600",
   },
 });

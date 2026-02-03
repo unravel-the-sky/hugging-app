@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#c26969",
+    // backgroundColor: "#f7b7b7",
     height: "100%",
   },
   statusContainer: {
@@ -154,7 +154,8 @@ const styles = StyleSheet.create({
   progressContainer: {
     height: 15,
     width: "70%",
-    top: -150,
+    position: "absolute",
+    top: 20,
     backgroundColor: "#eee",
     borderRadius: 4,
     overflow: "hidden",
