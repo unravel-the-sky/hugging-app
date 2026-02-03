@@ -21,7 +21,7 @@ type HugButtonProps = {
   hugPhase: HugPhase;
   onPressIn: () => void;
   onPressOut: () => void;
-  onHugIsSent: (val: boolean) => void;
+  onSendHugProcess: (val: HugPhase) => void;
 };
 
 export default function HugButton({
@@ -29,7 +29,7 @@ export default function HugButton({
   hugPhase,
   onPressIn,
   onPressOut,
-  onHugIsSent,
+  onSendHugProcess,
 }: HugButtonProps) {
   const translateY = useSharedValue(0);
   const isDragging = useSharedValue(false);
@@ -37,10 +37,11 @@ export default function HugButton({
 
   const panGesture = Gesture.Pan()
     .onUpdate((event) => {
-      if (hugPhase !== "formed") return;
+      if (hugPhase === "hugging" || hugPhase === "idle") return;
       // if (hugProgress.value < 0.99 || hugProgress.value > 1.5) return;
 
-      console.log("translateY.value is: ", translateY.value);
+      scheduleOnRN(onSendHugProcess, "pulling");
+      // console.log("translateY.value is: ", translateY.value);
 
       // drag only downward
       translateY.value = Math.max(0, event.translationY * 1.5);
@@ -53,7 +54,7 @@ export default function HugButton({
 
       if (canRelease.value) {
         // throw the slingshotttt
-        scheduleOnRN(onHugIsSent, true);
+        scheduleOnRN(onSendHugProcess, "sending");
         translateY.value = withSpring(
           -800,
           {
@@ -64,7 +65,7 @@ export default function HugButton({
           () => {
             translateY.value = 0;
             hugProgress.value = 0;
-            scheduleOnRN(onHugIsSent, false);
+            scheduleOnRN(onSendHugProcess, "thrown");
           },
         );
       } else {

@@ -3,7 +3,13 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -56,6 +62,12 @@ export default function HomeScreen() {
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.usernameText}>@{user?.displayName || ""}</Text>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => router.push("/add-user")}
+            >
+              <Text style={styles.addButtonText}>+</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Hug stuff */}
@@ -63,7 +75,22 @@ export default function HomeScreen() {
 
           {/* Footer - Placeholder for future navigation */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>footer</Text>
+            <TouchableOpacity
+              style={[styles.footerButton, styles.footerButtonActive]}
+            >
+              <Text style={styles.footerEmoji}>🤗</Text>
+              <Text style={[styles.footerText, styles.footerTextActive]}>
+                Send Hug
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.footerButton}
+              onPress={() => router.push("/hugs")}
+            >
+              <Text style={styles.footerEmoji}>📬</Text>
+              <Text style={styles.footerText}>Hugs</Text>
+            </TouchableOpacity>
           </View>
         </GestureHandlerRootView>
       </SafeAreaView>
@@ -85,6 +112,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#FAFAFA",
   },
   header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 24,
     paddingVertical: 16,
     borderBottomWidth: 1,
@@ -94,6 +124,25 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     color: "#1A1A1A",
+  },
+  addButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#FF6B6B",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#FF6B6B",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  addButtonText: {
+    fontSize: 24,
+    color: "#FFF",
+    fontWeight: "bold",
+    marginTop: -2,
   },
   content: {
     flex: 1,
@@ -107,14 +156,32 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
   footer: {
+    flexDirection: "row",
     paddingHorizontal: 24,
-    paddingVertical: 20,
+    paddingVertical: 12,
     borderTopWidth: 1,
     borderTopColor: "#E0E0E0",
+    backgroundColor: "#FFF",
+  },
+  footerButton: {
+    flex: 1,
     alignItems: "center",
+    paddingVertical: 8,
+  },
+  footerButtonActive: {
+    // borderBottomWidth: 2,
+    // borderBottomColor: "#FF6B6B",
+  },
+  footerEmoji: {
+    fontSize: 24,
+    marginBottom: 4,
   },
   footerText: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#999",
+  },
+  footerTextActive: {
+    color: "#FF6B6B",
+    fontWeight: "600",
   },
 });

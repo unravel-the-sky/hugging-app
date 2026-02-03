@@ -16,19 +16,20 @@ import { auth } from "@/lib/firebaseConfig";
 import { Hug, sendHug } from "@/lib/handleHugs";
 import { scheduleOnRN } from "react-native-worklets";
 
-export type HugPhase = "idle" | "hugging" | "formed" | "thrown";
+export type HugPhase =
+  | "idle"
+  | "hugging"
+  | "formed"
+  | "thrown"
+  | "sending"
+  | "pulling";
 
 export default function HugController() {
   const hugPress = useSharedValue(0);
-  const translateY = useSharedValue(0);
 
   const [hugPhase, setHugPhase] = useState<HugPhase>("idle");
 
-  const { user, loading, connected } = useCurrentUser();
-
-  useEffect(() => {
-    console.log("yello2");
-  }, []);
+  const { user } = useCurrentUser();
 
   const startHug = () => {
     console.log("starting to hugggg");
@@ -46,6 +47,7 @@ export default function HugController() {
 
   const releaseHug = () => {
     console.log("Lifted, hugPhase ", hugPhase);
+    // if (hugPhase === "pulling" || hugPhase === "formed") return;
     hugPress.value = withSpring(
       0,
       {
@@ -57,14 +59,13 @@ export default function HugController() {
     );
   };
 
-  const onHugIsSent = async (val: boolean) => {
-    console.log("whoa it is sent ", val);
-    if (val === true) {
+  const onSendHugProcess = async (phase: HugPhase) => {
+    console.log("whoa phase", phase);
+    if (phase === "thrown") {
       // here send an even to the parent and do an update on the firebase and such
       console.log(
         "hug is sent now, we are here, gonna make a hug object and send",
       );
-      console.log("user is: ", user);
       const hug: Hug = {
         fromUid: auth.currentUser?.uid || "lol",
         fromName: user?.displayName || "",
@@ -73,15 +74,11 @@ export default function HugController() {
       };
       sendHug(hug);
     }
-    setHugPhase(val ? "thrown" : "idle");
+    setHugPhase(phase);
   };
 
   const bgStyle = useAnimatedStyle(() => {
-    const bg = interpolateColor(
-      translateY.value,
-      [0, 120],
-      ["#fff", "#ffe6eb"],
-    );
+    const bg = interpolateColor(hugPress.value, [0, 1], ["#fff", "#ffecff"]);
 
     return { backgroundColor: bg };
   });
@@ -131,7 +128,7 @@ export default function HugController() {
         hugPhase={hugPhase}
         onPressIn={startHug}
         onPressOut={releaseHug}
-        onHugIsSent={onHugIsSent}
+        onSendHugProcess={onSendHugProcess}
       />
     </Animated.View>
   );
@@ -142,7 +139,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: "#c26969",
     height: "100%",
   },
   statusContainer: {
