@@ -37,14 +37,17 @@ export function useCurrentUser() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log("is firebaseUser: ", firebaseUser);
       if (!firebaseUser) {
         const result = await signInAnonymously(auth);
         const currentUser = await getUserFromCollection(result.user.uid);
+        console.log("currentUser: ", currentUser);
         if (currentUser) {
           setUser(currentUser);
         }
       } else {
         const currentUser = await getUserFromCollection(firebaseUser.uid);
+        console.log("currentUser: ", currentUser);
         if (currentUser) {
           setUser(currentUser);
         }

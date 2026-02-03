@@ -85,6 +85,7 @@ export async function getFriendsForCurrentUser() {
   const friendUidList: string[] = userData.friends || [];
 
   console.log("friendsUidList here: ", friendUidList);
+  if (friendUidList.length < 1) return [];
 
   // now we have the list of friend uids. fetch these from users collection
   const q = query(

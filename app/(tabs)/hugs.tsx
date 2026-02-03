@@ -16,7 +16,7 @@ export default function HugsListScreen() {
   const uid = currentUser?.uid;
   const { isLoading, hugs } = useIncomingHugs(uid);
 
-  console.log("whoa all the hugs i have received: ", hugs);
+  // console.log("whoa all the hugs i have received: ", hugs);
 
   const handleValidateHug = async (hugId: string) => {
     // try {

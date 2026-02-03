@@ -1,62 +1,35 @@
-import { Tabs, router } from "expo-router";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useState, useEffect } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import Loader from "@/components/ui/Loader";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { Tabs, router } from "expo-router";
+import { useEffect } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function TabsLayout() {
-  const [isLoading, setIsLoading] = useState(true);
-
   const { user, loading } = useCurrentUser();
 
   useEffect(() => {
-    checkAndLoadUsername();
-  }, []);
-
-  // useEffect(() => {
-  //   resetUser().then(() => {
-  //     alert("user deleted!");
-  //   });
-  // }, []);
-
-  const checkAndLoadUsername = async () => {
-    try {
-      const storedUsername = await AsyncStorage.getItem("displayName");
-      const storedUserId = await AsyncStorage.getItem("userId");
-      if (!storedUsername || !storedUserId) {
-        // No username, go to setup
+    if (!loading) {
+      console.log("auth user is: ", user);
+      if (!user) {
         router.replace("/setup");
-      } else {
-        // setUserId(storedUserId);
       }
-    } catch (error) {
-      console.error("Error loading username:", error);
-      router.replace("/setup");
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, [loading, user]);
 
-  if (loading || isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF6B6B" />
-      </View>
-    );
+  console.log("user from firebase is: ", user);
+
+  if (loading) {
+    return <Loader />;
   }
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       {/* Shared Header */}
       <View style={styles.header}>
-        <Text style={styles.usernameText}>@{user?.displayName || ""}</Text>
+        <TouchableOpacity onPress={() => router.push("/profile")}>
+          <Text style={styles.usernameText}>@{user?.displayName || ""}</Text>
+        </TouchableOpacity>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => router.push("./(tabs)/add-user")}

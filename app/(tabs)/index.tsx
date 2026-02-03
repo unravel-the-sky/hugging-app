@@ -3,8 +3,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect } from "react";
 import { Alert, StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import Animated from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
   const { toUid, toName } = useLocalSearchParams<{
@@ -16,10 +14,10 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (!toUid) {
-      Alert.alert("Oh nou", "Pls select a friend to send hug to, tenks");
-      router.push({
-        pathname: "/(tabs)/friends",
-      });
+      // Alert.alert("Oh nou", "Pls select a friend to send hug to, tenks");
+      // router.push({
+      //   pathname: "/(tabs)/friends",
+      // });
     }
   }, [toUid]);
 

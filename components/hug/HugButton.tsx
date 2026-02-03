@@ -15,6 +15,7 @@ import { BUTTON_SIZE } from "@/constants";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { scheduleOnRN } from "react-native-worklets";
 import { HugPhase } from "./HugController";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 type HugButtonProps = {
   hugProgress: SharedValue<number>;
@@ -34,6 +35,8 @@ export default function HugButton({
   const translateY = useSharedValue(0);
   const isDragging = useSharedValue(false);
   const canRelease = useSharedValue(false);
+
+  const { user } = useCurrentUser();
 
   const panGesture = Gesture.Pan()
     .onUpdate((event) => {
@@ -129,7 +132,10 @@ export default function HugButton({
           <Animated.View style={hugContainerStyle}>
             <HugArms hugProgress={hugProgress} />
             <Animated.View style={faceAnimatedStyle}>
-              <Face hugProgress={hugProgress} />
+              <Face
+                hugProgress={hugProgress}
+                userAvatar={user?.avatar || "male"}
+              />
             </Animated.View>
           </Animated.View>
         </Animated.View>

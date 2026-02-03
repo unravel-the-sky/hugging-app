@@ -6,13 +6,17 @@ import {
   runTransaction,
   serverTimestamp,
   setDoc,
+  updateDoc,
 } from "firebase/firestore";
 import { auth, db } from "./firebaseConfig";
 import { normalizeUsername } from "./util";
 
+type AvatarType = "male" | "female";
+
 export type User = {
   displayName: string;
   friends: string[];
+  avatar?: AvatarType;
   createdAt?: FieldValue;
   pushToken?: string;
   stats: {
@@ -92,4 +96,19 @@ export async function createUserWithUsername(
   });
 
   return user.uid;
+}
+
+export async function updateUserAvatar(avatar: AvatarType) {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    console.log("poop, no currentUser");
+    return;
+  }
+
+  const currentUserRef = doc(db, "users", currentUser.uid);
+  if (!currentUserRef) return;
+
+  await updateDoc(currentUserRef, { avatar });
+
+  return true;
 }
