@@ -10,6 +10,7 @@ import {
   Platform,
 } from "react-native";
 import { router } from "expo-router";
+import { addFriendByUsername } from "@/lib/addFriend";
 
 export default function AddUserScreen() {
   const [username, setUsername] = useState("");
@@ -29,7 +30,12 @@ export default function AddUserScreen() {
     try {
       // TODO: Implement Firebase user search and add logic here
       // For now, just simulate the process
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // await new Promise((resolve) => setTimeout(resolve, 1000));
+      const res = await addFriendByUsername(username);
+      if (!res) {
+        Alert.alert("poop");
+        return;
+      }
 
       Alert.alert(
         "Success! 🎉",

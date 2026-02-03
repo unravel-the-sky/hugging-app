@@ -8,6 +8,7 @@ import {
   setDoc,
 } from "firebase/firestore";
 import { auth, db } from "./firebaseConfig";
+import { normalizeUsername } from "./util";
 
 export type User = {
   displayName: string;
@@ -20,10 +21,6 @@ export type User = {
     lastHugAt?: FieldValue;
   };
 };
-
-export function normalizeUsername(name: string) {
-  return name.trim().toLowerCase();
-}
 
 export async function createUserIfNeeded(displayName: string): Promise<string> {
   // check auth
