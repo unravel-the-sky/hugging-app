@@ -1,21 +1,40 @@
 import { db } from "@/lib/firebaseConfig";
 import { Hug } from "@/lib/handleHugs";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
-export function useIncomingHugs(uid: string) {
+export function useIncomingHugs(uid?: string) {
+  const [hugs, setHugs] = useState<Hug[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
+    if (!uid) return;
+
     const q = query(collection(db, "hugs"), where("to", "==", uid));
 
-    const unsubscribeUid = onSnapshot(q, (snap) => {
-      snap.docChanges().forEach((change) => {
-        if (change.type === "added") {
-          const hug = change.doc.data() as Hug;
-          console.log(`Hug from ${hug.fromName} is received!`);
-        }
-      });
+    const unsubscribe = onSnapshot(q, (snap) => {
+      setHugs(
+        snap.docs.map(
+          (doc) =>
+            ({
+              ...doc.data(),
+            }) as Hug,
+        ),
+      );
     });
 
-    return unsubscribeUid;
+    // const unsubscribeUid = onSnapshot(q, (snap) => {
+    //   snap.docChanges().forEach((change) => {
+    //     if (change.type === "added") {
+    //       const hug = change.doc.data() as Hug;
+    //       console.log(`Hug from ${hug.fromName} is received!`);
+    //     }
+    //   });
+    // });
+
+    setIsLoading(false);
+    return unsubscribe;
   }, [uid]);
+
+  return { isLoading, hugs };
 }

@@ -1,87 +1,34 @@
-import React, { useState, useEffect } from "react";
+import { useIncomingHugs } from "@/hooks/useIncomingHugs";
+import { auth } from "@/lib/firebaseConfig";
+import { Hug } from "@/lib/handleHugs";
+import { formatTimestamp } from "@/lib/util";
+import React from "react";
 import {
-  View,
-  Text,
+  ActivityIndicator,
   FlatList,
   StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
+  Text,
+  View,
 } from "react-native";
-import { router } from "expo-router";
-
-interface Hug {
-  id: string;
-  from: string;
-  timestamp: Date;
-  validated: boolean;
-}
 
 export default function HugsListScreen() {
-  const [hugs, setHugs] = useState<Hug[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const currentUser = auth.currentUser;
+  const uid = currentUser?.uid;
+  const { isLoading, hugs } = useIncomingHugs(uid);
 
-  useEffect(() => {
-    loadHugs();
-  }, []);
-
-  const loadHugs = async () => {
-    try {
-      // TODO: Load hugs from Firebase
-      // Simulating with dummy data for now
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      const dummyHugs: Hug[] = [
-        {
-          id: "1",
-          from: "alice",
-          timestamp: new Date(Date.now() - 1000 * 60 * 5), // 5 mins ago
-          validated: false,
-        },
-        {
-          id: "2",
-          from: "bob",
-          timestamp: new Date(Date.now() - 1000 * 60 * 60), // 1 hour ago
-          validated: true,
-        },
-        {
-          id: "3",
-          from: "charlie",
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-          validated: false,
-        },
-      ];
-
-      setHugs(dummyHugs);
-    } catch (error) {
-      console.error("Error loading hugs:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  console.log("whoa all the hugs i have received: ", hugs);
 
   const handleValidateHug = async (hugId: string) => {
-    try {
-      // TODO: Validate hug in Firebase
-      setHugs((prevHugs) =>
-        prevHugs.map((hug) =>
-          hug.id === hugId ? { ...hug, validated: true } : hug,
-        ),
-      );
-    } catch (error) {
-      console.error("Error validating hug:", error);
-    }
-  };
-
-  const formatTimestamp = (date: Date): string => {
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    return `${days}d ago`;
+    // try {
+    //   // TODO: Validate hug in Firebase
+    //   setHugs((prevHugs) =>
+    //     prevHugs.map((hug) =>
+    //       hug.id === hugId ? { ...hug, validated: true } : hug,
+    //     ),
+    //   );
+    // } catch (error) {
+    //   console.error("Error validating hug:", error);
+    // }
   };
 
   const renderHugItem = ({ item }: { item: Hug }) => (
@@ -91,11 +38,13 @@ export default function HugsListScreen() {
       </View>
 
       <View style={styles.hugInfo}>
-        <Text style={styles.hugFrom}>@{item.from}</Text>
-        <Text style={styles.hugTime}>{formatTimestamp(item.timestamp)}</Text>
+        <Text style={styles.hugFrom}>@{item.fromName}</Text>
+        <Text style={styles.hugTime}>
+          {formatTimestamp(item.createdAt!.toDate())}
+        </Text>
       </View>
 
-      {!item.validated ? (
+      {/* {!item.validated ? (
         <TouchableOpacity
           style={styles.hugBackButton}
           onPress={() => handleValidateHug(item.id)}
@@ -106,7 +55,7 @@ export default function HugsListScreen() {
         <View style={styles.validatedBadge}>
           <Text style={styles.validatedText}>✓</Text>
         </View>
-      )}
+      )} */}
     </View>
   );
 
@@ -123,15 +72,6 @@ export default function HugsListScreen() {
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyEmoji}>🤗</Text>
         <Text style={styles.emptyTitle}>No hugs yet</Text>
-        <Text style={styles.emptySubtitle}>
-          Add friends and start sending hugs!
-        </Text>
-        <TouchableOpacity
-          style={styles.addFriendButton}
-          onPress={() => router.push("./(tabs)/add-user")}
-        >
-          <Text style={styles.addFriendButtonText}>Add Friends</Text>
-        </TouchableOpacity>
       </View>
     );
   }
@@ -141,7 +81,7 @@ export default function HugsListScreen() {
       <FlatList
         data={hugs}
         renderItem={renderHugItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.createdAt!.nanoseconds.toFixed(2)}
         contentContainerStyle={styles.listContainer}
       />
     </View>
