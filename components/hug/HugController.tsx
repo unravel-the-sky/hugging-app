@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { useCallback, useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
 import Animated, {
   Extrapolation,
   interpolate,
@@ -13,9 +13,8 @@ import HugButton from "./HugButton";
 
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { auth } from "@/lib/firebaseConfig";
-import { Hug, sendHug } from "@/lib/handleHugs";
+import { HugCreate, sendHug } from "@/lib/handleHugs";
 import { scheduleOnRN } from "react-native-worklets";
-import { router } from "expo-router";
 
 export type HugPhase =
   | "idle"
@@ -72,7 +71,7 @@ export default function HugController({ toUid, toDisplayName }: HugProps) {
       console.log(
         "hug is sent now, we are here, gonna make a hug object and send",
       );
-      const hug: Hug = {
+      const hug: HugCreate = {
         fromUid: auth.currentUser?.uid || "lol",
         fromName: user?.displayName || "",
         toName: toDisplayName,

@@ -10,16 +10,28 @@ import {
 } from "firebase/firestore";
 import { auth, db } from "./firebaseConfig";
 
-export type Hug = {
+// export type Hug = {
+//   fromUid: string;
+//   toUid: string;
+//   fromName: string;
+//   toName: string;
+//   createdAt?: Timestamp;
+//   seenAt?: Timestamp;
+// };
+
+type HugBase<TTimestamp> = {
   fromUid: string;
   toUid: string;
   fromName: string;
   toName: string;
-  createdAt?: Timestamp;
-  seenAt?: Timestamp;
+  createdAt?: TTimestamp;
+  seenAt?: TTimestamp;
 };
 
-export async function sendHug(hug: Hug) {
+export type HugCreate = HugBase<FieldValue>;
+export type Hug = HugBase<Timestamp> & { id: string };
+
+export async function sendHug(hug: HugCreate) {
   const docRef = await addDoc(collection(db, "hugs"), {
     from: hug.fromUid,
     to: hug.toUid,
@@ -42,11 +54,8 @@ export async function getHugs() {
   const snapshot = await getDocs(q);
 
   const data: Hug[] = snapshot.docs.map((doc) => ({
-    fromName: doc.data().fromName,
-    fromUid: doc.data().fromUid,
-    toName: doc.data().toName,
-    toUid: doc.data().toUid,
-    createdAt: doc.data().createdAt,
+    id: doc.id,
+    ...(doc.data() as HugBase<Timestamp>),
   }));
 
   console.log("all the hugs for the user; ", data);

@@ -81,7 +81,7 @@ export default function HugsListScreen() {
       <FlatList
         data={hugs}
         renderItem={renderHugItem}
-        keyExtractor={(item) => item.createdAt!.nanoseconds.toFixed(2)}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
       />
     </View>
