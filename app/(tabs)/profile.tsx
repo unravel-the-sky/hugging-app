@@ -3,16 +3,19 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { updateUserAvatar } from "@/lib/createUser";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+
+const MaleFace = require("@/assets/images/hugFaceMaleImg.png");
+const FemaleFace = require("@/assets/images/hugFaceFemaleImg.png");
 
 type AvatarType = "male" | "female";
 
@@ -23,8 +26,8 @@ interface AvatarOption {
 }
 
 const avatarOptions: AvatarOption[] = [
-  { type: "male", emoji: "👨", label: "Male" },
-  { type: "female", emoji: "👩", label: "Female" },
+  { type: "male", emoji: "👨", label: "zhis" },
+  { type: "female", emoji: "👩", label: "zhat" },
 ];
 
 export default function ProfileScreen() {
@@ -33,6 +36,12 @@ export default function ProfileScreen() {
 
   const { user, loading } = useCurrentUser();
 
+  useEffect(() => {
+    if (user) {
+      setSelectedAvatar(user.avatar || "male");
+    }
+  }, [user]);
+
   const handleSaveAvatar = async () => {
     setIsSaving(true);
     try {
@@ -40,12 +49,12 @@ export default function ProfileScreen() {
       // // TODO: Update avatar in Firebase user object
       await updateUserAvatar(selectedAvatar);
 
-      Alert.alert("Success! ✨", "Your avatar has been updated!", [
-        {
-          text: "OK",
-          // onPress: () => router.back(),
-        },
-      ]);
+      // Alert.alert("Success! ✨", "Your avatar has been updated!", [
+      //   {
+      //     text: "OK",
+      //     // onPress: () => router.back(),
+      //   },
+      // ]);
     } catch (error) {
       console.error("Error saving avatar:", error);
       Alert.alert("Error", "Failed to save avatar. Please try again.");
@@ -79,6 +88,7 @@ export default function ProfileScreen() {
   if (loading) {
     return <Loader />;
   }
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -97,9 +107,10 @@ export default function ProfileScreen() {
         {/* Profile Info */}
         <View style={styles.profileSection}>
           <View style={styles.currentAvatar}>
-            <Text style={styles.currentAvatarEmoji}>
-              {avatarOptions.find((a) => a.type === selectedAvatar)?.emoji}
-            </Text>
+            <Image
+              source={user?.avatar === "male" ? MaleFace : FemaleFace}
+              style={{ width: 115, height: 108 }}
+            />
           </View>
           <Text style={styles.username}>@{user?.displayName}</Text>
         </View>
@@ -117,7 +128,10 @@ export default function ProfileScreen() {
                 ]}
                 onPress={() => setSelectedAvatar(avatar.type)}
               >
-                <Text style={styles.avatarEmoji}>{avatar.emoji}</Text>
+                <Image
+                  source={avatar.type === "male" ? MaleFace : FemaleFace}
+                  style={{ width: 115, height: 108 }}
+                />
                 <Text style={styles.avatarLabel}>{avatar.label}</Text>
                 {selectedAvatar === avatar.type && (
                   <View style={styles.selectedBadge}>
@@ -141,14 +155,14 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
         {/* Account Actions */}
-        <View style={styles.section}>
+        {/* <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
 
           <TouchableOpacity style={styles.actionButton} onPress={handleLogout}>
             <Text style={styles.actionButtonText}>Logout</Text>
             <Text style={styles.actionButtonIcon}>→</Text>
           </TouchableOpacity>
-        </View>
+        </View> */}
       </ScrollView>
     </View>
   );
@@ -194,7 +208,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: "#FF6B6B",
+    // backgroundColor: "#ffaeae",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
