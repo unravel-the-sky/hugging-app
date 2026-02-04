@@ -8,10 +8,10 @@ export default function SetupScreen() {
   const handleUsernameSet = async (userId: string, username: string) => {
     try {
       console.log("all went well, received userId: ", userId);
-      await AsyncStorage.multiSet([
-        ["userId", userId],
-        ["displayName", username],
-      ]);
+      // await AsyncStorage.multiSet([
+      //   ["userId", userId],
+      //   ["displayName", username],
+      // ]);
 
       router.replace("/");
     } catch (error: any) {

@@ -8,4 +8,5 @@ export const BUTTON_SIZE = 96;
 export const MAIN_COLOR = "#FF9C6B";
 export const STROKE_COLOR = "#E08A5F";
 export const HAIR_COLOR = "#7F440D";
-export const DARK_HAIR_COLOR = "#7F440D";
+export const DARK_HAIR_COLOR = "#2D2D2D";
+export const DARK_FACIAL_HAIR = "#323232";

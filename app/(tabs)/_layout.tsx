@@ -15,12 +15,13 @@ export default function TabsLayout() {
   const uid = currentUser?.uid;
   const { hugs, isLoading } = useIncomingHugs(uid);
 
+  console.log("loading: ", loading);
   useEffect(() => {
     if (!loading && !isLoading) {
       console.log("auth user is: ", user);
-      if (!user) {
-        router.replace("/setup");
-      }
+
+      console.log("user is: ", user);
+      if (user === null) router.replace("/setup");
 
       setUnreadHugsCount(hugs.filter((item) => !item.seenAt).length);
     }

@@ -32,13 +32,14 @@ export async function getUserFromCollection(uid: string) {
 }
 
 export function useCurrentUser() {
-  const [user, setUser] = useState<User | null>();
+  const [user, setUser] = useState<User | null | undefined>(undefined);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let unsubscribeUserDoc: (() => void) | undefined;
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoading(true);
       const userId = firebaseUser
         ? firebaseUser.uid
         : (await signInAnonymously(auth)).user.uid;
@@ -49,6 +50,8 @@ export function useCurrentUser() {
       unsubscribeUserDoc = onSnapshot(userRef, (snap) => {
         if (snap.exists()) {
           setUser({ ...(snap.data() as User) });
+        } else {
+          setUser(null);
         }
         setLoading(false);
       });
