@@ -3,6 +3,7 @@ import Animated, {
   Extrapolation,
   interpolate,
   SharedValue,
+  useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -16,6 +17,8 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { scheduleOnRN } from "react-native-worklets";
 import { HugPhase } from "./HugController";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import SprinklesController from "./SprinklesController";
+import { useState } from "react";
 
 type HugButtonProps = {
   hugProgress: SharedValue<number>;
@@ -74,6 +77,7 @@ export default function HugButton({
       } else {
         // snap it back
         translateY.value = withSpring(0);
+        scheduleOnRN(onSendHugProcess, "idle");
       }
 
       canRelease.value = false;
@@ -122,6 +126,17 @@ export default function HugButton({
     };
   });
 
+  const [sprinklesActive, setSprinklesActive] = useState(true);
+
+  useAnimatedReaction(
+    () => hugProgress.value > 0.001,
+    (isActive, prev) => {
+      if (isActive !== prev) {
+        scheduleOnRN(setSprinklesActive, isActive);
+      }
+    },
+  );
+
   return (
     <View style={styles.hugContainer}>
       <Animated.Text style={[styles.releaseText, releaseTextStyle]}>
@@ -136,6 +151,13 @@ export default function HugButton({
                 hugProgress={hugProgress}
                 userAvatar={user?.avatar || "male"}
               />
+              <SprinklesController
+                active={
+                  hugPhase === "formed" ||
+                  hugPhase === "hugging" ||
+                  hugPhase === "pulling"
+                }
+              />
             </Animated.View>
           </Animated.View>
         </Animated.View>
@@ -143,13 +165,13 @@ export default function HugButton({
       <Pressable
         onPressIn={onPressIn}
         onPressOut={onPressOut}
-        pressRetentionOffset={50}
+        pressRetentionOffset={150}
       >
         <GestureDetector gesture={panGesture}>
           <View
             style={{
-              width: 100,
-              height: 130,
+              width: 200,
+              height: 230,
               alignItems: "center",
               justifyContent: "center",
             }}

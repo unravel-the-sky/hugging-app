@@ -59,7 +59,12 @@ export function Face({ hugProgress, userAvatar }: FaceProps) {
 
   if (userAvatar === "male")
     return (
-      <Svg width={110} height={110} viewBox="0 0 230 216">
+      <Svg
+        style={{ zIndex: 100 }}
+        width={110}
+        height={110}
+        viewBox="0 0 230 216"
+      >
         <Path
           d="M115.902 16.7789C165.446 16.7789 206.936 47.9584 217.69 89.8024C222.665 100.314 225.402 111.778 225.402 123.779C225.402 174.589 176.377 215.779 115.902 215.779C55.4265 215.779 6.40171 174.589 6.40171 123.779C6.40171 111.778 9.13781 100.314 14.1127 89.8024C24.8661 47.9583 66.3572 16.7789 115.902 16.7789Z"
           fill={MAIN_COLOR}
@@ -184,7 +189,7 @@ export function Face({ hugProgress, userAvatar }: FaceProps) {
     );
 
   return (
-    <Svg width={110} height={120} viewBox="0 0 227 269">
+    <Svg style={{ zIndex: 100 }} width={110} height={120} viewBox="0 0 227 269">
       {/* face outline */}
       <Path
         d="M0 100C0 44.7715 44.7715 0 100 0H127C182.228 0 227 44.7715 227 100V241C227 256.464 214.464 269 199 269H28C12.536 269 0 256.464 0 241V100Z"

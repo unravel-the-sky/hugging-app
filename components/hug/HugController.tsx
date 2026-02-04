@@ -52,7 +52,7 @@ export default function HugController({ toUid, toDisplayName }: HugProps) {
 
   const releaseHug = () => {
     console.log("Lifted, hugPhase ", hugPhase);
-    // if (hugPhase === "pulling" || hugPhase === "formed") return;
+    if (hugPhase === "pulling" || hugPhase === "formed") return;
     hugPress.value = withSpring(
       0,
       {
