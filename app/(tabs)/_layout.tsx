@@ -1,21 +1,30 @@
 import Loader from "@/components/ui/Loader";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useIncomingHugs } from "@/hooks/useIncomingHugs";
+import { auth } from "@/lib/firebaseConfig";
 import { Tabs, router } from "expo-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function TabsLayout() {
   const { user, loading } = useCurrentUser();
+  const [unreadHugsCount, setUnreadHugsCount] = useState<number>(0);
+
+  const currentUser = auth.currentUser;
+  const uid = currentUser?.uid;
+  const { hugs, isLoading } = useIncomingHugs(uid);
 
   useEffect(() => {
-    if (!loading) {
+    if (!loading && !isLoading) {
       console.log("auth user is: ", user);
       if (!user) {
         router.replace("/setup");
       }
+
+      setUnreadHugsCount(hugs.filter((item) => !item.seenAt).length);
     }
-  }, [loading, user]);
+  }, [hugs, isLoading, loading, user]);
 
   console.log("user from firebase is: ", user);
 
@@ -66,7 +75,25 @@ export default function TabsLayout() {
           name="hugs"
           options={{
             title: "Hugs",
-            tabBarIcon: ({ color }) => <Text style={{ fontSize: 24 }}>📬</Text>,
+            tabBarIcon: ({ color }) => (
+              <View>
+                <Text style={{ fontSize: 24 }}>📬</Text>
+                {unreadHugsCount > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>
+                      {unreadHugsCount > 9 ? "9+" : unreadHugsCount}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            ),
+          }}
+          listeners={{
+            tabPress: () => {
+              // When user taps on Hugs tab, mark all as read
+              setUnreadHugsCount(0);
+              // TODO: Update Firebase to mark hugs as read
+            },
           }}
         />
         <Tabs.Screen
@@ -135,5 +162,24 @@ const styles = StyleSheet.create({
   tabBarLabel: {
     fontSize: 12,
     fontWeight: "600",
+  },
+  badge: {
+    position: "absolute",
+    top: -4,
+    right: -8,
+    backgroundColor: "#FF6B35",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 5,
+    borderWidth: 2,
+    borderColor: "#FFF",
+  },
+  badgeText: {
+    color: "#FFF",
+    fontSize: 11,
+    fontWeight: "bold",
   },
 });

@@ -29,9 +29,9 @@ export function useIncomingHugs(uid?: string) {
           ...(doc.data() as Omit<Hug, "id">),
         })),
       );
+      setIsLoading(false);
     });
 
-    setIsLoading(false);
     return unsubscribe;
   }, [uid]);
 

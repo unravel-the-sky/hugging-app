@@ -10,18 +10,9 @@ import {
 } from "firebase/firestore";
 import { auth, db } from "./firebaseConfig";
 
-// export type Hug = {
-//   fromUid: string;
-//   toUid: string;
-//   fromName: string;
-//   toName: string;
-//   createdAt?: Timestamp;
-//   seenAt?: Timestamp;
-// };
-
 type HugBase<TTimestamp> = {
-  fromUid: string;
-  toUid: string;
+  from: string;
+  to: string;
   fromName: string;
   toName: string;
   createdAt?: TTimestamp;
@@ -32,13 +23,19 @@ export type HugCreate = HugBase<FieldValue>;
 export type Hug = HugBase<Timestamp> & { id: string };
 
 export async function sendHug(hug: HugCreate) {
-  const docRef = await addDoc(collection(db, "hugs"), {
-    from: hug.fromUid,
-    to: hug.toUid,
-    fromName: hug.fromName,
-    toName: hug.toName,
-    createdAt: serverTimestamp(),
-  });
+  try {
+    console.log("sending hug to firebase");
+    await addDoc(collection(db, "hugs"), {
+      from: hug.from,
+      to: hug.to,
+      fromName: hug.fromName,
+      toName: hug.toName,
+      createdAt: serverTimestamp(),
+    });
+    console.log("hug is sent to firebase");
+  } catch (err) {
+    console.error("error when saving hug ", err);
+  }
 }
 
 export async function getHugs() {

@@ -72,12 +72,15 @@ export default function HugController({ toUid, toDisplayName }: HugProps) {
         "hug is sent now, we are here, gonna make a hug object and send",
       );
       const hug: HugCreate = {
-        fromUid: auth.currentUser?.uid || "lol",
+        from: auth.currentUser?.uid || "lol",
         fromName: user?.displayName || "",
         toName: toDisplayName,
-        toUid: toUid,
+        to: toUid,
+        seenAt: undefined, // toa avoid crash
       };
-      sendHug(hug);
+
+      console.log("created hug object: ", hug);
+      await sendHug(hug);
     }
     setHugPhase(phase);
   };

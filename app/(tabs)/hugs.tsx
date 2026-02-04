@@ -1,8 +1,10 @@
 import { useIncomingHugs } from "@/hooks/useIncomingHugs";
-import { auth } from "@/lib/firebaseConfig";
+import { auth, db } from "@/lib/firebaseConfig";
 import { Hug } from "@/lib/handleHugs";
 import { formatTimestamp } from "@/lib/util";
-import React from "react";
+import { useFocusEffect } from "expo-router";
+import { doc, Timestamp, updateDoc } from "firebase/firestore";
+import React, { useCallback } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -16,20 +18,45 @@ export default function HugsListScreen() {
   const uid = currentUser?.uid;
   const { isLoading, hugs } = useIncomingHugs(uid);
 
-  // console.log("whoa all the hugs i have received: ", hugs);
+  const markHugsAsSeen = async (unseenHugs: Hug[]) => {
+    try {
+      console.log(`Marking ${unseenHugs.length} hugs as seen`);
+      const now = Timestamp.now();
 
-  const handleValidateHug = async (hugId: string) => {
-    // try {
-    //   // TODO: Validate hug in Firebase
-    //   setHugs((prevHugs) =>
-    //     prevHugs.map((hug) =>
-    //       hug.id === hugId ? { ...hug, validated: true } : hug,
-    //     ),
-    //   );
-    // } catch (error) {
-    //   console.error("Error validating hug:", error);
-    // }
+      console.log(unseenHugs[0].id);
+
+      // Update all unseen hugs in Firebase
+      const updatePromises = unseenHugs.map(async (hug) => {
+        const hugRef = doc(db, "hugs", hug.id);
+        return updateDoc(hugRef, {
+          seenAt: now,
+        });
+      });
+
+      await Promise.all(updatePromises);
+
+      console.log("marking as seen done!");
+
+      // // Local state will be updated automatically by the snapshot listener
+      // // in useIncomingHugs hook, but we can update it optimistically:
+      // setHugs(prevHugs =>
+      //   prevHugs.map(hug =>
+      //     hug.seenAt ? hug : { ...hug, seenAt: now }
+      //   )
+      // );
+    } catch (error) {
+      console.error("Error marking hugs as seen:", error);
+    }
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      const unseenHugs = hugs.filter((hug) => !hug.seenAt);
+      if (unseenHugs.length > 0) {
+        markHugsAsSeen(unseenHugs);
+      }
+    }, [hugs]),
+  );
 
   const renderHugItem = ({ item }: { item: Hug }) => (
     <View style={styles.hugItem}>

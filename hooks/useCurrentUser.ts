@@ -36,27 +36,44 @@ export function useCurrentUser() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log("is firebaseUser: ", firebaseUser);
-      if (!firebaseUser) {
-        const result = await signInAnonymously(auth);
-        const currentUser = await getUserFromCollection(result.user.uid);
-        console.log("currentUser: ", currentUser);
-        if (currentUser) {
-          setUser(currentUser);
+    let unsubscribeUserDoc: (() => void) | undefined;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      const userId = firebaseUser
+        ? firebaseUser.uid
+        : (await signInAnonymously(auth)).user.uid;
+
+      const userRef = doc(db, "users", userId);
+
+      // some firebase snapshot magic, thanks to chatgbt
+      unsubscribeUserDoc = onSnapshot(userRef, (snap) => {
+        if (snap.exists()) {
+          setUser({ ...(snap.data() as User) });
         }
-      } else {
-        const currentUser = await getUserFromCollection(firebaseUser.uid);
-        console.log("currentUser: ", currentUser);
-        if (currentUser) {
-          setUser(currentUser);
-        }
-      }
-      setLoading(false);
+        setLoading(false);
+      });
     });
 
-    return unsub;
+    return () => {
+      unsubscribeAuth();
+      unsubscribeUserDoc?.(); // optional chaining apparently. call the functoin if it exists as function, or else do nothing as it can be undefined as well
+    };
   }, []);
+
+  // useEffect(() => {
+  //   const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+  //     const userId = firebaseUser
+  //       ? firebaseUser.uid
+  //       : (await signInAnonymously(auth)).user.uid;
+  //     const currentUser = await getUserFromCollection(userId);
+  //     if (currentUser) {
+  //       setUser(currentUser);
+  //     }
+  //     setLoading(false);
+  //   });
+
+  //   return unsub;
+  // }, []);
 
   return { user, loading, connected: !!user };
 }
