@@ -49,7 +49,7 @@ export default function Sprinkle({ onDone }: SprinkleProps) {
           textAlignVertical: "center",
         }}
       >
-        ⭐️
+        ❤️
       </Text>
     </Animated.View>
   );

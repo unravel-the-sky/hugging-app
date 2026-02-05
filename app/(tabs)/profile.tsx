@@ -1,3 +1,4 @@
+import AvatarImage from "@/components/avatar/AvatarImage";
 import Loader from "@/components/ui/Loader";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { updateUserAvatar } from "@/lib/createUser";
@@ -107,10 +108,7 @@ export default function ProfileScreen() {
         {/* Profile Info */}
         <View style={styles.profileSection}>
           <View style={styles.currentAvatar}>
-            <Image
-              source={user?.avatar === "male" ? MaleFace : FemaleFace}
-              style={{ width: 115, height: 108 }}
-            />
+            <AvatarImage avatar={user?.avatar} />
           </View>
           <Text style={styles.username}>@{user?.displayName}</Text>
         </View>
@@ -128,10 +126,7 @@ export default function ProfileScreen() {
                 ]}
                 onPress={() => setSelectedAvatar(avatar.type)}
               >
-                <Image
-                  source={avatar.type === "male" ? MaleFace : FemaleFace}
-                  style={{ width: 115, height: 108 }}
-                />
+                <AvatarImage avatar={avatar.type} />
                 <Text style={styles.avatarLabel}>{avatar.label}</Text>
                 {selectedAvatar === avatar.type && (
                   <View style={styles.selectedBadge}>
@@ -153,16 +148,6 @@ export default function ProfileScreen() {
             {isSaving ? "Saving..." : "Save Avatar"}
           </Text>
         </TouchableOpacity>
-
-        {/* Account Actions */}
-        {/* <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account</Text>
-
-          <TouchableOpacity style={styles.actionButton} onPress={handleLogout}>
-            <Text style={styles.actionButtonText}>Logout</Text>
-            <Text style={styles.actionButtonIcon}>→</Text>
-          </TouchableOpacity>
-        </View> */}
       </ScrollView>
     </View>
   );

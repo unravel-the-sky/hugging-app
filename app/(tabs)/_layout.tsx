@@ -15,19 +15,21 @@ export default function TabsLayout() {
   const uid = currentUser?.uid;
   const { hugs, isLoading } = useIncomingHugs(uid);
 
-  console.log("loading: ", loading);
+  console.log(`TabsLayout is called, ${loading} and ${isLoading}`);
   useEffect(() => {
     if (!loading && !isLoading) {
-      console.log("auth user is: ", user);
+      // console.log("auth user is: ", user);
 
-      console.log("user is: ", user);
+      // console.log("user is: ", user);
       if (user === null) router.replace("/setup");
 
-      setUnreadHugsCount(hugs.filter((item) => !item.seenAt).length);
+      const unSeenHugsCount = hugs.filter((item) => !item.seenAt).length;
+      console.log("unSeenHugsCount: ", unSeenHugsCount);
+      setUnreadHugsCount(unSeenHugsCount);
     }
   }, [hugs, isLoading, loading, user]);
 
-  console.log("user from firebase is: ", user);
+  // console.log("user from firebase is: ", user);
 
   if (loading) {
     return <Loader />;
@@ -91,9 +93,7 @@ export default function TabsLayout() {
           }}
           listeners={{
             tabPress: () => {
-              // When user taps on Hugs tab, mark all as read
-              setUnreadHugsCount(0);
-              // TODO: Update Firebase to mark hugs as read
+              // maybe add something here later
             },
           }}
         />

@@ -27,9 +27,14 @@ export type HugPhase =
 export type HugProps = {
   toUid: string;
   toDisplayName: string;
+  note: string;
 };
 
-export default function HugController({ toUid, toDisplayName }: HugProps) {
+export default function HugController({
+  toUid,
+  toDisplayName,
+  note,
+}: HugProps) {
   const hugPress = useSharedValue(0);
 
   const [hugPhase, setHugPhase] = useState<HugPhase>("idle");
@@ -76,6 +81,8 @@ export default function HugController({ toUid, toDisplayName }: HugProps) {
         fromName: user?.displayName || "",
         toName: toDisplayName,
         to: toUid,
+        fromAvatar: user?.avatar,
+        note,
         seenAt: undefined, // toa avoid crash
       };
 

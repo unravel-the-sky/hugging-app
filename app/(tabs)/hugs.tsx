@@ -1,15 +1,17 @@
+import HugViewOverlay from "@/components/hug/HugViewOverlay";
 import { useIncomingHugs } from "@/hooks/useIncomingHugs";
 import { auth, db } from "@/lib/firebaseConfig";
 import { Hug } from "@/lib/handleHugs";
 import { formatTimestamp } from "@/lib/util";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { doc, Timestamp, updateDoc } from "firebase/firestore";
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -49,14 +51,51 @@ export default function HugsListScreen() {
     }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      const unseenHugs = hugs.filter((hug) => !hug.seenAt);
-      if (unseenHugs.length > 0) {
-        markHugsAsSeen(unseenHugs);
-      }
-    }, [hugs]),
-  );
+  // useFocusEffect(
+  //   useCallback(() => {
+  //     const unseenHugs = hugs.filter((hug) => !hug.seenAt);
+  //     if (unseenHugs.length > 0) {
+  //       markHugsAsSeen(unseenHugs);
+  //     }
+  //   }, [hugs]),
+  // );
+
+  const [seeHug, setSeeHug] = useState<Hug | undefined>(undefined);
+
+  const handleValidateHug = async (hugId: string) => {
+    const now = Timestamp.now();
+    const hugRef = doc(db, "hugs", hugId);
+    try {
+      await updateDoc(hugRef, {
+        seenAt: now,
+      });
+    } catch (err) {
+      console.error(`Error while validating hug with id: ${hugId}`, err);
+    }
+  };
+
+  const handleHugBack = async (hug: Hug) => {
+    await handleValidateHug(hug.id);
+    router.push({
+      pathname: "/(tabs)",
+      params: {
+        toUid: hug.from,
+        toName: hug.fromName,
+      },
+    });
+    setSeeHug(undefined);
+  };
+
+  const handleIgnore = async (hugId: string) => {
+    console.log("ignoring lol: ", hugId);
+    await handleValidateHug(hugId);
+    setSeeHug(undefined);
+  };
+
+  const handleSeeHug = (hug: Hug) => {
+    console.log("seeHug: ", hug);
+    setSeeHug(hug);
+  };
 
   const renderHugItem = ({ item }: { item: Hug }) => (
     <View style={styles.hugItem}>
@@ -71,18 +110,18 @@ export default function HugsListScreen() {
         </Text>
       </View>
 
-      {/* {!item.validated ? (
+      {!item.seenAt ? (
         <TouchableOpacity
           style={styles.hugBackButton}
-          onPress={() => handleValidateHug(item.id)}
+          onPress={() => handleSeeHug(item)}
         >
-          <Text style={styles.hugBackText}>Hug Back</Text>
+          <Text style={styles.hugBackText}>See</Text>
         </TouchableOpacity>
       ) : (
         <View style={styles.validatedBadge}>
           <Text style={styles.validatedText}>✓</Text>
         </View>
-      )} */}
+      )}
     </View>
   );
 
@@ -110,6 +149,12 @@ export default function HugsListScreen() {
         renderItem={renderHugItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
+      />
+      <HugViewOverlay
+        visible={!!seeHug?.id}
+        hug={seeHug}
+        onHugBack={handleHugBack}
+        onIgnore={handleIgnore}
       />
     </View>
   );

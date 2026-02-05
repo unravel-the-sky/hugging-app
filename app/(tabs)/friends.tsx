@@ -10,42 +10,19 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { getFriendsForCurrentUser } from "@/lib/handleFriends";
+import HugNoteModal from "@/components/hug/HugNoteModal";
 
-interface Friend {
+export type Friend = {
   uid: string;
   displayName: string;
   addedAt?: Date;
-}
-
-const makeDummyFriends = async () => {
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-
-  const dummyFriends: Friend[] = [
-    {
-      uid: "1",
-      displayName: "alice",
-      addedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7), // 1 week ago
-    },
-    {
-      uid: "2",
-      displayName: "bob",
-      addedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3), // 3 days ago
-    },
-    {
-      uid: "3",
-      displayName: "charlie",
-      addedAt: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-    },
-  ];
-
-  return dummyFriends;
 };
-
-const addDummy = false;
 
 export default function FriendsListScreen() {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
+  const [noteModalVisible, setNoteModalVisible] = useState(false);
 
   useEffect(() => {
     loadFriends();
@@ -53,14 +30,6 @@ export default function FriendsListScreen() {
 
   const loadFriends = async () => {
     try {
-      // TODO: Load friends from Firebase
-      if (addDummy) {
-        // Simulating with dummy data for now
-        const dummyFriends = await makeDummyFriends();
-        setFriends(dummyFriends);
-        return;
-      }
-
       // the shiiiit
       const friendsForCurrentUser =
         (await getFriendsForCurrentUser()) as Friend[];
@@ -100,17 +69,30 @@ export default function FriendsListScreen() {
     );
   };
 
-  const handleSendHug = (friendUid: string, friendDisplayName: string) => {
+  const handleSendHug = (friend: Friend) => {
     // Navigate to home screen to send hug
     // TODO: You might want to pre-select this friend when sending
+    setSelectedFriend(friend);
+    setNoteModalVisible(true);
+  };
+
+  const handleContinueWithNote = (
+    friendName: string,
+    friendUid: string,
+    note?: string,
+  ) => {
     router.push({
       pathname: "/(tabs)",
       params: {
         toUid: friendUid,
-        toName: friendDisplayName,
+        toName: friendName,
+        note: note,
       },
     });
+    setSelectedFriend(null);
+    setNoteModalVisible(false);
   };
+  const handleCancelNote = () => {};
 
   const renderFriendItem = ({ item }: { item: Friend }) => (
     <View style={styles.friendItem}>
@@ -127,7 +109,7 @@ export default function FriendsListScreen() {
 
       <TouchableOpacity
         style={styles.hugButton}
-        onPress={() => handleSendHug(item.uid, item.displayName)}
+        onPress={() => handleSendHug(item)}
       >
         <Text style={styles.hugButtonEmoji}>🤗</Text>
       </TouchableOpacity>
@@ -183,6 +165,14 @@ export default function FriendsListScreen() {
       >
         <Text style={styles.floatingButtonText}>+</Text>
       </TouchableOpacity>
+
+      <HugNoteModal
+        visible={noteModalVisible}
+        friendName={selectedFriend?.displayName || ""}
+        friendUid={selectedFriend?.uid || ""}
+        onContinue={handleContinueWithNote}
+        onCancel={handleCancelNote}
+      />
     </View>
   );
 }
