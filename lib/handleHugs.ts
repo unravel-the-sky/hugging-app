@@ -25,6 +25,8 @@ type HugBase<TTimestamp> = {
 export type HugCreate = HugBase<FieldValue>;
 export type Hug = HugBase<Timestamp> & { id: string };
 
+export type SendableHug = Pick<HugBase<FieldValue>, "to" | "toName" | "note">;
+
 export async function sendHug(hug: HugCreate) {
   try {
     console.log("sending hug to firebase, hug is: ", hug);

@@ -102,7 +102,7 @@ export default function HugButton({
     const scale = interpolate(
       hugProgress.value,
       [0, 1],
-      [1, 2],
+      [1, 1.8],
       Extrapolation.CLAMP,
     );
 

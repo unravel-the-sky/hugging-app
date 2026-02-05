@@ -42,12 +42,6 @@ export default function TabsLayout() {
         <TouchableOpacity onPress={() => router.push("/profile")}>
           <Text style={styles.usernameText}>@{user?.displayName || ""}</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => router.push("./(tabs)/add-user")}
-        >
-          <Text style={styles.addButtonText}>+</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Tab Content */}

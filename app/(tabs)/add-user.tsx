@@ -69,12 +69,9 @@ export default function AddUserScreen() {
         </View>
 
         <Text style={styles.title}>Add a Friend</Text>
-        <Text style={styles.subtitle}>
-          Enter their username to send them hugs
-        </Text>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Username</Text>
+          <Text style={styles.label}>Search by username</Text>
           <View style={styles.inputWrapper}>
             <Text style={styles.atSymbol}>@</Text>
             <TextInput
@@ -85,7 +82,6 @@ export default function AddUserScreen() {
               onChangeText={setUsername}
               autoCapitalize="none"
               autoCorrect={false}
-              autoFocus={true}
               editable={!isLoading}
             />
           </View>
@@ -120,7 +116,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 32,
-    paddingTop: 40,
+    paddingTop: 20,
   },
   iconContainer: {
     alignItems: "center",
@@ -130,7 +126,7 @@ const styles = StyleSheet.create({
     fontSize: 64,
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: "bold",
     color: "#1A1A1A",
     textAlign: "center",
@@ -143,7 +139,7 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   inputContainer: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   label: {
     fontSize: 14,
@@ -192,7 +188,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   cancelButton: {
-    marginTop: 16,
+    marginTop: 8,
     padding: 12,
     alignItems: "center",
   },

@@ -28,12 +28,14 @@ export type HugProps = {
   toUid: string;
   toDisplayName: string;
   note: string;
+  onComplete: () => void;
 };
 
 export default function HugController({
   toUid,
   toDisplayName,
   note,
+  onComplete,
 }: HugProps) {
   const hugPress = useSharedValue(0);
 
@@ -88,6 +90,7 @@ export default function HugController({
 
       console.log("created hug object: ", hug);
       await sendHug(hug);
+      onComplete();
     }
     setHugPhase(phase);
   };
@@ -101,7 +104,7 @@ export default function HugController({
   const getHugPhaseStatusText = useCallback(() => {
     if (hugPhase === "formed") return "Hug is formed!";
     if (hugPhase === "hugging") return "Hug is hugging!";
-    if (hugPhase === "idle") return "Hug is idle!";
+    if (hugPhase === "idle") return "Too early, try again!";
     if (hugPhase === "thrown") return "Hug is thrown!";
   }, [hugPhase]);
 

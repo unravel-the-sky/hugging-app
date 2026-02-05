@@ -11,6 +11,7 @@ import {
 import { router } from "expo-router";
 import { getFriendsForCurrentUser } from "@/lib/handleFriends";
 import HugNoteModal from "@/components/hug/HugNoteModal";
+import Loader from "@/components/ui/Loader";
 
 export type Friend = {
   uid: string;
@@ -44,25 +45,25 @@ export default function FriendsListScreen() {
   const handleRemoveFriend = (friendId: string, username: string) => {
     Alert.alert(
       "Remove Friend",
-      `Are you sure you want to remove @${username}?`,
+      `Remove people already?? Whoaaa bad karma. And nope.`,
       [
         {
-          text: "Cancel",
+          text: "Nope",
           style: "cancel",
         },
         {
-          text: "Remove",
-          style: "destructive",
+          text: "Ok da",
+          style: "default",
           onPress: async () => {
-            try {
-              // TODO: Remove friend from Firebase
-              setFriends((prevFriends) =>
-                prevFriends.filter((f) => f.uid !== friendId),
-              );
-            } catch (error) {
-              console.error("Error removing friend:", error);
-              Alert.alert("Error", "Failed to remove friend");
-            }
+            // try {
+            //   // TODO: Remove friend from Firebase
+            //   setFriends((prevFriends) =>
+            //     prevFriends.filter((f) => f.uid !== friendId),
+            //   );
+            // } catch (error) {
+            //   console.error("Error removing friend:", error);
+            //   Alert.alert("Error", "Failed to remove friend");
+            // }
           },
         },
       ],
@@ -124,11 +125,7 @@ export default function FriendsListScreen() {
   );
 
   if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF6B6B" />
-      </View>
-    );
+    return <Loader />;
   }
 
   if (friends.length === 0) {

@@ -10,11 +10,6 @@ interface HugViewOverlayProps {
   onIgnore: (hugId: string) => void;
 }
 
-const avatarEmojis = {
-  male: "👨",
-  female: "👩",
-};
-
 export default function HugViewOverlay({
   visible,
   hug,
@@ -44,17 +39,16 @@ export default function HugViewOverlay({
           {/* Action Buttons */}
           <View style={styles.actionsContainer}>
             <TouchableOpacity
-              style={[styles.actionButton, styles.hugBackButton]}
-              onPress={() => onHugBack(hug)}
-            >
-              <Text style={styles.hugBackText}>Hug Back</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
               style={[styles.actionButton, styles.ignoreButton]}
               onPress={() => onIgnore(hug.id)}
             >
-              <Text style={styles.ignoreText}>Ignore</Text>
+              <Text style={styles.ignoreText}>whatever</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.hugBackButton]}
+              onPress={() => onHugBack(hug)}
+            >
+              <Text style={styles.hugBackText}>aw hug back</Text>
             </TouchableOpacity>
           </View>
         </View>

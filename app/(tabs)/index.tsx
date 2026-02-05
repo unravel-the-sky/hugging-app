@@ -1,14 +1,10 @@
 import HugController from "@/components/hug/HugController";
 import { AppText } from "@/components/ui/AppText";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { Hug, SendableHug } from "@/lib/handleHugs";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect } from "react";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import React, { useEffect, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 export default function HomeScreen() {
@@ -19,6 +15,17 @@ export default function HomeScreen() {
   }>();
 
   console.log({ toUid, toName });
+  const [sendableHug, setSendableHug] = useState<SendableHug | undefined>(
+    undefined,
+  );
+  const [hugIsSent, setHugIsSent] = useState(false);
+
+  console.log("yello i am rendered and sendableHug: ", sendableHug);
+  useEffect(() => {
+    if (toUid && toName) {
+      setSendableHug({ to: toUid, toName: toName, note: note });
+    }
+  }, [note, toName, toUid]);
 
   useEffect(() => {
     if (!toUid) {
@@ -31,18 +38,46 @@ export default function HomeScreen() {
 
   const handleInitiateHug = () => {
     console.log("send to friends here");
-    // router.push({
-    //   pathname: "/(tabs)/friends",
-    // });
+    router.push({
+      pathname: "/(tabs)/friends",
+    });
   };
+
+  const handleCompleteHug = () => {
+    console.log("i am called and resetting it");
+    setHugIsSent(true);
+  };
+
+  const handleResetHug = () => {
+    setHugIsSent(false);
+    setSendableHug(undefined);
+  };
+
+  if (hugIsSent) {
+    return (
+      <View style={styles.emptyContainer}>
+        <AppText style={styles.emptyTitle}>Welldone!!</AppText>
+        <AppText style={styles.emptySubtitle}>
+          You sent a hug to {sendableHug?.toName || "lol"}
+        </AppText>
+        <Pressable
+          style={styles.addFriendButton}
+          onPress={() => handleResetHug()}
+        >
+          <Text style={styles.addFriendButtonText}>Yay!</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      {toUid && toName ? (
+      {sendableHug ? (
         <HugController
-          toUid={toUid || ""}
-          toDisplayName={toName || ""}
-          note={note || ""}
+          toUid={sendableHug.to || ""}
+          toDisplayName={sendableHug.toName || ""}
+          note={sendableHug.note || ""}
+          onComplete={handleCompleteHug}
         />
       ) : (
         <View style={styles.overlay}>
@@ -76,6 +111,37 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  // move this to an egen coponent later
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 40,
+    backgroundColor: "#FAFAFA",
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#1A1A1A",
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 24,
+  },
+  addFriendButton: {
+    backgroundColor: "#FF6B6B",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  addFriendButtonText: {
+    color: "#FFF",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
   overlay: {
     flex: 1,
     justifyContent: "center",

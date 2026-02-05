@@ -21,7 +21,6 @@ type FaceProps = {
 };
 
 export function Face({ hugProgress, userAvatar }: FaceProps) {
-  console.log("hugProgress: ", hugProgress.value);
   const opacityAnimatedProps = useAnimatedProps(() => ({
     opacity: interpolate(
       hugProgress.value,
@@ -54,8 +53,6 @@ export function Face({ hugProgress, userAvatar }: FaceProps) {
       ],
     };
   });
-
-  console.log("hugProgress from Face: ", hugProgress.value);
 
   if (userAvatar === "male")
     return (
