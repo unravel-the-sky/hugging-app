@@ -7,16 +7,12 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-
-const MaleFace = require("@/assets/images/hugFaceMaleImg.png");
-const FemaleFace = require("@/assets/images/hugFaceFemaleImg.png");
 
 type AvatarType = "male" | "female";
 

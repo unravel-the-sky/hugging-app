@@ -1,7 +1,14 @@
 import HugController from "@/components/hug/HugController";
+import { AppText } from "@/components/ui/AppText";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 export default function HomeScreen() {
@@ -24,9 +31,9 @@ export default function HomeScreen() {
 
   const handleInitiateHug = () => {
     console.log("send to friends here");
-    router.push({
-      pathname: "/(tabs)/friends",
-    });
+    // router.push({
+    //   pathname: "/(tabs)/friends",
+    // });
   };
 
   return (
@@ -40,18 +47,26 @@ export default function HomeScreen() {
       ) : (
         <View style={styles.overlay}>
           <View style={styles.container}>
-            <Text>Welcome to Hug.me</Text>
-            <Text>Welcome to Hug.me</Text>
-            <Text>Welcome to Hug.me</Text>
-            <Text>Welcome to Hug.me</Text>
+            <AppText>Welcome to Hug.me</AppText>
+            <Text>
+              Do you feel like you need a hug? r would you like to send one hug?
+            </Text>
+            <Text>
+              Then click the button, choose a friend and send some luuuvvv
+            </Text>
+            <Text>doooo iiitttt</Text>
             {/* Action Buttons */}
             <View style={styles.actionsContainer}>
-              <TouchableOpacity
-                style={[styles.actionButton, styles.hugBackButton]}
+              <Pressable
                 onPress={handleInitiateHug}
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  styles.hugBackButton,
+                  pressed && styles.buttonPressed,
+                ]}
               >
-                <Text style={styles.hugBackText}>Send a hug..</Text>
-              </TouchableOpacity>
+                <AppText style={styles.hugBackText}>Send a hug 🥹</AppText>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -75,6 +90,11 @@ const styles = StyleSheet.create({
     height: "100%",
     display: "flex",
     justifyContent: "space-between",
+    fontSize: 26,
+    fontFamily: "CuteFont",
+  },
+  containerText: {
+    fontSize: 20,
   },
   actionsContainer: {
     flexDirection: "row",
@@ -82,7 +102,7 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    aspectRatio: 1.8,
+    aspectRatio: 3,
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
@@ -94,6 +114,15 @@ const styles = StyleSheet.create({
   },
   hugBackButton: {
     backgroundColor: "#ffbf6b",
+    borderColor: "#d19b53",
+    borderWidth: 5,
+    borderStyle: "dashed",
+  },
+  buttonPressed: {
+    transform: [{ translateY: 2 }],
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    elevation: 1,
   },
   hugBackEmoji: {
     fontSize: 48,
