@@ -50,7 +50,7 @@ export default function FriendsListScreen() {
   const handleRemoveFriend = (friendId: string, username: string) => {
     Alert.alert(
       "Remove Friend",
-      `Remove people already?? Whoaaa bad karma. And nope.`,
+      `Remove people already?? Whoaaa bad karma. And nope. (didn't implement it yet lol)`,
       [
         {
           text: "Nope",
@@ -98,7 +98,9 @@ export default function FriendsListScreen() {
     setSelectedFriend(null);
     setNoteModalVisible(false);
   };
-  const handleCancelNote = () => {};
+  const handleCancelNote = () => {
+    setNoteModalVisible(false);
+  };
 
   const renderFriendItem = ({ item }: { item: Friend }) => (
     <View style={styles.friendItem}>

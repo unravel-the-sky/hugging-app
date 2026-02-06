@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 16,
     color: "#1A1A1A",
-    minHeight: 120,
+    minHeight: 80,
     maxHeight: 200,
   },
   characterCount: {

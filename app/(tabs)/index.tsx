@@ -85,7 +85,8 @@ export default function HomeScreen() {
           <View style={styles.container}>
             <AppText>Welcome to Hug.me</AppText>
             <Text>
-              Do you feel like you need a hug? r would you like to send one hug?
+              Do you feel like you need a hug? Or would you like to send a hug?
+              🥹
             </Text>
             <View
               style={{
@@ -99,7 +100,7 @@ export default function HomeScreen() {
               <Logo />
             </View>
             <Text>
-              Then click the button, choose a friend and send some luuuvvv
+              Then click the button, choose a human and send some luuuvvv
             </Text>
             {/* Action Buttons */}
             <View style={styles.actionsContainer}>

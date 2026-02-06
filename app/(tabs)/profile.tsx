@@ -8,10 +8,10 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -88,68 +88,78 @@ export default function ProfileScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Text style={styles.backButtonText}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <View style={styles.headerSpacer} />
+    <View style={styles.overlay}>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Profile</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+
+        <ScrollView contentContainerStyle={styles.content}>
+          {/* Profile Info */}
+          <View style={styles.profileSection}>
+            <View style={styles.currentAvatar}>
+              <AvatarImage avatar={user?.avatar} />
+            </View>
+            <Text style={styles.username}>@{user?.displayName}</Text>
+          </View>
+
+          {/* Avatar Selection */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Choose Your Avatar</Text>
+            <View style={styles.avatarGrid}>
+              {avatarOptions.map((avatar) => (
+                <Pressable
+                  key={avatar.type}
+                  style={[
+                    styles.avatarOption,
+                    selectedAvatar === avatar.type &&
+                      styles.avatarOptionSelected,
+                  ]}
+                  onPress={() => setSelectedAvatar(avatar.type)}
+                >
+                  <AvatarImage avatar={avatar.type} />
+                  <Text style={styles.avatarLabel}>{avatar.label}</Text>
+                  {selectedAvatar === avatar.type && (
+                    <View style={styles.selectedBadge}>
+                      <Text style={styles.selectedBadgeText}>✓</Text>
+                    </View>
+                  )}
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+          {/* Save Button */}
+          <AppButton
+            onPress={handleSaveAvatar}
+            disabled={isSaving}
+            buttonText={isSaving ? "Saving..." : "Save Avatar"}
+          />
+        </ScrollView>
       </View>
-
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* Profile Info */}
-        <View style={styles.profileSection}>
-          <View style={styles.currentAvatar}>
-            <AvatarImage avatar={user?.avatar} />
-          </View>
-          <Text style={styles.username}>@{user?.displayName}</Text>
-        </View>
-
-        {/* Avatar Selection */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Choose Your Avatar</Text>
-          <View style={styles.avatarGrid}>
-            {avatarOptions.map((avatar) => (
-              <TouchableOpacity
-                key={avatar.type}
-                style={[
-                  styles.avatarOption,
-                  selectedAvatar === avatar.type && styles.avatarOptionSelected,
-                ]}
-                onPress={() => setSelectedAvatar(avatar.type)}
-              >
-                <AvatarImage avatar={avatar.type} />
-                <Text style={styles.avatarLabel}>{avatar.label}</Text>
-                {selectedAvatar === avatar.type && (
-                  <View style={styles.selectedBadge}>
-                    <Text style={styles.selectedBadgeText}>✓</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Save Button */}
-        <AppButton
-          onPress={handleSaveAvatar}
-          disabled={isSaving}
-          buttonText={isSaving ? "Saving..." : "Save Avatar"}
-        />
-      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  overlay: {
     flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  container: {
     backgroundColor: "#FAFAFA",
+    borderRadius: 24,
+    padding: 32,
+    width: "100%",
+    height: "100%",
+    display: "flex",
+    justifyContent: "space-between",
+    fontSize: 26,
+    fontFamily: "CuteFont",
   },
   header: {
     flexDirection: "row",

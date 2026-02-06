@@ -1,11 +1,12 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
+  Easing,
   Extrapolation,
   interpolate,
   SharedValue,
-  useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
+  withRepeat,
   withSpring,
   withTiming,
 } from "react-native-reanimated";
@@ -13,12 +14,12 @@ import { Face } from "./Face";
 import HugArms from "./HugArms";
 
 import { BUTTON_SIZE } from "@/constants";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useEffect } from "react";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { scheduleOnRN } from "react-native-worklets";
 import { HugPhase } from "./HugController";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
 import SprinklesController from "./SprinklesController";
-import { useState } from "react";
 
 type HugButtonProps = {
   hugProgress: SharedValue<number>;
@@ -98,6 +99,25 @@ export default function HugButton({
     ],
   }));
 
+  const breathingScale = useSharedValue(1);
+
+  useEffect(() => {
+    breathingScale.value = withRepeat(
+      withTiming(1.06, {
+        duration: 1500,
+        easing: Easing.inOut(Easing.ease),
+      }),
+      -1,
+      true,
+    );
+  }, [breathingScale]);
+
+  const faceBreathingAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      // transform: [{ scale: breathingScale.value }],
+    };
+  });
+
   const faceAnimatedStyle = useAnimatedStyle(() => {
     const scale = interpolate(
       hugProgress.value,
@@ -126,16 +146,16 @@ export default function HugButton({
     };
   });
 
-  const [sprinklesActive, setSprinklesActive] = useState(true);
+  // const [sprinklesActive, setSprinklesActive] = useState(true);
 
-  useAnimatedReaction(
-    () => hugProgress.value > 0.001,
-    (isActive, prev) => {
-      if (isActive !== prev) {
-        scheduleOnRN(setSprinklesActive, isActive);
-      }
-    },
-  );
+  // useAnimatedReaction(
+  //   () => hugProgress.value > 0.001,
+  //   (isActive, prev) => {
+  //     if (isActive !== prev) {
+  //       scheduleOnRN(setSprinklesActive, isActive);
+  //     }
+  //   },
+  // );
 
   return (
     <View style={styles.hugContainer}>
@@ -146,18 +166,20 @@ export default function HugButton({
         <Animated.View style={styles.faceWrapper}>
           <Animated.View style={hugContainerStyle}>
             <HugArms hugProgress={hugProgress} />
-            <Animated.View style={faceAnimatedStyle}>
-              <Face
-                hugProgress={hugProgress}
-                userAvatar={user?.avatar || "male"}
-              />
-              <SprinklesController
-                active={
-                  hugPhase === "formed" ||
-                  hugPhase === "hugging" ||
-                  hugPhase === "pulling"
-                }
-              />
+            <Animated.View style={faceBreathingAnimatedStyle}>
+              <Animated.View style={faceAnimatedStyle}>
+                <Face
+                  hugProgress={hugProgress}
+                  userAvatar={user?.avatar || "male"}
+                />
+                <SprinklesController
+                  active={
+                    hugPhase === "formed" ||
+                    hugPhase === "hugging" ||
+                    hugPhase === "pulling"
+                  }
+                />
+              </Animated.View>
             </Animated.View>
           </Animated.View>
         </Animated.View>
