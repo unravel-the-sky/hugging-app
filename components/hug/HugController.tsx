@@ -83,7 +83,7 @@ export default function HugController({
         fromName: user?.displayName || "",
         toName: toDisplayName,
         to: toUid,
-        fromAvatar: user?.avatar,
+        fromAvatar: user?.avatar || "male",
         note,
         seenAt: undefined, // toa avoid crash
       };

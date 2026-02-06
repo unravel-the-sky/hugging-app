@@ -12,6 +12,8 @@ import { router } from "expo-router";
 import { getFriendsForCurrentUser } from "@/lib/handleFriends";
 import HugNoteModal from "@/components/hug/HugNoteModal";
 import Loader from "@/components/ui/Loader";
+import { auth } from "@/lib/firebaseConfig";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 export type Friend = {
   uid: string;
@@ -25,15 +27,18 @@ export default function FriendsListScreen() {
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [noteModalVisible, setNoteModalVisible] = useState(false);
 
-  useEffect(() => {
-    loadFriends();
-  }, []);
+  const { user, loading } = useCurrentUser();
 
-  const loadFriends = async () => {
+  useEffect(() => {
+    if (user) loadFriends(user?.avatar || "");
+  }, [user]);
+
+  const loadFriends = async (userId: string) => {
     try {
       // the shiiiit
-      const friendsForCurrentUser =
-        (await getFriendsForCurrentUser()) as Friend[];
+      const friendsForCurrentUser = (await getFriendsForCurrentUser(
+        userId,
+      )) as Friend[];
       setFriends(friendsForCurrentUser);
     } catch (error) {
       console.error("Error loading friends:", error);

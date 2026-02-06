@@ -65,7 +65,7 @@ export async function addFriendByUsername(username: string) {
   }
 }
 
-export async function getFriendsForCurrentUser() {
+export async function getFriendsForCurrentUser(userId?: string) {
   // get current user
   const currentUser = auth.currentUser;
   if (!currentUser) {
@@ -100,7 +100,7 @@ export async function getFriendsForCurrentUser() {
     displayName: doc.data()?.displayName || "",
   }));
 
-  console.log("whoa, all users data: ", data);
+  // console.log("whoa, all users data: ", data);
 
   return data;
 }

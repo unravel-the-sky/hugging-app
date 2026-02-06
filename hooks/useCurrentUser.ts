@@ -1,7 +1,7 @@
 import { User } from "@/lib/createUser";
 import { auth, db } from "@/lib/firebaseConfig";
 import { registerForPushNotifications } from "@/lib/registerForPushNotifications";
-import { onAuthStateChanged, signInAnonymously } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 
@@ -37,20 +37,24 @@ export function useCurrentUser() {
 
   useEffect(() => {
     let unsubscribeUserDoc: (() => void) | undefined;
+    let missingTimeout: number | null = null;
 
-    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
-      setLoading(true);
-      const userId = firebaseUser
-        ? firebaseUser.uid
-        : (await signInAnonymously(auth)).user.uid;
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      console.log("firebaseUser: ", firebaseUser?.uid);
+      if (!firebaseUser) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
 
-      const userRef = doc(db, "users", userId);
+      const userRef = doc(db, "users", firebaseUser.uid);
 
-      // some firebase snapshot magic, thanks to chatgbt
       unsubscribeUserDoc = onSnapshot(userRef, (snap) => {
         if (snap.exists()) {
-          setUser({ ...(snap.data() as User) });
+          console.log("snap exists");
+          setUser(snap.data() as User);
         } else {
+          console.log("snap does not exist");
           setUser(null);
         }
         setLoading(false);
@@ -59,24 +63,10 @@ export function useCurrentUser() {
 
     return () => {
       unsubscribeAuth();
-      unsubscribeUserDoc?.(); // optional chaining apparently. call the functoin if it exists as function, or else do nothing as it can be undefined as well
+      unsubscribeUserDoc?.();
+      if (missingTimeout) clearTimeout(missingTimeout);
     };
   }, []);
 
-  // useEffect(() => {
-  //   const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
-  //     const userId = firebaseUser
-  //       ? firebaseUser.uid
-  //       : (await signInAnonymously(auth)).user.uid;
-  //     const currentUser = await getUserFromCollection(userId);
-  //     if (currentUser) {
-  //       setUser(currentUser);
-  //     }
-  //     setLoading(false);
-  //   });
-
-  //   return unsub;
-  // }, []);
-
-  return { user, loading, connected: !!user };
+  return { user, loading };
 }

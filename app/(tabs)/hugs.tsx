@@ -104,7 +104,13 @@ export default function HugsListScreen() {
       </View>
 
       <View style={styles.hugInfo}>
-        <Text style={styles.hugFrom}>@{item.fromName}</Text>
+        <Text style={styles.hugFrom}>
+          {item.fromName}
+          &nbsp;
+          <Text style={{ fontWeight: "500", color: "#757575" }}>
+            sent a hug
+          </Text>
+        </Text>
         <Text style={styles.hugTime}>
           {formatTimestamp(item.createdAt!.toDate())}
         </Text>

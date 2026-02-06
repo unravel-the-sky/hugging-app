@@ -2,10 +2,11 @@ import Loader from "@/components/ui/Loader";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useIncomingHugs } from "@/hooks/useIncomingHugs";
 import { auth } from "@/lib/firebaseConfig";
-import { Tabs, router } from "expo-router";
+import { Tabs, router, useSegments } from "expo-router";
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import SetupScreen from "../setup";
 
 export default function TabsLayout() {
   const { user, loading } = useCurrentUser();
@@ -13,23 +14,42 @@ export default function TabsLayout() {
 
   const currentUser = auth.currentUser;
   const uid = currentUser?.uid;
-  const { hugs, isLoading } = useIncomingHugs(uid);
+  const { hugs, isLoading: isLoadingHugs } = useIncomingHugs(uid);
 
-  console.log(`TabsLayout is called, ${loading} and ${isLoading}`);
+  const segments = useSegments();
+  const isOnSetup = segments[0] === "setup";
+
+  console.log(
+    `TabsLayout is called, ${loading} and ${user} and userId: ${uid}`,
+  );
+  // useEffect(() => {
+  //   if (loading) return;
+
+  //   if (user === null && !isOnSetup) {
+  //     // check the asyncstorage here
+
+  //     router.replace("/setup");
+  //     console.log("we got here now, fordi 404 not snapshot");
+  //     return;
+  //   }
+
+  //   if (user) {
+  //     console.log("yay all good");
+  //   }
+  // }, [isOnSetup, loading, user]);
+
   useEffect(() => {
-    if (!loading && !isLoading) {
-      // console.log("auth user is: ", user);
-
-      // console.log("user is: ", user);
-      if (user === null) router.replace("/setup");
-
+    if (!isLoadingHugs) {
       const unSeenHugsCount = hugs.filter((item) => !item.seenAt).length;
-      console.log("unSeenHugsCount: ", unSeenHugsCount);
       setUnreadHugsCount(unSeenHugsCount);
     }
-  }, [hugs, isLoading, loading, user]);
+  }, [hugs, isLoadingHugs]);
 
   // console.log("user from firebase is: ", user);
+
+  if (!loading && user === null && !isOnSetup) {
+    return <SetupScreen />;
+  }
 
   if (loading) {
     return <Loader />;

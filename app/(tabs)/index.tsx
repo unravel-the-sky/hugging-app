@@ -1,7 +1,6 @@
 import HugController from "@/components/hug/HugController";
 import { AppText } from "@/components/ui/AppText";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { Hug, SendableHug } from "@/lib/handleHugs";
+import { SendableHug } from "@/lib/handleHugs";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";

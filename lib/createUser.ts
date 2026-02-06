@@ -60,7 +60,7 @@ export async function createUserWithUsername(
   const normalized = normalizeUsername(displayName); // just in case
 
   console.log("we are at createUserWithUsername");
-  console.log("auth.currentUser: ", auth.currentUser);
+  // console.log("auth.currentUser: ", auth.currentUser);
   const authResult = auth.currentUser
     ? { user: auth.currentUser }
     : await signInAnonymously(auth);
