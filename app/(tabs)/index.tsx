@@ -1,5 +1,7 @@
 import HugController from "@/components/hug/HugController";
+import { AppButton } from "@/components/ui/AppButton";
 import { AppText } from "@/components/ui/AppText";
+import { Logo } from "@/components/ui/Logo";
 import { SendableHug } from "@/lib/handleHugs";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -85,22 +87,26 @@ export default function HomeScreen() {
             <Text>
               Do you feel like you need a hug? r would you like to send one hug?
             </Text>
+            <View
+              style={{
+                display: "flex",
+                width: "100%",
+                padding: 8,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <Logo />
+            </View>
             <Text>
               Then click the button, choose a friend and send some luuuvvv
             </Text>
-            <Text>doooo iiitttt</Text>
             {/* Action Buttons */}
             <View style={styles.actionsContainer}>
-              <Pressable
+              <AppButton
                 onPress={handleInitiateHug}
-                style={({ pressed }) => [
-                  styles.actionButton,
-                  styles.hugBackButton,
-                  pressed && styles.buttonPressed,
-                ]}
-              >
-                <AppText style={styles.hugBackText}>Send a hug 🥹</AppText>
-              </Pressable>
+                buttonText="Send a hug 🥹"
+              />
             </View>
           </View>
         </View>
@@ -164,37 +170,5 @@ const styles = StyleSheet.create({
   actionsContainer: {
     flexDirection: "row",
     width: "100%",
-  },
-  actionButton: {
-    flex: 1,
-    aspectRatio: 3,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  hugBackButton: {
-    backgroundColor: "#ffbf6b",
-    borderColor: "#d19b53",
-    borderWidth: 5,
-    borderStyle: "dashed",
-  },
-  buttonPressed: {
-    transform: [{ translateY: 2 }],
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    elevation: 1,
-  },
-  hugBackEmoji: {
-    fontSize: 48,
-    marginBottom: 8,
-  },
-  hugBackText: {
-    fontSize: 16,
-    fontWeight: "bold",
   },
 });

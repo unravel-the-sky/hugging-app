@@ -1,4 +1,5 @@
 import AvatarImage from "@/components/avatar/AvatarImage";
+import { AppButton } from "@/components/ui/AppButton";
 import Loader from "@/components/ui/Loader";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { updateUserAvatar } from "@/lib/createUser";
@@ -135,15 +136,11 @@ export default function ProfileScreen() {
         </View>
 
         {/* Save Button */}
-        <TouchableOpacity
-          style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+        <AppButton
           onPress={handleSaveAvatar}
           disabled={isSaving}
-        >
-          <Text style={styles.saveButtonText}>
-            {isSaving ? "Saving..." : "Save Avatar"}
-          </Text>
-        </TouchableOpacity>
+          buttonText={isSaving ? "Saving..." : "Save Avatar"}
+        />
       </ScrollView>
     </View>
   );

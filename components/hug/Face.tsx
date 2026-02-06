@@ -39,6 +39,11 @@ export function Face({ hugProgress, userAvatar }: FaceProps) {
     ),
   }));
 
+  /**
+   * TODO: for face
+   * standardise the components, divide them into, face outline, eyes, eye brows, mouth, hair, cheeks
+   */
+
   const cheekAnimatedProps = useAnimatedProps(() => {
     return {
       transform: [
@@ -318,31 +323,6 @@ export function Face({ hugProgress, userAvatar }: FaceProps) {
         d="M138.782 81.2595C138.262 81.4195 137.728 81.532 137.188 81.5955L133.286 82.0546C131.11 82.3106 129.074 80.9365 128.497 78.8226C128.18 77.6583 128.351 76.4149 128.972 75.38L129.441 74.5986C130.43 72.9499 132.092 71.8151 133.991 71.5113C135.659 71.2445 137.258 71 137.5 71C137.542 71 137.638 71.0072 137.779 71.0205C143.239 71.5327 148.531 73.1809 153.5 75.5L162.5 79.5L163.547 80.1283C166.165 81.6992 168.513 83.6818 170.5 86L172.5 89L174.087 91.856C174.665 92.8962 174.743 94.1413 174.302 95.2461L174.122 95.6943C174.042 95.896 173.921 96.0792 173.767 96.2328C173.091 96.9088 171.978 96.8471 171.38 96.1006L168.832 92.9145C168.611 92.6389 168.363 92.3861 168.092 92.1602L165.21 89.7585C161.433 86.6108 157.13 84.1537 152.5 82.5L149.527 81.3851C146.268 80.1629 142.695 80.0552 139.369 81.0789L138.782 81.2595Z"
         fill={DARK_FACIAL_HAIR}
       />
-
-      <Defs>
-        <RadialGradient
-          id="paint0_radial_123_180"
-          cx="0"
-          cy="0"
-          r="1"
-          gradientTransform="matrix(-53.3191 116.536 -100.94 -73.2582 116.5 134.5)"
-          gradientUnits="userSpaceOnUse"
-        >
-          <Stop stop-color="#FE7735" />
-          <Stop offset="1" stop-color={MAIN_COLOR} stop-opacity="0" />
-        </RadialGradient>
-        <RadialGradient
-          id="paint1_radial_123_180"
-          cx="0"
-          cy="0"
-          r="1"
-          gradientTransform="matrix(-53.3191 116.536 -100.94 -73.2582 116.5 134.5)"
-          gradientUnits="userSpaceOnUse"
-        >
-          <Stop stop-color="#FE7735" />
-          <Stop offset="1" stop-color={MAIN_COLOR} stop-opacity="0" />
-        </RadialGradient>
-      </Defs>
     </Svg>
   );
 
@@ -380,4 +360,33 @@ export function Face({ hugProgress, userAvatar }: FaceProps) {
   //     <Path />
   //   </Svg>
   // );
+}
+
+export function SvgEffect() {
+  return (
+    <Defs>
+      <RadialGradient
+        id="paint0_radial_123_180"
+        cx="0"
+        cy="0"
+        r="1"
+        gradientTransform="matrix(-53.3191 116.536 -100.94 -73.2582 116.5 134.5)"
+        gradientUnits="userSpaceOnUse"
+      >
+        <Stop stop-color="#FE7735" />
+        <Stop offset="1" stop-color={MAIN_COLOR} stop-opacity="0" />
+      </RadialGradient>
+      <RadialGradient
+        id="paint1_radial_123_180"
+        cx="0"
+        cy="0"
+        r="1"
+        gradientTransform="matrix(-53.3191 116.536 -100.94 -73.2582 116.5 134.5)"
+        gradientUnits="userSpaceOnUse"
+      >
+        <Stop stop-color="#FE7735" />
+        <Stop offset="1" stop-color={MAIN_COLOR} stop-opacity="0" />
+      </RadialGradient>
+    </Defs>
+  );
 }
