@@ -373,8 +373,8 @@ export function SvgEffect() {
         gradientTransform="matrix(-53.3191 116.536 -100.94 -73.2582 116.5 134.5)"
         gradientUnits="userSpaceOnUse"
       >
-        <Stop stop-color="#FE7735" />
-        <Stop offset="1" stop-color={MAIN_COLOR} stop-opacity="0" />
+        <Stop stopColor="#FE7735" />
+        <Stop offset="1" stopColor={MAIN_COLOR} stopOpacity="0" />
       </RadialGradient>
       <RadialGradient
         id="paint1_radial_123_180"
@@ -384,8 +384,8 @@ export function SvgEffect() {
         gradientTransform="matrix(-53.3191 116.536 -100.94 -73.2582 116.5 134.5)"
         gradientUnits="userSpaceOnUse"
       >
-        <Stop stop-color="#FE7735" />
-        <Stop offset="1" stop-color={MAIN_COLOR} stop-opacity="0" />
+        <Stop stopColor="#FE7735" />
+        <Stop offset="1" stopColor={MAIN_COLOR} stopOpacity="0" />
       </RadialGradient>
     </Defs>
   );
