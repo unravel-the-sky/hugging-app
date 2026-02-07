@@ -11,7 +11,7 @@ export const savePushTokenOnUser = async (userId: string) => {
   console.log("returned token is: ", token);
   if (token) {
     console.log("token to be set into user is: ", token);
-    await updateDoc(doc(db, "user", userId), {
+    await updateDoc(doc(db, "users", userId), {
       pushToken: token,
     });
   }

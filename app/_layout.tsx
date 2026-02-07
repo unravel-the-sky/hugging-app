@@ -1,8 +1,8 @@
 import { savePushTokenOnUser, useCurrentUser } from "@/hooks/useCurrentUser";
 import { auth } from "@/lib/firebaseConfig";
 import { useFonts } from "expo-font";
-import { SplashScreen, Stack } from "expo-router";
-import { signInAnonymously } from "firebase/auth";
+import * as Notifications from "expo-notifications";
+import { SplashScreen, Stack, router } from "expo-router";
 import { useEffect, useRef } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -27,11 +27,23 @@ export default function RootLayout() {
     if (currentUser) savePushTokenOnUser(currentUser.uid);
   }, [loading, user]);
 
-  // useEffect(() => {
-  //   if (!auth.currentUser) {
-  //     signInAnonymously(auth);
-  //   }
-  // }, []);
+  useEffect(() => {
+    console.log("HALLOOOO im registering the listener here");
+    const sub = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const hugId = response.notification.request.content.data?.hugId;
+        console.log(
+          "whoa hug is received, then making deepling for hugId: ",
+          hugId,
+        );
+        if (!hugId) return;
+
+        router.push(`/hugs?hugId=${hugId}`);
+      },
+    );
+
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     if (loaded || error) {

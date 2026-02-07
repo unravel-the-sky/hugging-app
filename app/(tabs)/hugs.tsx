@@ -3,9 +3,9 @@ import { useIncomingHugs } from "@/hooks/useIncomingHugs";
 import { auth, db } from "@/lib/firebaseConfig";
 import { Hug } from "@/lib/handleHugs";
 import { formatTimestamp } from "@/lib/util";
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { doc, Timestamp, updateDoc } from "firebase/firestore";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -19,6 +19,8 @@ export default function HugsListScreen() {
   const currentUser = auth.currentUser;
   const uid = currentUser?.uid;
   const { isLoading, hugs } = useIncomingHugs(uid);
+
+  const { hugId } = useLocalSearchParams();
 
   const markHugsAsSeen = async (unseenHugs: Hug[]) => {
     try {
@@ -59,6 +61,13 @@ export default function HugsListScreen() {
   //     }
   //   }, [hugs]),
   // );
+
+  useEffect(() => {
+    if (!hugId) return;
+
+    const hug = hugs.find((item) => item.id === hugId);
+    setSeeHug(hug);
+  }, [hugId, hugs]);
 
   const [seeHug, setSeeHug] = useState<Hug | undefined>(undefined);
 

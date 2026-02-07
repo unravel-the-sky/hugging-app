@@ -37,12 +37,16 @@ admin.initializeApp();
 const db = admin.firestore();
 
 export const onHugCreated = onDocumentCreated("hugs/{hugId}", async (event) => {
+  console.log("🔥🔥🔥 onHugCreated FIRED");
+  console.log("hugId:", event.params.hugId);
+
   const snap = event.data;
   if (!snap) return;
 
   const hug = snap.data();
   if (!hug?.to) return;
 
+  // get user
   const userSnap = await db.doc(`users/${hug.to}`).get();
   const user = userSnap.data();
 
@@ -51,17 +55,18 @@ export const onHugCreated = onDocumentCreated("hugs/{hugId}", async (event) => {
     return;
   }
 
+  // send the msgggg, whoaa!
   const message = {
     to: user.pushToken,
     sound: "default",
-    title: "🤍 You got a hug",
+    title: "You got a hug 🥹",
     body: `${hug.fromName ?? "Someone"} sent you a hug`,
     data: {
       hugId: snap.id,
     },
   };
 
-  await fetch("https://exp.host/--/api/v2/push/send", {
+  const json = await fetch("https://exp.host/--/api/v2/push/send", {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -69,4 +74,5 @@ export const onHugCreated = onDocumentCreated("hugs/{hugId}", async (event) => {
     },
     body: JSON.stringify(message),
   });
+  console.log("Expo push response:", json);
 });
