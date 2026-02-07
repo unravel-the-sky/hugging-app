@@ -17,6 +17,7 @@ export function Logo() {
   const lowerArmTranslateX = useSharedValue(0);
   const upperArmTranslateX = useSharedValue(5);
   const lowerArmRotate = useSharedValue(0);
+  const upperArmRotate = useSharedValue(0);
 
   useEffect(() => {
     lowerArmTranslateX.value = withRepeat(
@@ -39,7 +40,16 @@ export function Logo() {
 
     lowerArmRotate.value = withRepeat(
       withTiming(-2, {
-        duration: 600,
+        duration: 1200,
+        easing: Easing.inOut(Easing.ease),
+      }),
+      -1,
+      true,
+    );
+
+    upperArmRotate.value = withRepeat(
+      withTiming(2, {
+        duration: 1600,
         easing: Easing.inOut(Easing.ease),
       }),
       -1,
@@ -49,17 +59,17 @@ export function Logo() {
 
   const lowerArmAnimatedProps = useAnimatedProps(() => {
     return {
-      transform: [
-        { translateX: lowerArmTranslateX.value },
-        {
-          translateY: -lowerArmTranslateX.value * 0.3,
-        },
-      ],
+      transform: `rotate(${lowerArmRotate.value} 0 0)`,
+      // { translateX: lowerArmTranslateX.value },
+      // {
+      //   translateY: -lowerArmTranslateX.value * 0.3,
+      // },
     };
   });
   const upperArmAnimatedProps = useAnimatedProps(() => {
     return {
-      transform: [{ translateX: upperArmTranslateX.value }],
+      transform: `rotate(${upperArmRotate.value} 200 100)`,
+      // transform: [{ translateX: upperArmTranslateX.value }],
     };
   });
 

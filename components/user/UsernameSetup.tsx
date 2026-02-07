@@ -68,7 +68,7 @@ export default function UsernameSetup({ onUsernameSet }: UsernameSetupProps) {
         <Text style={styles.label}>Username</Text>
         <TextInput
           style={styles.input}
-          placeholder="your_username"
+          placeholder="username"
           placeholderTextColor="#999"
           value={username}
           onChangeText={setUsername}
