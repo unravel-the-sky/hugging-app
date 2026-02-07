@@ -5,7 +5,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 
-const savePushTokenOnUser = async (userId: string) => {
+export const savePushTokenOnUser = async (userId: string) => {
   console.log("userId received, registering for push notifications");
   const token = await registerForPushNotifications();
   console.log("returned token is: ", token);

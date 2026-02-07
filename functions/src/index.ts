@@ -43,7 +43,7 @@ export const onHugCreated = onDocumentCreated("hugs/{hugId}", async (event) => {
   const hug = snap.data();
   if (!hug?.to) return;
 
-  const userSnap = await db.doc(`user/${hug.to}`).get();
+  const userSnap = await db.doc(`users/${hug.to}`).get();
   const user = userSnap.data();
 
   if (!user?.pushToken) {
