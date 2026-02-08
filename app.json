@@ -13,7 +13,8 @@
       "bundleIdentifier": "com.anonymous.huggingapp",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "icon": "./assets/ios-app.icon/"
     },
     "android": {
       "adaptiveIcon": {

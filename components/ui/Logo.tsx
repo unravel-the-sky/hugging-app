@@ -59,17 +59,15 @@ export function Logo() {
 
   const lowerArmAnimatedProps = useAnimatedProps(() => {
     return {
-      transform: `rotate(${lowerArmRotate.value} 0 0)`,
-      // { translateX: lowerArmTranslateX.value },
-      // {
-      //   translateY: -lowerArmTranslateX.value * 0.3,
-      // },
+      // transform: `rotate(${lowerArmRotate.value} 0 0)`,
+      transform: [{ rotate: `${lowerArmRotate.value}deg` }],
     };
   });
   const upperArmAnimatedProps = useAnimatedProps(() => {
     return {
-      transform: `rotate(${upperArmRotate.value} 200 100)`,
+      // transform: `rotate(${upperArmRotate.value} 200 100)`,
       // transform: [{ translateX: upperArmTranslateX.value }],
+      transform: [{ rotate: `${upperArmRotate.value}deg` }],
     };
   });
 
@@ -99,7 +97,7 @@ export function Logo() {
       />
 
       {/* LOWER ARM START */}
-      <AnimatedG animatedProps={lowerArmAnimatedProps}>
+      <AnimatedG animatedProps={lowerArmAnimatedProps} originX={0} originY={0}>
         <AnimatedPath
           d="M939.762 1039.83C947.01 1121.77 886.34 1150.2 796.922 1150.2C707.504 1150.2 674.956 1110.55 674.956 1053.74C674.956 996.929 747.444 961.703 836.862 961.703C926.28 961.703 938.806 1029.02 939.762 1039.83Z"
           fill="#FFA87E"
@@ -115,7 +113,11 @@ export function Logo() {
       {/* LOWER ARM END */}
 
       {/* HIGHER ARM START */}
-      <AnimatedG animatedProps={upperArmAnimatedProps}>
+      <AnimatedG
+        animatedProps={upperArmAnimatedProps}
+        originX={200}
+        originY={100}
+      >
         <AnimatedPath
           d="M1001.31 754.283C1060.06 773.245 1059.74 852.441 1008.62 887.055C959.989 919.985 891.5 945 820.993 945C703.696 945 661 902.295 661 841.115C661 779.935 774.798 742 873.385 742C930.519 742 970.761 744.423 1001.31 754.283Z"
           fill="#FFA87E"
