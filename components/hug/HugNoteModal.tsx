@@ -1,15 +1,26 @@
-import { Friend } from "@/app/(tabs)/friends";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  View,
+  Dimensions,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
   Text,
   TextInput,
-  StyleSheet,
   TouchableOpacity,
-  Modal,
-  KeyboardAvoidingView,
-  Platform,
+  View,
 } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  Easing,
+} from "react-native-reanimated";
+import { scheduleOnRN } from "react-native-worklets";
+
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+const ANIMATION_DURATION = 300;
 
 interface HugNoteModalProps {
   visible: boolean;
@@ -27,30 +38,83 @@ export default function HugNoteModal({
   onCancel,
 }: HugNoteModalProps) {
   const [note, setNote] = useState("");
+  const [isRendered, setIsRendered] = useState(visible);
   const maxLength = 256;
 
+  const backdropOpacity = useSharedValue(0);
+  const translateY = useSharedValue(SCREEN_HEIGHT);
+
+  useEffect(() => {
+    if (visible) {
+      setIsRendered(true);
+      backdropOpacity.value = withTiming(1, {
+        duration: ANIMATION_DURATION,
+        easing: Easing.out(Easing.cubic),
+      });
+      translateY.value = withTiming(0, {
+        duration: ANIMATION_DURATION,
+        easing: Easing.out(Easing.cubic),
+      });
+    } else {
+      backdropOpacity.value = withTiming(0, {
+        duration: ANIMATION_DURATION,
+        easing: Easing.in(Easing.cubic),
+      });
+      translateY.value = withTiming(
+        SCREEN_HEIGHT,
+        {
+          duration: ANIMATION_DURATION,
+          easing: Easing.in(Easing.cubic),
+        },
+        (finished) => {
+          if (finished) {
+            scheduleOnRN(setIsRendered, false);
+          }
+        },
+      );
+    }
+  }, [backdropOpacity, translateY, visible]);
+
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: backdropOpacity.value,
+  }));
+
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
   const handleContinue = () => {
-    onContinue(friendName, friendUid, note.trim());
-    setNote(""); // Clear for next time
+    onContinue(note.trim(), friendName, friendUid);
+    setNote("");
   };
 
   const handleCancel = () => {
-    setNote(""); // Clear on cancel
+    setNote("");
     onCancel();
   };
 
   return (
     <Modal
-      visible={visible}
-      animationType="fade"
+      visible={isRendered}
+      animationType="none"
       transparent={true}
       onRequestClose={handleCancel}
+      statusBarTranslucent
     >
+      {/* Animated backdrop */}
+      <Animated.View style={[styles.backdrop, backdropStyle]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={handleCancel} />
+      </Animated.View>
+
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.overlay}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.keyboardWrapper}
+        pointerEvents="box-none"
       >
-        <View style={styles.container}>
+        <Animated.View style={[styles.sheet, sheetStyle]}>
+          {/* Grabber handle */}
+          <View style={styles.handle} />
+
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.emoji}>💌</Text>
@@ -67,16 +131,14 @@ export default function HugNoteModal({
               placeholderTextColor="#999"
               value={note}
               onChangeText={setNote}
-              multiline={true}
+              multiline
               maxLength={maxLength}
               textAlignVertical="top"
-              autoFocus={true}
+              autoFocus
             />
-            <View style={styles.characterCount}>
-              <Text style={styles.characterCountText}>
-                {note.length} / {maxLength}
-              </Text>
-            </View>
+            <Text style={styles.characterCountText}>
+              {note.length} / {maxLength}
+            </Text>
           </View>
 
           {/* Action Buttons */}
@@ -95,37 +157,47 @@ export default function HugNoteModal({
               <Text style={styles.continueButtonText}>Continue</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
-  container: {
+  keyboardWrapper: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  sheet: {
     backgroundColor: "#FAFAFA",
-    borderRadius: 24,
-    padding: 32,
-    width: "100%",
-    maxWidth: 400,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === "ios" ? 40 : 24,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#DDD",
+    alignSelf: "center",
+    marginBottom: 20,
   },
   header: {
     alignItems: "center",
     marginBottom: 24,
   },
   emoji: {
-    fontSize: 64,
-    marginBottom: 16,
+    fontSize: 56,
+    marginBottom: 12,
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "bold",
     color: "#1A1A1A",
     marginBottom: 4,
@@ -152,15 +224,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#1A1A1A",
     minHeight: 80,
-    maxHeight: 200,
-  },
-  characterCount: {
-    alignItems: "flex-end",
-    marginTop: 8,
+    maxHeight: 160,
   },
   characterCountText: {
     fontSize: 12,
     color: "#999",
+    alignSelf: "flex-end",
+    marginTop: 8,
   },
   actionsContainer: {
     flexDirection: "row",
@@ -168,8 +238,8 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 14,
+    paddingVertical: 16,
     alignItems: "center",
   },
   cancelButton: {
@@ -177,7 +247,7 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "600",
     color: "#666",
   },
   continueButton: {
