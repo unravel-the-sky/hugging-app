@@ -26,7 +26,7 @@ interface HugNoteModalProps {
   visible: boolean;
   friendName: string;
   friendUid: string;
-  onContinue: (note: string, friendName: string, friendUid: string) => void;
+  onContinue: (friendName: string, friendUid: string, note: string) => void;
   onCancel: () => void;
 }
 
@@ -84,7 +84,7 @@ export default function HugNoteModal({
   }));
 
   const handleContinue = () => {
-    onContinue(note.trim(), friendName, friendUid);
+    onContinue(friendName, friendUid, note.trim());
     setNote("");
   };
 
