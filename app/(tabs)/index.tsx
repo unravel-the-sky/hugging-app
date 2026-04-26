@@ -83,7 +83,7 @@ export default function HomeScreen() {
       ) : (
         <View style={styles.overlay}>
           <View style={styles.container}>
-            <AppText>Welcome to Hug.me</AppText>
+            <AppText>Welcome to Hug.me!</AppText>
             <Text>
               Do you feel like you need a hug? Or would you like to send a hug?
               🥹

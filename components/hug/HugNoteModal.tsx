@@ -134,7 +134,6 @@ export default function HugNoteModal({
               multiline
               maxLength={maxLength}
               textAlignVertical="top"
-              autoFocus
             />
             <Text style={styles.characterCountText}>
               {note.length} / {maxLength}
