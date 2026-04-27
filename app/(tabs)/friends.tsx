@@ -33,6 +33,10 @@ export default function FriendsListScreen() {
     if (user) loadFriends(user?.avatar || "");
   }, [user]);
 
+  useEffect(() => {
+    console.log("noteModalVisible changed: ", noteModalVisible);
+  }, [noteModalVisible]);
+
   const loadFriends = async (userId: string) => {
     try {
       // the shiiiit

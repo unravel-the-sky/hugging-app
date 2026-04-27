@@ -1,26 +1,19 @@
-import React, { useEffect, useState } from "react";
+import type { BottomSheetBackdropProps } from "@gorhom/bottom-sheet";
+import BottomSheet, {
+  BottomSheetBackdrop,
+  BottomSheetTextInput,
+  BottomSheetView,
+  useBottomSheetSpringConfigs,
+} from "@gorhom/bottom-sheet";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Dimensions,
-  KeyboardAvoidingView,
-  Modal,
+  Keyboard,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-  Easing,
-} from "react-native-reanimated";
-import { scheduleOnRN } from "react-native-worklets";
-
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
-const ANIMATION_DURATION = 300;
 
 interface HugNoteModalProps {
   visible: boolean;
@@ -38,154 +31,126 @@ export default function HugNoteModal({
   onCancel,
 }: HugNoteModalProps) {
   const [note, setNote] = useState("");
-  const [isRendered, setIsRendered] = useState(visible);
+  const sheetRef = useRef<BottomSheet>(null);
   const maxLength = 256;
 
-  const backdropOpacity = useSharedValue(0);
-  const translateY = useSharedValue(SCREEN_HEIGHT);
+  // const { expand, collapse, close } = useBottomSheet();
+  const animationConfigs = useBottomSheetSpringConfigs({
+    damping: 80,
+    overshootClamping: true,
+    stiffness: 500,
+  });
 
   useEffect(() => {
     if (visible) {
-      setIsRendered(true);
-      backdropOpacity.value = withTiming(1, {
-        duration: ANIMATION_DURATION,
-        easing: Easing.out(Easing.cubic),
-      });
-      translateY.value = withTiming(0, {
-        duration: ANIMATION_DURATION,
-        easing: Easing.out(Easing.cubic),
-      });
+      sheetRef.current?.expand();
     } else {
-      backdropOpacity.value = withTiming(0, {
-        duration: ANIMATION_DURATION,
-        easing: Easing.in(Easing.cubic),
-      });
-      translateY.value = withTiming(
-        SCREEN_HEIGHT,
-        {
-          duration: ANIMATION_DURATION,
-          easing: Easing.in(Easing.cubic),
-        },
-        (finished) => {
-          if (finished) {
-            scheduleOnRN(setIsRendered, false);
-          }
-        },
-      );
+      sheetRef.current?.close();
     }
-  }, [backdropOpacity, translateY, visible]);
-
-  const backdropStyle = useAnimatedStyle(() => ({
-    opacity: backdropOpacity.value,
-  }));
-
-  const sheetStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-  }));
+  }, [visible]);
 
   const handleContinue = () => {
     onContinue(friendName, friendUid, note.trim());
     setNote("");
+    sheetRef.current?.close();
   };
 
-  const handleCancel = () => {
+  const handleClose = () => {
+    console.log("Sheet closed, resetting note and calling onCancel");
+    Keyboard.dismiss();
     setNote("");
     onCancel();
   };
 
+  const renderBackdrop = useCallback(
+    (props: BottomSheetBackdropProps) => (
+      <BottomSheetBackdrop
+        {...props}
+        appearsOnIndex={0}
+        disappearsOnIndex={-1}
+        opacity={0.5}
+      />
+    ),
+    [],
+  );
+
   return (
-    <Modal
-      visible={isRendered}
-      animationType="none"
-      transparent={true}
-      onRequestClose={handleCancel}
-      statusBarTranslucent
+    <BottomSheet
+      ref={sheetRef}
+      index={-1}
+      enableDynamicSizing
+      enablePanDownToClose
+      onClose={handleClose}
+      backdropComponent={renderBackdrop}
+      animationConfigs={animationConfigs}
+      backgroundStyle={styles.sheetBackground}
+      handleIndicatorStyle={styles.handle}
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
     >
-      {/* Animated backdrop */}
-      <Animated.View style={[styles.backdrop, backdropStyle]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={handleCancel} />
-      </Animated.View>
+      <BottomSheetView style={styles.contentContainer}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.emoji}>💌</Text>
+          <Text style={styles.title}>Send a Hug</Text>
+          <Text style={styles.subtitle}>to @{friendName}</Text>
+        </View>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.keyboardWrapper}
-        pointerEvents="box-none"
-      >
-        <Animated.View style={[styles.sheet, sheetStyle]}>
-          {/* Grabber handle */}
-          <View style={styles.handle} />
+        {/* Note Input */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Add a note (optional)</Text>
+          <BottomSheetTextInput
+            style={styles.textInput}
+            placeholder="Write something nice..."
+            placeholderTextColor="#999"
+            value={note}
+            onChangeText={setNote}
+            multiline
+            maxLength={maxLength}
+            textAlignVertical="top"
+          />
+          <Text style={styles.characterCountText}>
+            {note.length} / {maxLength}
+          </Text>
+        </View>
 
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.emoji}>💌</Text>
-            <Text style={styles.title}>Send a Hug</Text>
-            <Text style={styles.subtitle}>to @{friendName}</Text>
-          </View>
+        {/* Action Buttons */}
+        <View style={styles.actionsContainer}>
+          <TouchableOpacity
+            style={[styles.button, styles.cancelButton]}
+            onPress={() => sheetRef.current?.close()}
+          >
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
 
-          {/* Note Input */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Add a note (optional)</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="Write something nice..."
-              placeholderTextColor="#999"
-              value={note}
-              onChangeText={setNote}
-              multiline
-              maxLength={maxLength}
-              textAlignVertical="top"
-            />
-            <Text style={styles.characterCountText}>
-              {note.length} / {maxLength}
-            </Text>
-          </View>
-
-          {/* Action Buttons */}
-          <View style={styles.actionsContainer}>
-            <TouchableOpacity
-              style={[styles.button, styles.cancelButton]}
-              onPress={handleCancel}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.button, styles.continueButton]}
-              onPress={handleContinue}
-            >
-              <Text style={styles.continueButtonText}>Continue</Text>
-            </TouchableOpacity>
-          </View>
-        </Animated.View>
-      </KeyboardAvoidingView>
-    </Modal>
+          <TouchableOpacity
+            style={[styles.button, styles.continueButton]}
+            onPress={handleContinue}
+          >
+            <Text style={styles.continueButtonText}>Continue</Text>
+          </TouchableOpacity>
+        </View>
+      </BottomSheetView>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-  keyboardWrapper: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  sheet: {
+  sheetBackground: {
     backgroundColor: "#FAFAFA",
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: Platform.OS === "ios" ? 40 : 24,
   },
   handle: {
+    backgroundColor: "#DDD",
     width: 40,
     height: 4,
-    borderRadius: 2,
-    backgroundColor: "#DDD",
-    alignSelf: "center",
-    marginBottom: 20,
+  },
+  contentContainer: {
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: Platform.OS === "ios" ? 40 : 24,
   },
   header: {
     alignItems: "center",

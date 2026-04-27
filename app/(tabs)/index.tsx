@@ -72,7 +72,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <>
       {sendableHug ? (
         <HugController
           toUid={sendableHug.to || ""}
@@ -112,7 +112,7 @@ export default function HomeScreen() {
           </View>
         </View>
       )}
-    </GestureHandlerRootView>
+    </>
   );
 }
 
