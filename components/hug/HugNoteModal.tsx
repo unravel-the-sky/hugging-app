@@ -5,7 +5,13 @@ import BottomSheet, {
   BottomSheetView,
   useBottomSheetSpringConfigs,
 } from "@gorhom/bottom-sheet";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import {
   Keyboard,
   Platform,
@@ -15,8 +21,13 @@ import {
   View,
 } from "react-native";
 
+export interface HugNoteModalRef {
+  open: () => void;
+  close: () => void;
+}
+
 interface HugNoteModalProps {
-  visible: boolean;
+  ref?: React.Ref<HugNoteModalRef>;
   friendName: string;
   friendUid: string;
   onContinue: (friendName: string, friendUid: string, note: string) => void;
@@ -24,7 +35,7 @@ interface HugNoteModalProps {
 }
 
 export default function HugNoteModal({
-  visible,
+  ref,
   friendName,
   friendUid,
   onContinue,
@@ -34,20 +45,16 @@ export default function HugNoteModal({
   const sheetRef = useRef<BottomSheet>(null);
   const maxLength = 256;
 
-  // const { expand, collapse, close } = useBottomSheet();
   const animationConfigs = useBottomSheetSpringConfigs({
     damping: 80,
     overshootClamping: true,
     stiffness: 500,
   });
 
-  useEffect(() => {
-    if (visible) {
-      sheetRef.current?.expand();
-    } else {
-      sheetRef.current?.close();
-    }
-  }, [visible]);
+  useImperativeHandle(ref, () => ({
+    open: () => sheetRef.current?.expand(),
+    close: () => sheetRef.current?.close(),
+  }));
 
   const handleContinue = () => {
     onContinue(friendName, friendUid, note.trim());
@@ -55,12 +62,17 @@ export default function HugNoteModal({
     sheetRef.current?.close();
   };
 
-  const handleClose = () => {
-    console.log("Sheet closed, resetting note and calling onCancel");
-    Keyboard.dismiss();
-    setNote("");
-    onCancel();
-  };
+  const handleSheetChanges = useCallback(
+    (index: number) => {
+      if (index === -1) {
+        console.log("Sheet closed, resetting note and calling onCancel");
+        Keyboard.dismiss();
+        setNote("");
+        onCancel();
+      }
+    },
+    [onCancel],
+  );
 
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
@@ -80,7 +92,7 @@ export default function HugNoteModal({
       index={-1}
       enableDynamicSizing
       enablePanDownToClose
-      onClose={handleClose}
+      onChange={handleSheetChanges}
       backdropComponent={renderBackdrop}
       animationConfigs={animationConfigs}
       backgroundStyle={styles.sheetBackground}

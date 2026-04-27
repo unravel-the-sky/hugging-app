@@ -1,19 +1,17 @@
-import React, { useState, useEffect } from "react";
+import HugNoteModal, { HugNoteModalRef } from "@/components/hug/HugNoteModal";
+import Loader from "@/components/ui/Loader";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { getFriendsForCurrentUser } from "@/lib/handleFriends";
+import { router } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  View,
-  Text,
+  Alert,
   FlatList,
   StyleSheet,
+  Text,
   TouchableOpacity,
-  ActivityIndicator,
-  Alert,
+  View,
 } from "react-native";
-import { router } from "expo-router";
-import { getFriendsForCurrentUser } from "@/lib/handleFriends";
-import HugNoteModal from "@/components/hug/HugNoteModal";
-import Loader from "@/components/ui/Loader";
-import { auth } from "@/lib/firebaseConfig";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 export type Friend = {
   uid: string;
@@ -28,6 +26,8 @@ export default function FriendsListScreen() {
   const [noteModalVisible, setNoteModalVisible] = useState(false);
 
   const { user, loading } = useCurrentUser();
+
+  const hugModalRef = useRef<HugNoteModalRef>(null);
 
   useEffect(() => {
     if (user) loadFriends(user?.avatar || "");
@@ -83,7 +83,7 @@ export default function FriendsListScreen() {
     // Navigate to home screen to send hug
     // TODO: You might want to pre-select this friend when sending
     setSelectedFriend(friend);
-    setNoteModalVisible(true);
+    hugModalRef.current?.open();
   };
 
   const handleContinueWithNote = (
@@ -175,7 +175,7 @@ export default function FriendsListScreen() {
       </TouchableOpacity>
 
       <HugNoteModal
-        visible={noteModalVisible}
+        ref={hugModalRef}
         friendName={selectedFriend?.displayName || ""}
         friendUid={selectedFriend?.uid || ""}
         onContinue={handleContinueWithNote}
