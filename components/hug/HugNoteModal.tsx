@@ -7,7 +7,6 @@ import BottomSheet, {
 } from "@gorhom/bottom-sheet";
 import React, {
   useCallback,
-  useEffect,
   useImperativeHandle,
   useRef,
   useState,

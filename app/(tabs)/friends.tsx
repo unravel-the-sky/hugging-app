@@ -1,5 +1,6 @@
 import HugNoteModal, { HugNoteModalRef } from "@/components/hug/HugNoteModal";
 import Loader from "@/components/ui/Loader";
+import useCreateHugWithNote from "@/hooks/useCreateHugWithNote";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getFriendsForCurrentUser } from "@/lib/handleFriends";
 import { router } from "expo-router";
@@ -22,20 +23,16 @@ export type Friend = {
 export default function FriendsListScreen() {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
-  const [noteModalVisible, setNoteModalVisible] = useState(false);
 
   const { user, loading } = useCurrentUser();
 
   const hugModalRef = useRef<HugNoteModalRef>(null);
+  const { selectedFriend, startHuggingFlow, continueHuggingFlow, cancelHug } =
+    useCreateHugWithNote();
 
   useEffect(() => {
     if (user) loadFriends(user?.avatar || "");
   }, [user]);
-
-  useEffect(() => {
-    console.log("noteModalVisible changed: ", noteModalVisible);
-  }, [noteModalVisible]);
 
   const loadFriends = async (userId: string) => {
     try {
@@ -82,28 +79,8 @@ export default function FriendsListScreen() {
   const handleSendHug = (friend: Friend) => {
     // Navigate to home screen to send hug
     // TODO: You might want to pre-select this friend when sending
-    setSelectedFriend(friend);
+    startHuggingFlow(friend);
     hugModalRef.current?.open();
-  };
-
-  const handleContinueWithNote = (
-    friendName: string,
-    friendUid: string,
-    note?: string,
-  ) => {
-    router.push({
-      pathname: "/(tabs)",
-      params: {
-        toUid: friendUid,
-        toName: friendName,
-        note: note,
-      },
-    });
-    setSelectedFriend(null);
-    setNoteModalVisible(false);
-  };
-  const handleCancelNote = () => {
-    setNoteModalVisible(false);
   };
 
   const renderFriendItem = ({ item }: { item: Friend }) => (
@@ -178,8 +155,8 @@ export default function FriendsListScreen() {
         ref={hugModalRef}
         friendName={selectedFriend?.displayName || ""}
         friendUid={selectedFriend?.uid || ""}
-        onContinue={handleContinueWithNote}
-        onCancel={handleCancelNote}
+        onContinue={continueHuggingFlow}
+        onCancel={cancelHug}
       />
     </View>
   );
