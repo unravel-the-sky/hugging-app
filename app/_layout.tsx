@@ -1,5 +1,7 @@
 import { savePushTokenOnUser, useCurrentUser } from "@/hooks/useCurrentUser";
+import { GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from "@/lib/auth-config";
 import { auth } from "@/lib/firebaseConfig";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { useFonts } from "expo-font";
 import * as Notifications from "expo-notifications";
 import { SplashScreen, Stack, router } from "expo-router";
@@ -15,6 +17,13 @@ export default function RootLayout() {
 
   const { user, loading } = useCurrentUser();
   const tokenRegisteredRef = useRef(false);
+
+  useEffect(() => {
+    GoogleSignin.configure({
+      webClientId: GOOGLE_WEB_CLIENT_ID,
+      iosClientId: GOOGLE_IOS_CLIENT_ID,
+    });
+  }, []);
 
   useEffect(() => {
     if (loading) return;
