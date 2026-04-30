@@ -1,12 +1,14 @@
-import { GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from "@/lib/auth-config";
 import { auth } from "@/lib/firebaseConfig";
 import {
   GoogleSignin,
   statusCodes,
 } from "@react-native-google-signin/google-signin";
+import * as AppleAuthentication from "expo-apple-authentication";
 import {
   GoogleAuthProvider,
   linkWithCredential,
+  OAuthProvider,
+  signInAnonymously,
   signInWithCredential,
 } from "firebase/auth";
 import React, { useState } from "react";
@@ -76,12 +78,71 @@ export default function SignInScreen() {
     Alert.alert("Sign-in failed", "Something went wrong. Please try again.");
   };
 
+  const handleAppleSignIn = async () => {
+    // handle apple signin flow
+    setIsLoading(true);
+
+    try {
+      // request signin from apple
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      // then get identity token from the response and create a firebase credential
+      const { identityToken, email, fullName } = credential;
+      if (!identityToken) {
+        throw new Error("No identity token returned from Apple");
+      }
+
+      // build firebase credential with the token
+      const provider = new OAuthProvider("apple.com");
+      const firebaseCredential = provider.credential({
+        idToken: identityToken,
+      });
+
+      // link and signin
+      const currentUser = auth.currentUser;
+
+      if (currentUser?.isAnonymous) {
+        await linkWithCredential(currentUser, firebaseCredential);
+      } else {
+        await signInWithCredential(auth, firebaseCredential);
+      }
+
+      // onAuthStateChanged will fire from useCurrentUser; routing updates automatically
+    } catch (error) {
+      handleAppleSignInError(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAppleSignInError = (error: any) => {
+    if (error?.code === "ERR_REQUEST_CANCELED") {
+      return;
+    }
+
+    if (error?.code === "auth/credential-already-in-use") {
+      Alert.alert(
+        "Account already exists",
+        "This Apple account is already linked to another Hug.me account. Please contact support.",
+      );
+      return;
+    }
+
+    console.error("Apple Sign-in error:", error);
+    Alert.alert("Sign-in failed", "Something went wrong. Please try again.");
+  };
+
   return (
     <View style={styles.content}>
       <View style={styles.header}>
         <Text style={styles.emoji}>🤗</Text>
         <Text style={styles.title}>
-          {isExistingUser ? "Welcome back" : "Welcome to Hug"}
+          {isExistingUser ? "Welcome back" : "Hello there!"}
         </Text>
         <Text style={styles.subtitle}>
           {isExistingUser
@@ -104,6 +165,29 @@ export default function SignInScreen() {
         </TouchableOpacity>
 
         {/* Apple Sign-In button slot — we'll add this in the next phase */}
+        {/* commenting out for now since we don't have apple auth configured yet, it seems to need GCIP which i don't want to bother right now */}
+        {/* {Platform.OS === "ios" && (
+          <AppleAuthentication.AppleAuthenticationButton
+            buttonType={
+              AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
+            }
+            buttonStyle={
+              AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+            }
+            cornerRadius={12}
+            style={styles.appleButton}
+            onPress={handleAppleSignIn}
+          />
+        )} */}
+
+        {__DEV__ && (
+          <TouchableOpacity
+            style={[styles.devButton, isLoading && styles.buttonDisabled]}
+            onPress={() => signInAnonymously(auth)}
+          >
+            <Text>Dev: Skip Sign-In</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -114,6 +198,24 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     paddingHorizontal: 32,
+  },
+  appleButton: {
+    width: "100%",
+    height: 56,
+  },
+  devButton: {
+    marginTop: 12,
+    backgroundColor: "#DDD",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    minHeight: 56,
+    justifyContent: "center",
+    shadowColor: "#FF6B6B",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   header: {
     alignItems: "center",

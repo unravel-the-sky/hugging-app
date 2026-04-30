@@ -7,9 +7,10 @@ import { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import SetupScreen from "../setup";
+import SignInScreen from "../sign-in";
 
 export default function TabsLayout() {
-  const { user, loading } = useCurrentUser();
+  const { authUser, user, loading } = useCurrentUser();
   const [unreadHugsCount, setUnreadHugsCount] = useState<number>(0);
 
   const currentUser = auth.currentUser;
@@ -22,21 +23,6 @@ export default function TabsLayout() {
   console.log(
     `TabsLayout is called, ${loading} and ${user} and userId: ${uid}`,
   );
-  // useEffect(() => {
-  //   if (loading) return;
-
-  //   if (user === null && !isOnSetup) {
-  //     // check the asyncstorage here
-
-  //     router.replace("/setup");
-  //     console.log("we got here now, fordi 404 not snapshot");
-  //     return;
-  //   }
-
-  //   if (user) {
-  //     console.log("yay all good");
-  //   }
-  // }, [isOnSetup, loading, user]);
 
   useEffect(() => {
     if (!isLoadingHugs) {
@@ -47,7 +33,16 @@ export default function TabsLayout() {
 
   // console.log("user from firebase is: ", user);
 
-  if (!loading && user === null && !isOnSetup) {
+  if (!authUser && !isOnSetup) {
+    return <SignInScreen />;
+  }
+
+  // extra case for anonymous users
+  if (authUser?.isAnonymous && !isOnSetup && !__DEV__) {
+    return <SignInScreen />;
+  }
+
+  if (authUser && !user && !isOnSetup) {
     return <SetupScreen />;
   }
 

@@ -15,13 +15,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyCP_AUUjewwX3k7qY75lDIBwRuvk0Tf3kk",
-  authDomain: "hug-me-app-afb44.firebaseapp.com",
-  projectId: "hug-me-app-afb44",
-  storageBucket: "hug-me-app-afb44.firebasestorage.app",
-  messagingSenderId: "150030020437",
-  appId: "1:150030020437:web:6c55ca8839b8da6eef89dc",
-  measurementId: "G-2MRHMXEE90",
+  apiKey: "AIzaSyBXoswQn-DueKJBlO8dSeNAoBRfA1AlXIE",
+  authDomain: "hugging-app.firebaseapp.com",
+  projectId: "hugging-app",
+  storageBucket: "hugging-app.firebasestorage.app",
+  messagingSenderId: "811741030521",
+  appId: "1:811741030521:web:07e655849359b4647d8ca8",
+  measurementId: "G-0YFMHPWZM4",
 };
 
 // Initialize Firebase

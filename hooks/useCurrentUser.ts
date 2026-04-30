@@ -1,7 +1,7 @@
 import { User } from "@/lib/createUser";
 import { auth, db } from "@/lib/firebaseConfig";
 import { registerForPushNotifications } from "@/lib/registerForPushNotifications";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, User as FirebaseAuthUser } from "firebase/auth";
 import { doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 
@@ -32,15 +32,22 @@ export async function getUserFromCollection(uid: string) {
 }
 
 export function useCurrentUser() {
+  const [authUser, setAuthUser] = useState<FirebaseAuthUser | null | undefined>(
+    undefined,
+  );
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let unsubscribeUserDoc: (() => void) | undefined;
-    let missingTimeout: number | null = null;
 
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
-      console.log("firebaseUser: ", firebaseUser?.uid);
+      setAuthUser(firebaseUser);
+
+      // Clean up any previous profile listener
+      unsubscribeUserDoc?.();
+      unsubscribeUserDoc = undefined;
+
       if (!firebaseUser) {
         setUser(null);
         setLoading(false);
@@ -48,15 +55,8 @@ export function useCurrentUser() {
       }
 
       const userRef = doc(db, "users", firebaseUser.uid);
-
       unsubscribeUserDoc = onSnapshot(userRef, (snap) => {
-        if (snap.exists()) {
-          console.log("snap exists");
-          setUser(snap.data() as User);
-        } else {
-          console.log("snap does not exist");
-          setUser(null);
-        }
+        setUser(snap.exists() ? (snap.data() as User) : null);
         setLoading(false);
       });
     });
@@ -64,9 +64,8 @@ export function useCurrentUser() {
     return () => {
       unsubscribeAuth();
       unsubscribeUserDoc?.();
-      if (missingTimeout) clearTimeout(missingTimeout);
     };
   }, []);
 
-  return { user, loading };
+  return { user, loading, authUser };
 }
