@@ -1,6 +1,6 @@
 import Loader from "@/components/ui/Loader";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useIncomingHugs } from "@/hooks/useIncomingHugs";
+import { useHugs } from "@/hooks/useIncomingHugs";
 import { auth } from "@/lib/firebaseConfig";
 import { Tabs, router, useSegments } from "expo-router";
 import { useEffect, useState } from "react";
@@ -15,7 +15,7 @@ export default function TabsLayout() {
 
   const currentUser = auth.currentUser;
   const uid = currentUser?.uid;
-  const { hugs, isLoading: isLoadingHugs } = useIncomingHugs(uid);
+  const { hugs, isLoading: isLoadingHugs } = useHugs(uid);
 
   const segments = useSegments();
   const isOnSetup = segments[0] === "setup";

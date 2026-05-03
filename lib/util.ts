@@ -19,5 +19,6 @@ export const formatTimestamp = (date: Date): string => {
   if (minutes < 1) return "just now";
   if (minutes < 60) return `${minutes}m ago`;
   if (hours < 24) return `${hours}h ago`;
-  return `${days}d ago`;
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString();
 };

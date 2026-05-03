@@ -1,6 +1,6 @@
 import HugViewOverlay from "@/components/hug/HugViewOverlay";
 import useCreateHugWithNote from "@/hooks/useCreateHugWithNote";
-import { useIncomingHugs } from "@/hooks/useIncomingHugs";
+import { useHugs } from "@/hooks/useIncomingHugs";
 import { auth, db } from "@/lib/firebaseConfig";
 import { Hug } from "@/lib/handleHugs";
 import { formatTimestamp } from "@/lib/util";
@@ -19,10 +19,22 @@ import {
 export default function HugsListScreen() {
   const currentUser = auth.currentUser;
   const uid = currentUser?.uid;
-  const { isLoading, hugs } = useIncomingHugs(uid);
+
+  const [seeHug, setSeeHug] = useState<Hug | undefined>(undefined);
+  const [tab, setTab] = useState<"incoming" | "outgoing">("incoming");
+
+  const { isLoading: incomingLoading, hugs: incomingHugs } = useHugs(
+    uid,
+    "incoming",
+  );
+  const { isLoading: outgoingLoading, hugs: outgoingHugs } = useHugs(
+    uid,
+    "outgoing",
+  );
+
+  const hugs = tab === "incoming" ? incomingHugs : outgoingHugs;
 
   const { hugId } = useLocalSearchParams();
-
   const { startHugWithNote } = useCreateHugWithNote();
 
   const markHugsAsSeen = async (unseenHugs: Hug[]) => {
@@ -68,11 +80,9 @@ export default function HugsListScreen() {
   useEffect(() => {
     if (!hugId) return;
 
-    const hug = hugs.find((item) => item.id === hugId);
+    const hug = incomingHugs.find((item) => item.id === hugId);
     setSeeHug(hug);
-  }, [hugId, hugs]);
-
-  const [seeHug, setSeeHug] = useState<Hug | undefined>(undefined);
+  }, [hugId, incomingHugs]);
 
   const handleValidateHug = async (hugId: string) => {
     const now = Timestamp.now();
@@ -103,41 +113,7 @@ export default function HugsListScreen() {
     setSeeHug(hug);
   };
 
-  const renderHugItem = ({ item }: { item: Hug }) => (
-    <View style={styles.hugItem}>
-      <View style={styles.hugIcon}>
-        <Text style={styles.hugEmoji}>🤗</Text>
-      </View>
-
-      <View style={styles.hugInfo}>
-        <Text style={styles.hugFrom}>
-          {item.fromName}
-          &nbsp;
-          <Text style={{ fontWeight: "500", color: "#757575" }}>
-            sent a hug
-          </Text>
-        </Text>
-        <Text style={styles.hugTime}>
-          {formatTimestamp(item.createdAt!.toDate())}
-        </Text>
-      </View>
-
-      {!item.seenAt ? (
-        <TouchableOpacity
-          style={styles.hugBackButton}
-          onPress={() => handleSeeHug(item)}
-        >
-          <Text style={styles.hugBackText}>See</Text>
-        </TouchableOpacity>
-      ) : (
-        <View style={styles.validatedBadge}>
-          <Text style={styles.validatedText}>✓</Text>
-        </View>
-      )}
-    </View>
-  );
-
-  if (isLoading) {
+  if (incomingLoading || outgoingLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#FF6B6B" />
@@ -145,7 +121,7 @@ export default function HugsListScreen() {
     );
   }
 
-  if (hugs.length === 0) {
+  if (incomingHugs.length === 0) {
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyEmoji}>🤗</Text>
@@ -158,24 +134,165 @@ export default function HugsListScreen() {
     <View style={styles.container}>
       <FlatList
         data={hugs}
-        renderItem={renderHugItem}
+        renderItem={({ item }) => (
+          <HugRow
+            hug={item}
+            direction={tab}
+            onPress={tab === "incoming" ? () => handleSeeHug(item) : undefined}
+          />
+        )}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
       />
+
       <HugViewOverlay
         visible={!!seeHug?.id}
         hug={seeHug}
         onHugBack={handleHugBack}
         onIgnore={handleIgnore}
       />
+
+      <View style={styles.tabs}>
+        <TouchableOpacity
+          style={[styles.tab, tab === "incoming" && styles.tabActive]}
+          onPress={() => setTab("incoming")}
+        >
+          <Text
+            style={[styles.tabText, tab === "incoming" && styles.tabTextActive]}
+          >
+            Received
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, tab === "outgoing" && styles.tabActive]}
+          onPress={() => setTab("outgoing")}
+        >
+          <Text
+            style={[styles.tabText, tab === "outgoing" && styles.tabTextActive]}
+          >
+            Sent
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
+export type HugRowProps = {
+  hug: Hug;
+  direction: "incoming" | "outgoing";
+  onPress?: (hug: Hug) => void;
+};
+
+const HugRow = ({ hug, direction, onPress }: HugRowProps) => {
+  if (direction === "incoming") {
+    return (
+      <View style={styles.hugItem}>
+        <View style={styles.hugIcon}>
+          <Text style={styles.hugEmoji}>🤗</Text>
+        </View>
+
+        <View style={styles.hugInfo}>
+          <Text style={styles.hugFrom}>
+            {hug.fromName}
+            &nbsp;
+            <Text style={{ fontWeight: "500", color: "#757575" }}>
+              sent a hug
+            </Text>
+          </Text>
+          <Text style={styles.hugTime}>
+            {formatTimestamp(hug.createdAt!.toDate())}
+          </Text>
+        </View>
+
+        {!hug.seenAt ? (
+          <TouchableOpacity
+            style={styles.hugBackButton}
+            onPress={() => onPress && onPress(hug)}
+          >
+            <Text style={styles.hugBackText}>See</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.validatedBadge}>
+            <Text style={styles.validatedText}>✓</Text>
+          </View>
+        )}
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.hugItem}>
+      <View style={styles.hugIcon}>
+        <Text style={styles.hugEmoji}>🤗</Text>
+      </View>
+
+      <View style={styles.hugInfo}>
+        <Text style={styles.hugFrom}>
+          <Text style={{ fontWeight: "500", color: "#757575" }}>
+            sent a hug to
+          </Text>
+          &nbsp;
+          {hug.toName}
+        </Text>
+        <Text style={styles.hugTime}>
+          {formatTimestamp(hug.createdAt!.toDate())}
+        </Text>
+      </View>
+
+      {!hug.seenAt ? (
+        <View style={styles.hugBackButton}>
+          <Text style={styles.hugBackText}>sent</Text>
+        </View>
+      ) : (
+        <View style={{ flexDirection: "column", alignItems: "center" }}>
+          <View style={styles.hugSeenButton}>
+            <Text style={styles.hugSeenText}>seen</Text>
+          </View>
+          <Text style={styles.hugTime}>
+            {formatTimestamp(hug.seenAt!.toDate())}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
+  tabs: {
+    flexDirection: "row",
+    backgroundColor: "#F0F0F0",
+    borderRadius: 12,
+    padding: 4,
+    margin: 16,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  tabActive: {
+    backgroundColor: "#FFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#666",
+  },
+  tabTextActive: {
+    color: "#1A1A1A",
+    fontWeight: "600",
+  },
+  // Reuse the same styles for incoming and outgoing tabs, just change the background color
   container: {
     flex: 1,
     backgroundColor: "#FAFAFA",
+    flexDirection: "column",
   },
   loadingContainer: {
     flex: 1,
@@ -263,6 +380,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
+  },
+  hugSeenButton: {
+    // backgroundColor: "#4CAF50",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  hugSeenText: {
+    color: "#999",
+    fontSize: 16,
   },
   hugBackText: {
     color: "#FFF",

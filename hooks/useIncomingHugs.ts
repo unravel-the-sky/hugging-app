@@ -9,16 +9,23 @@ import {
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
 
-export function useIncomingHugs(uid?: string) {
+export type HugDirection = "incoming" | "outgoing";
+
+export function useHugs(
+  uid: string | undefined,
+  direction: HugDirection = "incoming",
+) {
   const [hugs, setHugs] = useState<Hug[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!uid) return;
 
+    const fieldName = direction === "incoming" ? "to" : "from";
+
     const q = query(
       collection(db, "hugs"),
-      where("to", "==", uid),
+      where(fieldName, "==", uid),
       orderBy("createdAt", "desc"),
     );
 
@@ -33,7 +40,7 @@ export function useIncomingHugs(uid?: string) {
     });
 
     return unsubscribe;
-  }, [uid]);
+  }, [uid, direction]);
 
   return { isLoading, hugs };
 }
