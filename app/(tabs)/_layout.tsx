@@ -2,12 +2,24 @@ import Loader from "@/components/ui/Loader";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useHugs } from "@/hooks/useIncomingHugs";
 import { auth } from "@/lib/firebaseConfig";
-import { Tabs, router, useSegments } from "expo-router";
+import { Label, Tabs, router, useSegments } from "expo-router";
 import { useEffect, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useColorScheme,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import SetupScreen from "../setup";
 import SignInScreen from "../sign-in";
+import { NativeTabs } from "expo-router/unstable-native-tabs";
+import {
+  ThemeProvider,
+  DarkTheme,
+  DefaultTheme,
+} from "@react-navigation/native";
 
 export default function TabsLayout() {
   const { authUser, user, loading } = useCurrentUser();
@@ -19,6 +31,8 @@ export default function TabsLayout() {
 
   const segments = useSegments();
   const isOnSetup = segments[0] === "setup";
+
+  const colorScheme = useColorScheme();
 
   console.log(
     `TabsLayout is called, ${loading} and ${user} and userId: ${uid}`,
@@ -51,69 +65,41 @@ export default function TabsLayout() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      {/* Shared Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push("/profile")}>
-          <Text style={styles.usernameText}>@{user?.displayName || ""}</Text>
-        </TouchableOpacity>
-      </View>
+    <ThemeProvider value={colorScheme === "dark" ? DefaultTheme : DefaultTheme}>
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        {/* Shared Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.push("/profile")}>
+            <Text style={styles.usernameText}>@{user?.displayName || ""}</Text>
+          </TouchableOpacity>
+        </View>
 
-      {/* Tab Content */}
-      <Tabs
-        screenOptions={{
-          headerShown: false,
-          tabBarStyle: styles.tabBar,
-          tabBarActiveTintColor: "#FF6B6B",
-          tabBarInactiveTintColor: "#999",
-          tabBarLabelStyle: styles.tabBarLabel,
-        }}
-      >
-        <Tabs.Screen
-          name="index"
-          options={{
-            title: "Send Hug",
-            tabBarIcon: ({ color }) => <Text style={{ fontSize: 24 }}>🤗</Text>,
-          }}
-        />
-        <Tabs.Screen
-          name="friends"
-          options={{
-            title: "Friends",
-            tabBarIcon: ({ color }) => <Text style={{ fontSize: 24 }}>👥</Text>,
-          }}
-        />
-        <Tabs.Screen
-          name="hugs"
-          options={{
-            title: "Hugs",
-            tabBarIcon: ({ color }) => (
-              <View>
-                <Text style={{ fontSize: 24 }}>📬</Text>
-                {unreadHugsCount > 0 && (
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>
-                      {unreadHugsCount > 9 ? "9+" : unreadHugsCount}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            ),
-          }}
-          listeners={{
-            tabPress: () => {
-              // maybe add something here later
-            },
-          }}
-        />
-        <Tabs.Screen
-          name="add-user"
-          options={{
-            href: null, // Hide from tab bar
-          }}
-        />
-      </Tabs>
-    </SafeAreaView>
+        {/* Tab Content */}
+        <NativeTabs>
+          <NativeTabs.Trigger name="index">
+            <Label>Home</Label>
+            <NativeTabs.Trigger.Icon sf="house.fill" md="settings" />
+          </NativeTabs.Trigger>
+          <NativeTabs.Trigger name="friends">
+            <Label>Friends</Label>
+            <NativeTabs.Trigger.Icon sf="person.2.fill" md="settings" />
+          </NativeTabs.Trigger>
+          <NativeTabs.Trigger name="hugs">
+            <Label>Hugs</Label>
+            <NativeTabs.Trigger.Icon sf="heart.circle.fill" md="settings" />
+            {unreadHugsCount > 0 && (
+              <NativeTabs.Trigger.Badge>
+                {unreadHugsCount > 9 ? "9+" : unreadHugsCount.toString()}
+              </NativeTabs.Trigger.Badge>
+            )}
+          </NativeTabs.Trigger>
+          <NativeTabs.Trigger name="profile">
+            <Label>Profile</Label>
+            <NativeTabs.Trigger.Icon sf="person" md="settings" />
+          </NativeTabs.Trigger>
+        </NativeTabs>
+      </SafeAreaView>
+    </ThemeProvider>
   );
 }
 
@@ -161,35 +147,5 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontWeight: "bold",
     marginTop: -2,
-  },
-  tabBar: {
-    borderTopWidth: 1,
-    borderTopColor: "#E0E0E0",
-    backgroundColor: "#FFF",
-    paddingBottom: 8,
-    paddingTop: 8,
-  },
-  tabBarLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  badge: {
-    position: "absolute",
-    top: -4,
-    right: -8,
-    backgroundColor: "#FF6B35",
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 5,
-    borderWidth: 2,
-    borderColor: "#FFF",
-  },
-  badgeText: {
-    color: "#FFF",
-    fontSize: 11,
-    fontWeight: "bold",
   },
 });

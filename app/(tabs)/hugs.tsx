@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HugsListScreen() {
   const currentUser = auth.currentUser;
@@ -131,7 +132,7 @@ export default function HugsListScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <FlatList
         data={hugs}
         renderItem={({ item }) => (
@@ -174,7 +175,7 @@ export default function HugsListScreen() {
           </Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 

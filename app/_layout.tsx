@@ -67,7 +67,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
+      <>
         <Stack
           screenOptions={{
             headerShown: false,
@@ -93,7 +93,7 @@ export default function RootLayout() {
             }}
           />
         </Stack>
-      </SafeAreaProvider>
+      </>
     </GestureHandlerRootView>
   );
 }

@@ -6,7 +6,7 @@ import { SendableHug } from "@/lib/handleHugs";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
   const { toUid, toName, note } = useLocalSearchParams<{
@@ -81,7 +81,7 @@ export default function HomeScreen() {
           onComplete={handleCompleteHug}
         />
       ) : (
-        <View style={styles.overlay}>
+        <SafeAreaView edges={["bottom"]} style={styles.overlay}>
           <View style={styles.container}>
             <AppText>Welcome to Hug.me!</AppText>
             <Text>
@@ -110,7 +110,7 @@ export default function HomeScreen() {
               />
             </View>
           </View>
-        </View>
+        </SafeAreaView>
       )}
     </>
   );
