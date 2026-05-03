@@ -1,10 +1,9 @@
-import HugNoteModal, { HugNoteModalRef } from "@/components/hug/HugNoteModal";
 import Loader from "@/components/ui/Loader";
 import useCreateHugWithNote from "@/hooks/useCreateHugWithNote";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getFriendsForCurrentUser } from "@/lib/handleFriends";
 import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -26,9 +25,7 @@ export default function FriendsListScreen() {
 
   const { user, loading } = useCurrentUser();
 
-  const hugModalRef = useRef<HugNoteModalRef>(null);
-  const { selectedFriend, startHuggingFlow, continueHuggingFlow, cancelHug } =
-    useCreateHugWithNote();
+  const { startHugWithNote } = useCreateHugWithNote();
 
   useEffect(() => {
     if (user) loadFriends(user?.avatar || "");
@@ -79,8 +76,7 @@ export default function FriendsListScreen() {
   const handleSendHug = (friend: Friend) => {
     // Navigate to home screen to send hug
     // TODO: You might want to pre-select this friend when sending
-    startHuggingFlow(friend);
-    hugModalRef.current?.open();
+    startHugWithNote(friend);
   };
 
   const renderFriendItem = ({ item }: { item: Friend }) => (
@@ -150,14 +146,6 @@ export default function FriendsListScreen() {
       >
         <Text style={styles.floatingButtonText}>+</Text>
       </TouchableOpacity>
-
-      <HugNoteModal
-        ref={hugModalRef}
-        friendName={selectedFriend?.displayName || ""}
-        friendUid={selectedFriend?.uid || ""}
-        onContinue={continueHuggingFlow}
-        onCancel={cancelHug}
-      />
     </View>
   );
 }

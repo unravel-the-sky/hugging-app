@@ -12,7 +12,7 @@ export default function AvatarImage({ avatar = "male" }: AvatarProps) {
   return (
     <Image
       source={avatar === "male" ? MaleFace : FemaleFace}
-      style={{ width: 80, height: 70 }}
+      style={{ width: 95, height: 90 }}
     />
   );
 }

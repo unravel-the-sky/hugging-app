@@ -1,38 +1,50 @@
 import { Friend } from "@/app/(tabs)/friends";
 import { router } from "expo-router";
-import { useState } from "react";
 
 export default function useCreateHugWithNote() {
-  const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
-
-  const startHuggingFlow = (friend: Friend) => {
-    setSelectedFriend(friend);
-  };
-
-  const continueHuggingFlow = (
-    friendName: string,
-    friendUid: string,
-    note?: string,
-  ) => {
+  const startHugWithNote = (friend: Friend) => {
     router.push({
-      pathname: "/(tabs)",
+      pathname: "/hug-note",
       params: {
-        toUid: friendUid,
-        toName: friendName,
-        note,
+        friendName: friend.displayName,
+        friendUid: friend.uid,
       },
     });
-    setSelectedFriend(null);
-  };
-
-  const cancelHug = () => {
-    setSelectedFriend(null);
   };
 
   return {
-    selectedFriend,
-    startHuggingFlow,
-    continueHuggingFlow,
-    cancelHug,
+    startHugWithNote,
   };
+  // const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
+
+  // const startHuggingFlow = (friend: Friend) => {
+  //   setSelectedFriend(friend);
+  // };
+
+  // const continueHuggingFlow = (
+  //   friendName: string,
+  //   friendUid: string,
+  //   note?: string,
+  // ) => {
+  //   router.push({
+  //     pathname: "/(tabs)",
+  //     params: {
+  //       toUid: friendUid,
+  //       toName: friendName,
+  //       note,
+  //     },
+  //   });
+  //   setSelectedFriend(null);
+  // };
+
+  // const cancelHug = () => {
+  //   setSelectedFriend(null);
+  // };
+
+  // return {
+  //   selectedFriend,
+  //   startHuggingFlow,
+  //   continueHuggingFlow,
+  //   cancelHug,
+  // };
 }

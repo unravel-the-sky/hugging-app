@@ -76,6 +76,22 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="setup" />
           <Stack.Screen name="sign-in" />
+          <Stack.Screen
+            name="hug-note"
+            options={{
+              presentation: "formSheet",
+              sheetAllowedDetents: "fitToContents",
+              // sheetAllowedDetents: [0.75],
+              // sheetInitialDetentIndex: 1,
+              sheetGrabberVisible: true,
+              headerTransparent: false,
+              headerShadowVisible: true,
+              headerLargeTitleShadowVisible: true,
+              sheetCornerRadius: 28,
+              headerShown: false,
+              contentStyle: { backgroundColor: "#FAFAFA" }, // semi-transparent background
+            }}
+          />
         </Stack>
       </SafeAreaProvider>
     </GestureHandlerRootView>

@@ -1,4 +1,3 @@
-import HugNoteModal, { HugNoteModalRef } from "@/components/hug/HugNoteModal";
 import HugViewOverlay from "@/components/hug/HugViewOverlay";
 import useCreateHugWithNote from "@/hooks/useCreateHugWithNote";
 import { useIncomingHugs } from "@/hooks/useIncomingHugs";
@@ -7,7 +6,7 @@ import { Hug } from "@/lib/handleHugs";
 import { formatTimestamp } from "@/lib/util";
 import { useLocalSearchParams } from "expo-router";
 import { doc, Timestamp, updateDoc } from "firebase/firestore";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -24,9 +23,7 @@ export default function HugsListScreen() {
 
   const { hugId } = useLocalSearchParams();
 
-  const hugModalRef = useRef<HugNoteModalRef>(null);
-  const { selectedFriend, startHuggingFlow, continueHuggingFlow, cancelHug } =
-    useCreateHugWithNote();
+  const { startHugWithNote } = useCreateHugWithNote();
 
   const markHugsAsSeen = async (unseenHugs: Hug[]) => {
     try {
@@ -91,8 +88,7 @@ export default function HugsListScreen() {
 
   const handleHugBack = async (hug: Hug) => {
     await handleValidateHug(hug.id);
-    startHuggingFlow({ displayName: hug.fromName, uid: hug.from });
-    hugModalRef.current?.open();
+    startHugWithNote({ displayName: hug.fromName, uid: hug.from });
     setSeeHug(undefined);
   };
 
@@ -171,13 +167,6 @@ export default function HugsListScreen() {
         hug={seeHug}
         onHugBack={handleHugBack}
         onIgnore={handleIgnore}
-      />
-      <HugNoteModal
-        ref={hugModalRef}
-        friendName={selectedFriend?.displayName || ""}
-        friendUid={selectedFriend?.uid || ""}
-        onContinue={continueHuggingFlow}
-        onCancel={cancelHug}
       />
     </View>
   );

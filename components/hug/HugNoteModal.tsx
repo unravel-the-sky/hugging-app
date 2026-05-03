@@ -1,32 +1,17 @@
-import type { BottomSheetBackdropProps } from "@gorhom/bottom-sheet";
-import BottomSheet, {
-  BottomSheetBackdrop,
-  BottomSheetTextInput,
-  BottomSheetView,
-  useBottomSheetSpringConfigs,
-} from "@gorhom/bottom-sheet";
-import React, {
-  useCallback,
-  useImperativeHandle,
-  useRef,
-  useState,
-} from "react";
+import React, { useState } from "react";
 import {
-  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
   Platform,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 
-export interface HugNoteModalRef {
-  open: () => void;
-  close: () => void;
-}
-
 interface HugNoteModalProps {
-  ref?: React.Ref<HugNoteModalRef>;
+  visible: boolean;
   friendName: string;
   friendUid: string;
   onContinue: (friendName: string, friendUid: string, note: string) => void;
@@ -34,84 +19,45 @@ interface HugNoteModalProps {
 }
 
 export default function HugNoteModal({
-  ref,
+  visible,
   friendName,
   friendUid,
   onContinue,
   onCancel,
 }: HugNoteModalProps) {
   const [note, setNote] = useState("");
-  const sheetRef = useRef<BottomSheet>(null);
   const maxLength = 256;
-
-  const animationConfigs = useBottomSheetSpringConfigs({
-    damping: 80,
-    overshootClamping: true,
-    stiffness: 500,
-  });
-
-  useImperativeHandle(ref, () => ({
-    open: () => sheetRef.current?.expand(),
-    close: () => sheetRef.current?.close(),
-  }));
 
   const handleContinue = () => {
     onContinue(friendName, friendUid, note.trim());
     setNote("");
-    sheetRef.current?.close();
   };
 
-  const handleSheetChanges = useCallback(
-    (index: number) => {
-      if (index === -1) {
-        console.log("Sheet closed, resetting note and calling onCancel");
-        Keyboard.dismiss();
-        setNote("");
-        onCancel();
-      }
-    },
-    [onCancel],
-  );
-
-  const renderBackdrop = useCallback(
-    (props: BottomSheetBackdropProps) => (
-      <BottomSheetBackdrop
-        {...props}
-        appearsOnIndex={0}
-        disappearsOnIndex={-1}
-        opacity={0.5}
-      />
-    ),
-    [],
-  );
+  const handleCancel = () => {
+    setNote("");
+    onCancel();
+  };
 
   return (
-    <BottomSheet
-      ref={sheetRef}
-      index={-1}
-      enableDynamicSizing
-      enablePanDownToClose
-      onChange={handleSheetChanges}
-      backdropComponent={renderBackdrop}
-      animationConfigs={animationConfigs}
-      backgroundStyle={styles.sheetBackground}
-      handleIndicatorStyle={styles.handle}
-      keyboardBehavior="interactive"
-      keyboardBlurBehavior="restore"
-      android_keyboardInputMode="adjustResize"
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="formSheet"
+      onRequestClose={handleCancel}
     >
-      <BottomSheetView style={styles.contentContainer}>
-        {/* Header */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.container}
+      >
         <View style={styles.header}>
           <Text style={styles.emoji}>💌</Text>
           <Text style={styles.title}>Send a Hug</Text>
           <Text style={styles.subtitle}>to @{friendName}</Text>
         </View>
 
-        {/* Note Input */}
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Add a note (optional)</Text>
-          <BottomSheetTextInput
+          <TextInput
             style={styles.textInput}
             placeholder="Write something nice..."
             placeholderTextColor="#999"
@@ -126,11 +72,10 @@ export default function HugNoteModal({
           </Text>
         </View>
 
-        {/* Action Buttons */}
         <View style={styles.actionsContainer}>
           <TouchableOpacity
             style={[styles.button, styles.cancelButton]}
-            onPress={() => sheetRef.current?.close()}
+            onPress={handleCancel}
           >
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
@@ -142,26 +87,19 @@ export default function HugNoteModal({
             <Text style={styles.continueButtonText}>Continue</Text>
           </TouchableOpacity>
         </View>
-      </BottomSheetView>
-    </BottomSheet>
+      </KeyboardAvoidingView>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  sheetBackground: {
+  container: {
+    flex: 1,
     backgroundColor: "#FAFAFA",
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-  },
-  handle: {
-    backgroundColor: "#DDD",
-    width: 40,
-    height: 4,
-  },
-  contentContainer: {
     paddingHorizontal: 24,
-    paddingTop: 8,
+    paddingTop: 24,
     paddingBottom: Platform.OS === "ios" ? 40 : 24,
+    height: "auto",
   },
   header: {
     alignItems: "center",
@@ -182,6 +120,7 @@ const styles = StyleSheet.create({
     color: "#666",
   },
   inputContainer: {
+    flex: 1,
     marginBottom: 24,
   },
   label: {
@@ -199,7 +138,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#1A1A1A",
     minHeight: 80,
-    maxHeight: 160,
   },
   characterCountText: {
     fontSize: 12,
@@ -227,11 +165,6 @@ const styles = StyleSheet.create({
   },
   continueButton: {
     backgroundColor: "#FF6B6B",
-    shadowColor: "#FF6B6B",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
   },
   continueButtonText: {
     fontSize: 16,
