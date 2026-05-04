@@ -67,43 +67,38 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <>
-        <Stack
-          screenOptions={{
+      <Stack
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="setup" />
+        <Stack.Screen name="sign-in" />
+        <Stack.Screen
+          name="hug-note"
+          options={{
+            presentation: "formSheet",
+            sheetAllowedDetents: "fitToContents",
+            sheetGrabberVisible: true,
+            headerTransparent: false,
+            headerShadowVisible: true,
+            headerLargeTitleShadowVisible: true,
             headerShown: false,
+            contentStyle: { backgroundColor: "#FAFAFA" }, // semi-transparent background
           }}
-        >
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="setup" />
-          <Stack.Screen name="sign-in" />
-          <Stack.Screen
-            name="hug-note"
-            options={{
-              presentation: "formSheet",
-              sheetAllowedDetents: "fitToContents",
-              // sheetAllowedDetents: [0.75],
-              // sheetInitialDetentIndex: 1,
-              sheetGrabberVisible: true,
-              headerTransparent: false,
-              headerShadowVisible: true,
-              headerLargeTitleShadowVisible: true,
-              sheetCornerRadius: 28,
-              headerShown: false,
-              contentStyle: { backgroundColor: "#FAFAFA" }, // semi-transparent background
-            }}
-          />
-          <Stack.Screen
-            name="add-user"
-            options={{
-              presentation: "modal",
-              sheetGrabberVisible: true,
-              headerTransparent: false,
-              headerShadowVisible: true,
-              headerLargeTitleShadowVisible: true,
-            }}
-          />
-        </Stack>
-      </>
+        />
+        <Stack.Screen
+          name="add-user"
+          options={{
+            presentation: "modal",
+            sheetGrabberVisible: true,
+            headerTransparent: false,
+            headerShadowVisible: true,
+            headerLargeTitleShadowVisible: true,
+          }}
+        />
+      </Stack>
     </GestureHandlerRootView>
   );
 }
