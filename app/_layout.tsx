@@ -92,6 +92,16 @@ export default function RootLayout() {
               contentStyle: { backgroundColor: "#FAFAFA" }, // semi-transparent background
             }}
           />
+          <Stack.Screen
+            name="add-user"
+            options={{
+              presentation: "modal",
+              sheetGrabberVisible: true,
+              headerTransparent: false,
+              headerShadowVisible: true,
+              headerLargeTitleShadowVisible: true,
+            }}
+          />
         </Stack>
       </>
     </GestureHandlerRootView>

@@ -15,36 +15,4 @@ export default function useCreateHugWithNote() {
   return {
     startHugWithNote,
   };
-  // const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
-
-  // const startHuggingFlow = (friend: Friend) => {
-  //   setSelectedFriend(friend);
-  // };
-
-  // const continueHuggingFlow = (
-  //   friendName: string,
-  //   friendUid: string,
-  //   note?: string,
-  // ) => {
-  //   router.push({
-  //     pathname: "/(tabs)",
-  //     params: {
-  //       toUid: friendUid,
-  //       toName: friendName,
-  //       note,
-  //     },
-  //   });
-  //   setSelectedFriend(null);
-  // };
-
-  // const cancelHug = () => {
-  //   setSelectedFriend(null);
-  // };
-
-  // return {
-  //   selectedFriend,
-  //   startHuggingFlow,
-  //   continueHuggingFlow,
-  //   cancelHug,
-  // };
 }

@@ -1,16 +1,17 @@
+import { addFriendByUsername } from "@/lib/handleFriends";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { router } from "expo-router";
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
   Alert,
   KeyboardAvoidingView,
   Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { router } from "expo-router";
-import { addFriendByUsername } from "@/lib/handleFriends";
 
 export default function AddUserScreen() {
   const [username, setUsername] = useState("");
@@ -65,7 +66,7 @@ export default function AddUserScreen() {
       {/* Content */}
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Text style={styles.icon}>👥</Text>
+          <Ionicons name="person-add" size={64} color={"#7c7c7c"} />
         </View>
 
         <Text style={styles.title}>Add a Friend</Text>
@@ -120,7 +121,7 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     alignItems: "center",
-    marginBottom: 24,
+    padding: 20,
   },
   icon: {
     fontSize: 64,

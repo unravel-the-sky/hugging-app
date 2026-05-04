@@ -36,6 +36,9 @@ setGlobalOptions({ maxInstances: 10 });
 admin.initializeApp();
 const db = admin.firestore();
 
+const BOT_UID = "bot-nope";
+const BOT_NAME = "nope";
+
 export const onHugCreated = onDocumentCreated("hugs/{hugId}", async (event) => {
   console.log("🔥🔥🔥 onHugCreated FIRED");
   console.log("hugId:", event.params.hugId);
@@ -46,6 +49,47 @@ export const onHugCreated = onDocumentCreated("hugs/{hugId}", async (event) => {
   const hug = snap.data();
   if (!hug?.to) return;
 
+  // introducing the BOT here
+  // do not process hugs that are sent by the
+  if (hug.to === BOT_UID && hug.from !== BOT_UID) {
+    await sendBotReply(hug);
+    return;
+  }
+
+  // send notification
+  await sendPushNotification(hug, snap.id);
+});
+
+const sendBotReply = async (originalHug: FirebaseFirestore.DocumentData) => {
+  console.log(`🤖 Bot replying to ${originalHug.from}`);
+
+  // get response from no-as-a-service endpoint here
+  let reason = "NO!";
+  try {
+    const res = await fetch("https://naas.isalman.dev/no");
+    if (res.ok) {
+      const data = (await res.json()) as { reason?: string };
+      if (data.reason) reason = data.reason;
+    }
+  } catch (err) {
+    console.error("Failed to fetch from naas with error: ", err);
+  }
+
+  // now use that reason
+  await db.collection("hugs").add({
+    from: BOT_UID,
+    fromName: BOT_NAME,
+    to: originalHug.from,
+    toName: originalHug.fromName,
+    note: reason,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+};
+
+const sendPushNotification = async (
+  hug: FirebaseFirestore.DocumentData,
+  hugId: string,
+) => {
   // get user
   const userSnap = await db.doc(`users/${hug.to}`).get();
   const user = userSnap.data();
@@ -62,7 +106,7 @@ export const onHugCreated = onDocumentCreated("hugs/{hugId}", async (event) => {
     title: "You got a hug 🥹",
     body: `${hug.fromName ?? "Someone"} sent you a hug`,
     data: {
-      hugId: snap.id,
+      hugId,
     },
   };
 
@@ -75,4 +119,4 @@ export const onHugCreated = onDocumentCreated("hugs/{hugId}", async (event) => {
     body: JSON.stringify(message),
   });
   console.log("Expo push response:", json);
-});
+};

@@ -123,7 +123,7 @@ export default function FriendsListScreen() {
         </Text>
         <TouchableOpacity
           style={styles.addFriendButton}
-          onPress={() => router.push("/(tabs)/add-user")}
+          onPress={() => router.push("/add-user")}
         >
           <Text style={styles.addFriendButtonText}>Add Friend</Text>
         </TouchableOpacity>
@@ -143,7 +143,7 @@ export default function FriendsListScreen() {
       {/* Floating Add Button */}
       <TouchableOpacity
         style={styles.floatingButton}
-        onPress={() => router.push("/(tabs)/add-user")}
+        onPress={() => router.push("/add-user")}
       >
         <Text style={styles.floatingButtonText}>+</Text>
       </TouchableOpacity>
