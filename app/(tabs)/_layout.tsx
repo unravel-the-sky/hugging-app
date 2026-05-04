@@ -2,7 +2,13 @@ import Loader from "@/components/ui/Loader";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useHugs } from "@/hooks/useIncomingHugs";
 import { auth } from "@/lib/firebaseConfig";
-import { Label, Tabs, router, useSegments } from "expo-router";
+import {
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider,
+} from "@react-navigation/native";
+import { Label, router, useSegments } from "expo-router";
+import { NativeTabs } from "expo-router/unstable-native-tabs";
 import { useEffect, useState } from "react";
 import {
   StyleSheet,
@@ -14,12 +20,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import SetupScreen from "../setup";
 import SignInScreen from "../sign-in";
-import { NativeTabs } from "expo-router/unstable-native-tabs";
-import {
-  ThemeProvider,
-  DarkTheme,
-  DefaultTheme,
-} from "@react-navigation/native";
 
 export default function TabsLayout() {
   const { authUser, user, loading } = useCurrentUser();
@@ -47,6 +47,10 @@ export default function TabsLayout() {
 
   // console.log("user from firebase is: ", user);
 
+  if (loading) {
+    return <Loader />;
+  }
+
   if (!authUser && !isOnSetup) {
     return <SignInScreen />;
   }
@@ -60,12 +64,8 @@ export default function TabsLayout() {
     return <SetupScreen />;
   }
 
-  if (loading) {
-    return <Loader />;
-  }
-
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DefaultTheme : DefaultTheme}>
+    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <SafeAreaView style={styles.container} edges={["top"]}>
         {/* Shared Header */}
         <View style={styles.header}>
@@ -128,24 +128,5 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     color: "#1A1A1A",
-  },
-  addButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#FF6B6B",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#FF6B6B",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  addButtonText: {
-    fontSize: 24,
-    color: "#FFF",
-    fontWeight: "bold",
-    marginTop: -2,
   },
 });

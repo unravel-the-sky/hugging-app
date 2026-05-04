@@ -1,5 +1,3 @@
-import AvatarImage from "@/components/avatar/AvatarImage";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
@@ -21,7 +19,6 @@ export default function HugNoteModal() {
   }>();
 
   const [note, setNote] = useState("");
-  const { user, loading } = useCurrentUser();
 
   const handleContinue = () => {
     router.replace({
@@ -48,10 +45,6 @@ export default function HugNoteModal() {
         <Text style={styles.title}>Send a Hug</Text>
         <Text style={styles.subtitle}>to @{friendName}</Text>
       </View>
-
-      {/* <View style={styles.currentAvatar}>
-        <AvatarImage avatar={user?.avatar} />
-      </View> */}
 
       <View style={styles.inputContainer}>
         <Text style={styles.label}>Add a note (optional)</Text>
