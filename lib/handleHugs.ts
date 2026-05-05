@@ -16,6 +16,7 @@ type HugBase<TTimestamp> = {
   to: string;
   fromName: string;
   toName: string;
+  imagePath?: string;
   fromAvatar?: AvatarType;
   note?: string;
   createdAt?: TTimestamp;
@@ -25,7 +26,10 @@ type HugBase<TTimestamp> = {
 export type HugCreate = HugBase<FieldValue>;
 export type Hug = HugBase<Timestamp> & { id: string };
 
-export type SendableHug = Pick<HugBase<FieldValue>, "to" | "toName" | "note">;
+export type SendableHug = Pick<
+  HugBase<FieldValue>,
+  "to" | "toName" | "note" | "imagePath"
+>;
 
 export async function sendHug(hug: HugCreate) {
   try {
@@ -37,6 +41,7 @@ export async function sendHug(hug: HugCreate) {
       toName: hug.toName,
       fromAvatar: hug.fromAvatar,
       note: hug.note,
+      imagePath: hug.imagePath || "",
       createdAt: serverTimestamp(),
     });
     console.log("hug is sent to firebase");

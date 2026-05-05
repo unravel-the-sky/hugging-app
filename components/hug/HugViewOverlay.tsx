@@ -2,6 +2,8 @@ import { Hug } from "@/lib/handleHugs";
 import React from "react";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import AvatarImage from "../avatar/AvatarImage";
+import { Image } from "expo-image";
+import HugImage from "./HugImage";
 
 interface HugViewOverlayProps {
   visible: boolean;
@@ -26,14 +28,19 @@ export default function HugViewOverlay({
           <View style={styles.titleContainer}>
             {/* <Text style={styles.fromName}>@{hug.fromName}</Text> */}
             <AvatarImage avatar={hug.fromAvatar} />
-            <Text style={styles.title}>sent you a hug.. 👉👈</Text>
+            <Text style={styles.title}>
+              {hug.fromName} sent you a hug.. 👉👈
+            </Text>
           </View>
 
-          {/* Note Section */}
-          {hug.note && (
-            <View style={styles.noteContainer}>
-              <Text style={styles.noteText}>{hug.note}</Text>
-            </View>
+          {hug.imagePath ? (
+            <HugImage hugImagePath={hug.imagePath} />
+          ) : (
+            hug.note && (
+              <View style={styles.noteContainer}>
+                <Text style={styles.noteText}>{hug.note}</Text>
+              </View>
+            )
           )}
 
           {/* Action Buttons */}
@@ -64,6 +71,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
+  },
+  image: {
+    flex: 1,
+    width: 50,
+    height: 50,
+    backgroundColor: "#0553",
   },
   container: {
     backgroundColor: "#FAFAFA",

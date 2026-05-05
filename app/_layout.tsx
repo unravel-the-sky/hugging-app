@@ -98,6 +98,8 @@ export default function RootLayout() {
             headerLargeTitleShadowVisible: true,
           }}
         />
+        <Stack.Screen name="take-pic" />
+        <Stack.Screen name="media" />
       </Stack>
     </GestureHandlerRootView>
   );

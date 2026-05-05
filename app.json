@@ -11,7 +11,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.huggingapp",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryAddUsageDescription": "Save your polaroids to your photo library."
       },
       "icon": "./assets/ios-app.icon/"
     },
@@ -53,7 +54,14 @@
           "iosUrlScheme": "com.googleusercontent.apps.811741030521-i1d275g4v5rdmmsm8ehjvnj4djh34eur"
         }
       ],
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Save your polaroids to your photo library.",
+          "savePhotosPermission": "Save your polaroids to your photo library."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

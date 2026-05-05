@@ -69,15 +69,6 @@ export default function HugsListScreen() {
     }
   };
 
-  // useFocusEffect(
-  //   useCallback(() => {
-  //     const unseenHugs = hugs.filter((hug) => !hug.seenAt);
-  //     if (unseenHugs.length > 0) {
-  //       markHugsAsSeen(unseenHugs);
-  //     }
-  //   }, [hugs]),
-  // );
-
   useEffect(() => {
     if (!hugId) return;
 

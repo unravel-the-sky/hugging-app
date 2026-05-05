@@ -9,10 +9,11 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
-  const { toUid, toName, note } = useLocalSearchParams<{
+  const { toUid, toName, note, imagePath } = useLocalSearchParams<{
     toUid: string;
     toName: string;
     note?: string;
+    imagePath?: string;
   }>();
 
   console.log({ toUid, toName });
@@ -24,9 +25,9 @@ export default function HomeScreen() {
   console.log("yello i am rendered and sendableHug: ", sendableHug);
   useEffect(() => {
     if (toUid && toName) {
-      setSendableHug({ to: toUid, toName: toName, note: note });
+      setSendableHug({ to: toUid, toName: toName, note, imagePath });
     }
-  }, [note, toName, toUid]);
+  }, [imagePath, note, toName, toUid]);
 
   useEffect(() => {
     if (!toUid) {
@@ -75,9 +76,7 @@ export default function HomeScreen() {
     <>
       {sendableHug ? (
         <HugController
-          toUid={sendableHug.to || ""}
-          toDisplayName={sendableHug.toName || ""}
-          note={sendableHug.note || ""}
+          sendableHug={sendableHug}
           onComplete={handleCompleteHug}
         />
       ) : (

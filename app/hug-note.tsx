@@ -35,6 +35,18 @@ export default function HugNoteModal() {
     router.back();
   };
 
+  const handleAddPicture = () => {
+    console.log("yay");
+    router.replace({
+      pathname: "/take-pic",
+      params: {
+        toUid: friendUid,
+        toName: friendName,
+        note: note.trim() || "",
+      },
+    });
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -63,6 +75,15 @@ export default function HugNoteModal() {
         </Text>
       </View>
 
+      <View>
+        <TouchableOpacity
+          style={[styles.button, styles.cancelButton]}
+          onPress={handleAddPicture}
+        >
+          <Text style={styles.cancelButtonText}>Make it a postcard 📷 </Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.actionsContainer}>
         <TouchableOpacity
           style={[styles.button, styles.cancelButton]}
@@ -86,10 +107,10 @@ const styles = StyleSheet.create({
   container: {
     // backgroundColor: "#ffffff",
     flex: 1,
-    // height: "25%",
     paddingHorizontal: 24,
     paddingTop: 24,
     paddingBottom: Platform.OS === "ios" ? 40 : 24,
+    gap: 16,
   },
   currentAvatar: {
     alignSelf: "center",
@@ -99,7 +120,6 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: "center",
-    marginBottom: 24,
   },
   emoji: {
     fontSize: 56,
@@ -116,7 +136,7 @@ const styles = StyleSheet.create({
     color: "#666",
   },
   inputContainer: {
-    marginBottom: 24,
+    // marginBottom: 24,
   },
   label: {
     fontSize: 14,

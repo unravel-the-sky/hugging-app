@@ -13,7 +13,7 @@ import HugButton from "./HugButton";
 
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { auth } from "@/lib/firebaseConfig";
-import { HugCreate, sendHug } from "@/lib/handleHugs";
+import { HugCreate, SendableHug, sendHug } from "@/lib/handleHugs";
 import { scheduleOnRN } from "react-native-worklets";
 
 export type HugPhase =
@@ -25,18 +25,11 @@ export type HugPhase =
   | "pulling";
 
 export type HugProps = {
-  toUid: string;
-  toDisplayName: string;
-  note: string;
+  sendableHug: SendableHug;
   onComplete: () => void;
 };
 
-export default function HugController({
-  toUid,
-  toDisplayName,
-  note,
-  onComplete,
-}: HugProps) {
+export default function HugController({ sendableHug, onComplete }: HugProps) {
   const hugPress = useSharedValue(0);
 
   const [hugPhase, setHugPhase] = useState<HugPhase>("idle");
@@ -81,10 +74,11 @@ export default function HugController({
       const hug: HugCreate = {
         from: auth.currentUser?.uid || "lol",
         fromName: user?.displayName || "",
-        toName: toDisplayName,
-        to: toUid,
+        toName: sendableHug.toName,
+        to: sendableHug.to,
         fromAvatar: user?.avatar || "male",
-        note,
+        note: sendableHug.note,
+        imagePath: sendableHug.imagePath,
         seenAt: undefined, // toa avoid crash
       };
 
@@ -140,7 +134,9 @@ export default function HugController({
         <Animated.View style={[styles.progressBar, progressBarStyle]} />
       </View>
       <View style={styles.statusContainer}>
-        <Text style={styles.statusText}>Send a hug to {toDisplayName}</Text>
+        <Text style={styles.statusText}>
+          Send a hug to {sendableHug.toName}
+        </Text>
         <Text style={styles.statusText}>{getHugPhaseStatusText()}</Text>
       </View>
       <HugButton
