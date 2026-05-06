@@ -6,20 +6,30 @@ import {
 } from "firebase/storage";
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
+import Loader from "../ui/Loader";
 
 export default function HugImage({ hugImagePath }: { hugImagePath: string }) {
   const [imageUrl, setImageUrl] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    setLoading(true);
     const storage = getStorage();
     getDownloadURL(storageRef(storage, hugImagePath))
       .then(setImageUrl)
-      .catch((err) => console.error("cannot downlad image"));
+      .catch((err) => console.error("cannot downlad image"))
+      .finally(() => {
+        setLoading(false);
+      });
   }, [hugImagePath]);
 
   return (
     <View style={styles.imageContainer}>
-      <Image source={imageUrl} style={styles.image} contentFit="contain" />
+      {loading ? (
+        <Loader />
+      ) : (
+        <Image source={imageUrl} style={styles.image} contentFit="contain" />
+      )}
     </View>
   );
 }

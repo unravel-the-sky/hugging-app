@@ -4,6 +4,7 @@ import {
   Group,
   Image,
   ImageFormat,
+  Rect,
   RoundedRect,
   Text as SkiaText,
   useCanvasRef,
@@ -206,10 +207,10 @@ export default function Media() {
 
       // take snapshot of the canvas
       const snapshot = canvasRef.current?.makeImageSnapshot({
-        x: frameX - 8,
-        y: frameY - 8,
-        height: frameHeight + 16,
-        width: frameWidth + 16,
+        x: frameX,
+        y: frameY,
+        height: frameHeight,
+        width: frameWidth,
       });
 
       if (!snapshot) {
@@ -278,21 +279,19 @@ export default function Media() {
           opacity={polaroidOpacity}
         >
           {/* Shadow */}
-          <RoundedRect
+          <Rect
             x={shadowX}
             y={shadowY}
             width={frameWidth}
             height={frameHeight}
-            r={4}
             color={shadowOpacity}
           />
           {/* White card */}
-          <RoundedRect
+          <Rect
             x={frameX}
             y={frameY}
             width={frameWidth}
             height={frameHeight}
-            r={4}
             color="white"
           />
           {/* Photo */}
@@ -385,7 +384,7 @@ const styles = StyleSheet.create({
   },
   filterRow: {
     position: "absolute",
-    bottom: 60,
+    bottom: 36,
     left: 0,
     right: 0,
     flexDirection: "row",

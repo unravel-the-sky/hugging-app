@@ -1,27 +1,27 @@
-import {
-  CameraView,
-  CameraType,
-  useCameraPermissions,
-  CameraMode,
-} from "expo-camera";
-import { Image } from "expo-image";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
+import {
+  CameraMode,
+  CameraType,
+  CameraView,
+  useCameraPermissions,
+} from "expo-camera";
+import { Image } from "expo-image";
+import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
 import {
   Button,
-  Linking,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { router, useLocalSearchParams } from "expo-router";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
+
+import * as ImagePicker from "expo-image-picker";
 
 export default function TakePicture() {
   const [facing, setFacing] = useState<CameraType>("back");
@@ -30,6 +30,8 @@ export default function TakePicture() {
   const ref = useRef<CameraView>(null);
   const [uri, setUri] = useState<string | null>(null);
   const [mode, setMode] = useState<CameraMode>("picture");
+
+  const [selectedImgUri, setSelectedImgUri] = useState<string | null>(null);
 
   const { toUid, toName, note } = useLocalSearchParams<{
     toUid: string;
@@ -62,6 +64,32 @@ export default function TakePicture() {
       console.log("double tapped!");
       scheduleOnRN(toggleCameraFacing);
     });
+
+  const pickImageFromMobileAsync = async () => {
+    try {
+      const res = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: true,
+        quality: 1,
+      });
+
+      if (!res.canceled && res.assets[0].uri) {
+        router.push({
+          pathname: "/media",
+          params: {
+            toUid,
+            toName,
+            media: res.assets[0].uri,
+            note,
+          },
+        });
+      }
+    } catch (err) {
+      console.error(
+        "Erro happened while getting pictures from library, error ",
+        err,
+      );
+    }
+  };
 
   if (!permission) {
     // camera permissions are loading
@@ -111,11 +139,12 @@ export default function TakePicture() {
           <View style={styles.shutterContainer}>
             <TouchableOpacity
               onPress={() => {
-                const link = Platform.select({
-                  ios: "photos-redirect://",
-                  android: "content://media/external/images/media",
-                });
-                Linking.openURL(link!);
+                pickImageFromMobileAsync();
+                // const link = Platform.select({
+                //   ios: "photos-redirect://",
+                //   android: "content://media/external/images/media",
+                // });
+                // Linking.openURL(link!);
               }}
             >
               <AntDesign name="picture" size={32} color="white" />
