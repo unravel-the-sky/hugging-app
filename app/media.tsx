@@ -106,13 +106,16 @@ export default function Media() {
 
   useEffect(() => {
     if (image) {
-      dropProgress.value = withTiming(1, {
-        duration: 900,
-        easing: Easing.out(Easing.back(1.5)),
-      });
+      dropProgress.value = withDelay(
+        40,
+        withTiming(1, {
+          duration: 900,
+          easing: Easing.out(Easing.back(1.5)),
+        }),
+      );
       // Start developing slightly before the drop fully settles
       developProgress.value = withDelay(
-        600,
+        300,
         withTiming(1, {
           duration: 2500,
           easing: Easing.out(Easing.cubic),
@@ -163,6 +166,13 @@ export default function Media() {
     return [{ scale }, { rotate }, { translateY }];
   });
 
+  const opacityVal = 0;
+  const polaroidOpacity = useDerivedValue(() => {
+    const t = dropProgress.value;
+    const opacity = opacityVal + (1 - opacityVal) * t; // scaleVal -> 1
+    return opacity;
+  });
+
   // Shadow follows the drop: larger offset and softer when "in air"
   const shadowOffsetX = useDerivedValue(
     () => 2 + (1 - dropProgress.value) * 14,
@@ -196,10 +206,10 @@ export default function Media() {
 
       // take snapshot of the canvas
       const snapshot = canvasRef.current?.makeImageSnapshot({
-        x: frameX,
-        y: frameY,
-        height: frameHeight,
-        width: frameWidth,
+        x: frameX - 8,
+        y: frameY - 8,
+        height: frameHeight + 16,
+        width: frameWidth + 16,
       });
 
       if (!snapshot) {
@@ -265,6 +275,7 @@ export default function Media() {
         <Group
           origin={{ x: centerX, y: centerY }}
           transform={polaroidTransform}
+          opacity={polaroidOpacity}
         >
           {/* Shadow */}
           <RoundedRect
@@ -322,15 +333,25 @@ export default function Media() {
         })}
       </View>
 
-      <Pressable
-        onPress={handleSaveImage}
-        disabled={saving}
-        style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-      >
-        <Text style={styles.saveButtonText}>
-          {saving ? "adding.." : "add pic to hug"}
-        </Text>
-      </Pressable>
+      <View style={styles.buttonContainer}>
+        <Pressable
+          style={styles.saveButton}
+          onPress={() => {
+            router.back();
+          }}
+        >
+          <Text style={styles.saveButtonText}>take another pic</Text>
+        </Pressable>
+        <Pressable
+          onPress={handleSaveImage}
+          disabled={saving}
+          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+        >
+          <Text style={styles.saveButtonText}>
+            {saving ? "adding.." : "add pic to hug"}
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -340,10 +361,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#bbbbbb",
   },
-  saveButton: {
+  buttonContainer: {
     position: "absolute",
     bottom: 140,
+    flex: 1,
+    gap: 12,
     alignSelf: "center",
+    flexDirection: "row",
+  },
+  saveButton: {
     paddingVertical: 14,
     paddingHorizontal: 10,
     borderRadius: 16,

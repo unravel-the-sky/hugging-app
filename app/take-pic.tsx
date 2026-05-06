@@ -20,6 +20,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { scheduleOnRN } from "react-native-worklets";
 
 export default function TakePicture() {
   const [facing, setFacing] = useState<CameraType>("back");
@@ -42,7 +44,7 @@ export default function TakePicture() {
   const takePic = async () => {
     const photo = await ref.current?.takePictureAsync();
     if (photo?.uri) {
-      router.replace({
+      router.push({
         pathname: "/media",
         params: {
           toUid,
@@ -53,6 +55,13 @@ export default function TakePicture() {
       });
     }
   };
+
+  const doubleTap = Gesture.Tap()
+    .numberOfTaps(2)
+    .onStart(() => {
+      console.log("double tapped!");
+      scheduleOnRN(toggleCameraFacing);
+    });
 
   if (!permission) {
     // camera permissions are loading
@@ -88,54 +97,56 @@ export default function TakePicture() {
 
   const renderCamera = () => {
     return (
-      <SafeAreaView style={styles.cameraContainer}>
-        <CameraView
-          style={styles.camera}
-          ref={ref}
-          mode={mode}
-          facing={facing}
-          mute={false}
-          mirror={true}
-          responsiveOrientationWhenOrientationLocked
-        />
-        <View style={styles.shutterContainer}>
-          <TouchableOpacity
-            onPress={() => {
-              const link = Platform.select({
-                ios: "photos-redirect://",
-                android: "content://media/external/images/media",
-              });
-              Linking.openURL(link!);
-            }}
-          >
-            <AntDesign name="picture" size={32} color="white" />
-          </TouchableOpacity>
-          <Pressable onPress={takePic}>
-            {({ pressed }) => (
-              <View
-                style={[
-                  styles.shutterBtn,
-                  {
-                    opacity: pressed ? 0.5 : 1,
-                  },
-                ]}
-              >
+      <GestureDetector gesture={doubleTap}>
+        <SafeAreaView style={styles.cameraContainer}>
+          <CameraView
+            style={styles.camera}
+            ref={ref}
+            mode={mode}
+            facing={facing}
+            mute={false}
+            mirror={true}
+            responsiveOrientationWhenOrientationLocked
+          />
+          <View style={styles.shutterContainer}>
+            <TouchableOpacity
+              onPress={() => {
+                const link = Platform.select({
+                  ios: "photos-redirect://",
+                  android: "content://media/external/images/media",
+                });
+                Linking.openURL(link!);
+              }}
+            >
+              <AntDesign name="picture" size={32} color="white" />
+            </TouchableOpacity>
+            <Pressable onPress={takePic}>
+              {({ pressed }) => (
                 <View
                   style={[
-                    styles.shutterBtnInner,
+                    styles.shutterBtn,
                     {
-                      backgroundColor: mode === "picture" ? "white" : "red",
+                      opacity: pressed ? 0.5 : 1,
                     },
                   ]}
-                />
-              </View>
-            )}
-          </Pressable>
-          <TouchableOpacity onPress={toggleCameraFacing}>
-            <FontAwesome6 name="rotate-left" size={32} color="white" />
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+                >
+                  <View
+                    style={[
+                      styles.shutterBtnInner,
+                      {
+                        backgroundColor: mode === "picture" ? "white" : "red",
+                      },
+                    ]}
+                  />
+                </View>
+              )}
+            </Pressable>
+            <TouchableOpacity onPress={toggleCameraFacing}>
+              <FontAwesome6 name="rotate-left" size={32} color="white" />
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </GestureDetector>
     );
   };
 
