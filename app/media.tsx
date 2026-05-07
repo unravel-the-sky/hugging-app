@@ -34,6 +34,8 @@ import * as MediaLibrary from "expo-media-library";
 
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "@/lib/firebaseConfig";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { scheduleOnRN } from "react-native-worklets";
 
 // Identity matrix — for what the image looks like as is
 const IDENTITY: number[] = [
@@ -75,6 +77,8 @@ const FILTERS = {
 } as const;
 
 type FilterKey = keyof typeof FILTERS;
+
+const filterKeys = Object.keys(FILTERS) as FilterKey[];
 
 // Linearly interpolate between two matrices, whoa took from claude
 const lerpMatrix = (a: readonly number[], b: readonly number[], t: number) => {
@@ -149,11 +153,6 @@ export default function Media() {
       frameHorizontalPadding
     : 80;
   const textY = 580;
-
-  const animatedMatrix = useDerivedValue(() => {
-    const target = FILTERS[selected].matrix;
-    return lerpMatrix(WHITE, target, developProgress.value);
-  }, [selected]);
 
   // Polaroid transform — scale 1.05 -> 1, rotate 10deg -> 0
   const scaleVal = 1.55;
@@ -268,50 +267,97 @@ export default function Media() {
     });
   };
 
+  const dragX = useSharedValue(0);
+  const dragLockedDirection = useSharedValue<"next" | "prev" | null>(null);
+
+  const SWIPE_THRESHOLD = 80;
+
+  const getFilterIndex = (direction: "next" | "prev", currentIndex: number) =>
+    direction === "next"
+      ? (currentIndex + 1) % filterKeys.length
+      : (currentIndex - 1 + filterKeys.length) % filterKeys.length;
+
+  const goToFilter = (direction: "next" | "prev") => {
+    const currentIndex = filterKeys.indexOf(selected);
+    const nextIndex = getFilterIndex(direction, currentIndex);
+    setSelected(filterKeys[nextIndex]);
+  };
+
+  const swipeGesture = Gesture.Pan()
+    .activeOffsetX([-15, 15])
+    .failOffsetY([-20, 20])
+    .onStart(() => {
+      "worklet";
+      dragLockedDirection.value = null;
+    })
+    .onUpdate((e) => {
+      "worklet";
+      if (dragLockedDirection.value === null && Math.abs(e.translationX) > 5) {
+        dragLockedDirection.value = e.translationX < 0 ? "next" : "prev";
+      }
+      dragX.value = e.translationX;
+    })
+    .onEnd((e) => {
+      "worklet";
+      const past = Math.abs(e.translationX) > SWIPE_THRESHOLD;
+      if (past && dragLockedDirection.value) {
+        scheduleOnRN(goToFilter, dragLockedDirection.value);
+      }
+      dragX.value = withTiming(0, { duration: 200 });
+      dragLockedDirection.value = null;
+    });
+
+  const animatedMatrix = useDerivedValue(() => {
+    const target = FILTERS[selected].matrix;
+    return lerpMatrix(WHITE, target, developProgress.value);
+  }, [selected]);
+
   if (!image) return null;
 
   return (
     <View style={styles.container}>
-      <Canvas style={StyleSheet.absoluteFill} ref={canvasRef}>
-        <Group
-          origin={{ x: centerX, y: centerY }}
-          transform={polaroidTransform}
-          opacity={polaroidOpacity}
-        >
-          {/* Shadow */}
-          <Rect
-            x={shadowX}
-            y={shadowY}
-            width={frameWidth}
-            height={frameHeight}
-            color={shadowOpacity}
-          />
-          {/* White card */}
-          <Rect
-            x={frameX}
-            y={frameY}
-            width={frameWidth}
-            height={frameHeight}
-            color="white"
-          />
-          {/* Photo */}
-          <Image
-            x={photoX}
-            y={photoY}
-            width={photoWidth}
-            height={photoHeight}
-            image={image}
-            fit="cover"
+      <GestureDetector gesture={swipeGesture}>
+        <Canvas style={{ width: 400, height: 800 }} ref={canvasRef}>
+          <Group
+            origin={{ x: centerX, y: centerY }}
+            transform={polaroidTransform}
+            opacity={polaroidOpacity}
           >
-            <ColorMatrix matrix={animatedMatrix} />
-          </Image>
-          {/* Caption */}
-          <SkiaText text={note} font={textFont} x={textX} y={textY} />
-        </Group>
-      </Canvas>
+            {/* Shadow */}
+            <Rect
+              x={shadowX}
+              y={shadowY}
+              width={frameWidth}
+              height={frameHeight}
+              color={shadowOpacity}
+            />
+            {/* White card */}
+            <Rect
+              x={frameX}
+              y={frameY}
+              width={frameWidth}
+              height={frameHeight}
+              color="white"
+            />
+            {/* Photo */}
+            <Image
+              x={photoX}
+              y={photoY}
+              width={photoWidth}
+              height={photoHeight}
+              image={image}
+              fit="cover"
+            >
+              <ColorMatrix matrix={animatedMatrix} />
+            </Image>
+            {/* Caption */}
+            <SkiaText text={note} font={textFont} x={textX} y={textY} />
+          </Group>
+        </Canvas>
+      </GestureDetector>
 
       <View style={styles.filterRow}>
-        {(Object.keys(FILTERS) as FilterKey[]).map((key) => {
+        {filterKeys.map((key) => {
           const isSelected = key === selected;
           return (
             <Pressable

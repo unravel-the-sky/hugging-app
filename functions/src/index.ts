@@ -104,7 +104,7 @@ const sendPushNotification = async (
     to: user.pushToken,
     sound: "default",
     title: "You got a hug 🥹",
-    body: `${hug.fromName ?? "Someone"} sent you a hug`,
+    body: `${hug.fromName ?? "Someone"} sent you a ${hug.imagePath ? "postcard" : "hug"}`,
     data: {
       hugId,
     },

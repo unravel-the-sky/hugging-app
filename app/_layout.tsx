@@ -7,7 +7,6 @@ import * as Notifications from "expo-notifications";
 import { SplashScreen, Stack, router } from "expo-router";
 import { useEffect, useRef } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
