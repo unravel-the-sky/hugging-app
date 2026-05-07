@@ -99,6 +99,16 @@ export default function RootLayout() {
         />
         <Stack.Screen name="take-pic" />
         <Stack.Screen name="media" />
+        <Stack.Screen
+          name="profile"
+          options={{
+            presentation: "modal",
+            sheetGrabberVisible: true,
+            headerTransparent: false,
+            headerShadowVisible: true,
+            headerLargeTitleShadowVisible: true,
+          }}
+        />
       </Stack>
     </GestureHandlerRootView>
   );

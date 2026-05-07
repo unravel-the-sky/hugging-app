@@ -1,3 +1,4 @@
+import AvatarImage from "@/components/avatar/AvatarImage";
 import Loader from "@/components/ui/Loader";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useHugs } from "@/hooks/useIncomingHugs";
@@ -11,9 +12,9 @@ import { Label, router, useSegments } from "expo-router";
 import { NativeTabs } from "expo-router/unstable-native-tabs";
 import { useEffect, useState } from "react";
 import {
+  Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
   useColorScheme,
   View,
 } from "react-native";
@@ -69,9 +70,10 @@ export default function TabsLayout() {
       <SafeAreaView style={styles.container} edges={["top"]}>
         {/* Shared Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.push("/profile")}>
-            <Text style={styles.usernameText}>@{user?.displayName || ""}</Text>
-          </TouchableOpacity>
+          <Text style={styles.usernameText}>@{user?.displayName || ""}</Text>
+          <Pressable onPress={() => router.push("/profile")}>
+            <AvatarImage avatar={user?.avatar || "male"} size="s" />
+          </Pressable>
         </View>
 
         {/* Tab Content */}
@@ -92,10 +94,6 @@ export default function TabsLayout() {
                 {unreadHugsCount > 9 ? "9+" : unreadHugsCount.toString()}
               </NativeTabs.Trigger.Badge>
             )}
-          </NativeTabs.Trigger>
-          <NativeTabs.Trigger name="profile">
-            <Label>Profile</Label>
-            <NativeTabs.Trigger.Icon sf="person" md="settings" />
           </NativeTabs.Trigger>
         </NativeTabs>
       </SafeAreaView>

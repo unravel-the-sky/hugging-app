@@ -10,12 +10,12 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HugsListScreen() {
   const currentUser = auth.currentUser;
@@ -123,7 +123,29 @@ export default function HugsListScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      <View style={styles.tabs}>
+        <Pressable
+          style={[styles.tab, tab === "incoming" && styles.tabActive]}
+          onPress={() => setTab("incoming")}
+        >
+          <Text
+            style={[styles.tabText, tab === "incoming" && styles.tabTextActive]}
+          >
+            Received
+          </Text>
+        </Pressable>
+        <Pressable
+          style={[styles.tab, tab === "outgoing" && styles.tabActive]}
+          onPress={() => setTab("outgoing")}
+        >
+          <Text
+            style={[styles.tabText, tab === "outgoing" && styles.tabTextActive]}
+          >
+            Sent
+          </Text>
+        </Pressable>
+      </View>
       <FlatList
         data={hugs}
         renderItem={({ item }) => (
@@ -143,30 +165,7 @@ export default function HugsListScreen() {
         onHugBack={handleHugBack}
         onIgnore={handleIgnore}
       />
-
-      <View style={styles.tabs}>
-        <TouchableOpacity
-          style={[styles.tab, tab === "incoming" && styles.tabActive]}
-          onPress={() => setTab("incoming")}
-        >
-          <Text
-            style={[styles.tabText, tab === "incoming" && styles.tabTextActive]}
-          >
-            Received
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, tab === "outgoing" && styles.tabActive]}
-          onPress={() => setTab("outgoing")}
-        >
-          <Text
-            style={[styles.tabText, tab === "outgoing" && styles.tabTextActive]}
-          >
-            Sent
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
