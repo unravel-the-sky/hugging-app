@@ -5,8 +5,8 @@ import {
   Image,
   ImageFormat,
   Rect,
-  RoundedRect,
   Text as SkiaText,
+  SkImage,
   useCanvasRef,
   useFont,
   useImage,
@@ -32,8 +32,8 @@ import {
 import { File, Paths } from "expo-file-system";
 import * as MediaLibrary from "expo-media-library";
 
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "@/lib/firebaseConfig";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { scheduleOnRN } from "react-native-worklets";
 
@@ -139,7 +139,7 @@ export default function Media() {
   const frameHeight = photoHeight + frameTopPadding + frameBottomPadding;
 
   const frameX = (screenWidth - frameWidth) / 2;
-  const frameY = (screenHeight - frameHeight) / 2 - 20;
+  const frameY = (screenHeight - frameHeight) / 2 - 60;
   const photoX = frameX + frameHorizontalPadding;
   const photoY = frameY + frameTopPadding;
 
@@ -152,7 +152,7 @@ export default function Media() {
       textFont.measureText(note).width / 2 +
       frameHorizontalPadding
     : 80;
-  const textY = 580;
+  const textY = 540;
 
   // Polaroid transform — scale 1.05 -> 1, rotate 10deg -> 0
   const scaleVal = 1.55;
@@ -365,6 +365,7 @@ export default function Media() {
               onPress={() => setSelected(key)}
               style={[styles.filterBox, isSelected && styles.filterBoxSelected]}
             >
+              <FilterPreview image={image} matrix={FILTERS[key].matrix} />
               <Text
                 style={[
                   styles.filterText,
@@ -401,6 +402,30 @@ export default function Media() {
   );
 }
 
+const FILTER_PREVIEW_SIZE = 48;
+
+type FilterPreviewProps = {
+  image: SkImage;
+  matrix: readonly number[];
+};
+
+const FilterPreview = ({ image, matrix }: FilterPreviewProps) => {
+  return (
+    <Canvas style={{ width: FILTER_PREVIEW_SIZE, height: FILTER_PREVIEW_SIZE }}>
+      <Image
+        x={0}
+        y={0}
+        width={FILTER_PREVIEW_SIZE}
+        height={FILTER_PREVIEW_SIZE}
+        image={image}
+        fit="cover"
+      >
+        <ColorMatrix matrix={[...matrix]} />
+      </Image>
+    </Canvas>
+  );
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -408,7 +433,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     position: "absolute",
-    bottom: 140,
+    bottom: 200,
     flex: 1,
     gap: 12,
     alignSelf: "center",
@@ -433,18 +458,19 @@ const styles = StyleSheet.create({
     bottom: 36,
     left: 0,
     right: 0,
+    width: "100%",
     flexDirection: "row",
     justifyContent: "center",
     gap: 12,
-    paddingHorizontal: 20,
   },
   filterBox: {
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    display: "flex",
+    gap: 6,
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: "rgba(255, 255, 255, 0.24)",
     borderColor: "rgba(255,255,255,0.2)",
-    minWidth: 80,
+    minWidth: 60,
     alignItems: "center",
   },
   filterBoxSelected: {
