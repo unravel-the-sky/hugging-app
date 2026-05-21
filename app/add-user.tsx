@@ -29,9 +29,6 @@ export default function AddUserScreen() {
     setIsLoading(true);
 
     try {
-      // TODO: Implement Firebase user search and add logic here
-      // For now, just simulate the process
-      // await new Promise((resolve) => setTimeout(resolve, 1000));
       const res = await addFriendByUsername(username);
       if (!res) {
         Alert.alert("poop");

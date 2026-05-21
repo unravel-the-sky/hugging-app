@@ -9,14 +9,7 @@ import {
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
-import {
-  Button,
-  Pressable,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Button, Pressable, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
@@ -137,18 +130,9 @@ export default function TakePicture() {
             responsiveOrientationWhenOrientationLocked
           />
           <View style={styles.shutterContainer}>
-            <TouchableOpacity
-              onPress={() => {
-                pickImageFromMobileAsync();
-                // const link = Platform.select({
-                //   ios: "photos-redirect://",
-                //   android: "content://media/external/images/media",
-                // });
-                // Linking.openURL(link!);
-              }}
-            >
+            <Pressable onPress={pickImageFromMobileAsync}>
               <AntDesign name="picture" size={32} color="white" />
-            </TouchableOpacity>
+            </Pressable>
             <Pressable onPress={takePic}>
               {({ pressed }) => (
                 <View
@@ -170,9 +154,9 @@ export default function TakePicture() {
                 </View>
               )}
             </Pressable>
-            <TouchableOpacity onPress={toggleCameraFacing}>
+            <Pressable onPress={toggleCameraFacing}>
               <FontAwesome6 name="rotate-left" size={32} color="white" />
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </SafeAreaView>
       </GestureDetector>

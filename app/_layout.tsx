@@ -109,6 +109,17 @@ export default function RootLayout() {
             headerLargeTitleShadowVisible: true,
           }}
         />
+        <Stack.Screen
+          name="friends-list"
+          options={{
+            presentation: "formSheet",
+            sheetAllowedDetents: "fitToContents",
+            sheetGrabberVisible: true,
+            headerTransparent: false,
+            headerShadowVisible: true,
+            headerLargeTitleShadowVisible: true,
+          }}
+        />
       </Stack>
     </GestureHandlerRootView>
   );

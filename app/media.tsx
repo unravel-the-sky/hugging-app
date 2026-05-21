@@ -267,45 +267,45 @@ export default function Media() {
     });
   };
 
-  const dragX = useSharedValue(0);
-  const dragLockedDirection = useSharedValue<"next" | "prev" | null>(null);
+  // const dragX = useSharedValue(0);
+  // const dragLockedDirection = useSharedValue<"next" | "prev" | null>(null);
 
-  const SWIPE_THRESHOLD = 80;
+  // const SWIPE_THRESHOLD = 80;
 
-  const getFilterIndex = (direction: "next" | "prev", currentIndex: number) =>
-    direction === "next"
-      ? (currentIndex + 1) % filterKeys.length
-      : (currentIndex - 1 + filterKeys.length) % filterKeys.length;
+  // const getFilterIndex = (direction: "next" | "prev", currentIndex: number) =>
+  //   direction === "next"
+  //     ? (currentIndex + 1) % filterKeys.length
+  //     : (currentIndex - 1 + filterKeys.length) % filterKeys.length;
 
-  const goToFilter = (direction: "next" | "prev") => {
-    const currentIndex = filterKeys.indexOf(selected);
-    const nextIndex = getFilterIndex(direction, currentIndex);
-    setSelected(filterKeys[nextIndex]);
-  };
+  // const goToFilter = (direction: "next" | "prev") => {
+  //   const currentIndex = filterKeys.indexOf(selected);
+  //   const nextIndex = getFilterIndex(direction, currentIndex);
+  //   setSelected(filterKeys[nextIndex]);
+  // };
 
-  const swipeGesture = Gesture.Pan()
-    .activeOffsetX([-15, 15])
-    .failOffsetY([-20, 20])
-    .onStart(() => {
-      "worklet";
-      dragLockedDirection.value = null;
-    })
-    .onUpdate((e) => {
-      "worklet";
-      if (dragLockedDirection.value === null && Math.abs(e.translationX) > 5) {
-        dragLockedDirection.value = e.translationX < 0 ? "next" : "prev";
-      }
-      dragX.value = e.translationX;
-    })
-    .onEnd((e) => {
-      "worklet";
-      const past = Math.abs(e.translationX) > SWIPE_THRESHOLD;
-      if (past && dragLockedDirection.value) {
-        scheduleOnRN(goToFilter, dragLockedDirection.value);
-      }
-      dragX.value = withTiming(0, { duration: 200 });
-      dragLockedDirection.value = null;
-    });
+  // const swipeGesture = Gesture.Pan()
+  //   .activeOffsetX([-15, 15])
+  //   .failOffsetY([-20, 20])
+  //   .onStart(() => {
+  //     "worklet";
+  //     dragLockedDirection.value = null;
+  //   })
+  //   .onUpdate((e) => {
+  //     "worklet";
+  //     if (dragLockedDirection.value === null && Math.abs(e.translationX) > 5) {
+  //       dragLockedDirection.value = e.translationX < 0 ? "next" : "prev";
+  //     }
+  //     dragX.value = e.translationX;
+  //   })
+  //   .onEnd((e) => {
+  //     "worklet";
+  //     const past = Math.abs(e.translationX) > SWIPE_THRESHOLD;
+  //     if (past && dragLockedDirection.value) {
+  //       scheduleOnRN(goToFilter, dragLockedDirection.value);
+  //     }
+  //     dragX.value = withTiming(0, { duration: 200 });
+  //     dragLockedDirection.value = null;
+  //   });
 
   const animatedMatrix = useDerivedValue(() => {
     const target = FILTERS[selected].matrix;
@@ -316,45 +316,43 @@ export default function Media() {
 
   return (
     <View style={styles.container}>
-      <GestureDetector gesture={swipeGesture}>
-        <Canvas style={{ width: 400, height: 800 }} ref={canvasRef}>
-          <Group
-            origin={{ x: centerX, y: centerY }}
-            transform={polaroidTransform}
-            opacity={polaroidOpacity}
+      <Canvas style={{ width: 400, height: 800 }} ref={canvasRef}>
+        <Group
+          origin={{ x: centerX, y: centerY }}
+          transform={polaroidTransform}
+          opacity={polaroidOpacity}
+        >
+          {/* Shadow */}
+          <Rect
+            x={shadowX}
+            y={shadowY}
+            width={frameWidth}
+            height={frameHeight}
+            color={shadowOpacity}
+          />
+          {/* White card */}
+          <Rect
+            x={frameX}
+            y={frameY}
+            width={frameWidth}
+            height={frameHeight}
+            color="white"
+          />
+          {/* Photo */}
+          <Image
+            x={photoX}
+            y={photoY}
+            width={photoWidth}
+            height={photoHeight}
+            image={image}
+            fit="cover"
           >
-            {/* Shadow */}
-            <Rect
-              x={shadowX}
-              y={shadowY}
-              width={frameWidth}
-              height={frameHeight}
-              color={shadowOpacity}
-            />
-            {/* White card */}
-            <Rect
-              x={frameX}
-              y={frameY}
-              width={frameWidth}
-              height={frameHeight}
-              color="white"
-            />
-            {/* Photo */}
-            <Image
-              x={photoX}
-              y={photoY}
-              width={photoWidth}
-              height={photoHeight}
-              image={image}
-              fit="cover"
-            >
-              <ColorMatrix matrix={animatedMatrix} />
-            </Image>
-            {/* Caption */}
-            <SkiaText text={note} font={textFont} x={textX} y={textY} />
-          </Group>
-        </Canvas>
-      </GestureDetector>
+            <ColorMatrix matrix={animatedMatrix} />
+          </Image>
+          {/* Caption */}
+          <SkiaText text={note} font={textFont} x={textX} y={textY} />
+        </Group>
+      </Canvas>
 
       <View style={styles.filterRow}>
         {filterKeys.map((key) => {
