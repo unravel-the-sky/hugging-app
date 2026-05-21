@@ -202,7 +202,7 @@ export default function Media() {
 
       const captureUri = await captureRef(imageRef, {
         format: "jpg",
-        quality: 0.8,
+        quality: 0.6,
         result: "tmpfile",
       });
 
