@@ -80,7 +80,7 @@ export default function HugNoteModal() {
           style={[styles.button, styles.cancelButton]}
           onPress={handleAddPicture}
         >
-          <Text style={styles.cancelButtonText}>Make it a postcard 📷 </Text>
+          <Text style={styles.cancelButtonText}>Send a postcard 📷 </Text>
         </TouchableOpacity>
       </View>
 

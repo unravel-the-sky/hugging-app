@@ -3,28 +3,23 @@ import {
   ColorMatrix,
   Group,
   Image,
-  ImageFormat,
   Rect,
-  Text as SkiaText,
   SkImage,
   useCanvasRef,
-  useFont,
   useImage,
 } from "@shopify/react-native-skia";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
 } from "react-native";
-import Animated, {
+import {
   Easing,
-  useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
   withDelay,
@@ -34,16 +29,11 @@ import Animated, {
 import { File, Paths } from "expo-file-system";
 import * as MediaLibrary from "expo-media-library";
 import { captureRef } from "react-native-view-shot";
-import * as FileSystem from "expo-file-system";
 
+import DraggableText from "@/components/ui/DraggableText";
 import { storage } from "@/lib/firebaseConfig";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import {
-  Gesture,
-  GestureDetector,
-  TextInput,
-} from "react-native-gesture-handler";
-import { scheduleOnRN } from "react-native-worklets";
+import { TextInput } from "react-native-gesture-handler";
 
 // Identity matrix — for what the image looks like as is
 const IDENTITY: number[] = [
@@ -101,11 +91,6 @@ export default function Media() {
     media: string;
     note: string;
   }>();
-
-  const textFont = useFont(
-    require("@/assets/fonts/JustMeAgainDownHere-Regular.ttf"),
-    32,
-  );
 
   const image = useImage(media);
 
@@ -235,8 +220,6 @@ export default function Media() {
       const file = new File(Paths.cache, filename);
       file.create();
       file.write(base64, { encoding: "base64" });
-
-      // await MediaLibrary.saveToLibraryAsync(FirebaseFirestore);
 
       // upload here to firebase
 
@@ -522,64 +505,3 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
-
-const DraggableText = ({
-  item = "",
-  onPressed,
-}: {
-  item: string;
-  onPressed: () => void;
-}) => {
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
-
-  const rotation = useSharedValue(0);
-  const savedRotation = useSharedValue(0);
-
-  const drag = Gesture.Pan().onChange((event) => {
-    translateX.value += event.changeX;
-    translateY.value += event.changeY;
-  });
-
-  const rotationGesture = Gesture.Rotation()
-    .onUpdate((e) => {
-      rotation.value = savedRotation.value + e.rotation;
-    })
-    .onEnd(() => {
-      savedRotation.value = rotation.value;
-    });
-
-  const containerStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        {
-          translateX: translateX.value,
-        },
-        {
-          translateY: translateY.value,
-        },
-        {
-          rotateZ: `${(rotation.value / Math.PI) * 180}deg`,
-        },
-      ],
-    };
-  });
-
-  return (
-    <GestureDetector gesture={drag}>
-      <Animated.View
-        style={[
-          containerStyle,
-          {
-            alignItems: "center",
-            bottom: 70,
-          },
-        ]}
-      >
-        <Pressable onPress={onPressed}>
-          <Text style={{ fontSize: 30, fontFamily: "CuteFont" }}>{item}</Text>
-        </Pressable>
-      </Animated.View>
-    </GestureDetector>
-  );
-};
