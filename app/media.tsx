@@ -12,17 +12,19 @@ import {
   useImage,
 } from "@shopify/react-native-skia";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
 } from "react-native";
-import {
+import Animated, {
   Easing,
+  useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
   withDelay,
@@ -31,10 +33,16 @@ import {
 
 import { File, Paths } from "expo-file-system";
 import * as MediaLibrary from "expo-media-library";
+import { captureRef } from "react-native-view-shot";
+import * as FileSystem from "expo-file-system";
 
 import { storage } from "@/lib/firebaseConfig";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import {
+  Gesture,
+  GestureDetector,
+  TextInput,
+} from "react-native-gesture-handler";
 import { scheduleOnRN } from "react-native-worklets";
 
 // Identity matrix — for what the image looks like as is
@@ -94,15 +102,18 @@ export default function Media() {
     note: string;
   }>();
 
-  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
-
   const textFont = useFont(
     require("@/assets/fonts/JustMeAgainDownHere-Regular.ttf"),
     32,
   );
 
   const image = useImage(media);
+
+  const imageRef = useRef(null);
+
   const [selected, setSelected] = useState<FilterKey>("normal");
+
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   // 0 = mid-drop (scaled up, tilted), 1 = landed
   const dropProgress = useSharedValue(0);
@@ -140,21 +151,19 @@ export default function Media() {
 
   const frameX = (screenWidth - frameWidth) / 2;
   const frameY = (screenHeight - frameHeight) / 2 - 60;
-  const photoX = frameX + frameHorizontalPadding;
-  const photoY = frameY + frameTopPadding;
 
-  // Center of the polaroid — used as rotation/scale pivot
-  const centerX = frameX + frameWidth / 2;
-  const centerY = frameY + frameHeight / 2;
+  const canvasPadding = 10; // for shadow
+  const canvasWidth = frameWidth + canvasPadding * 2;
+  const canvasHeight = frameHeight + canvasPadding * 2;
 
-  const textX = textFont
-    ? frameWidth / 2 -
-      textFont.measureText(note).width / 2 +
-      frameHorizontalPadding
-    : 80;
-  const textY = 540;
+  const frameXLocal = canvasPadding;
+  const frameYLocal = canvasPadding;
+  const photoXLocal = frameXLocal + frameHorizontalPadding;
+  const photoYLocal = frameYLocal + frameTopPadding;
 
-  // Polaroid transform — scale 1.05 -> 1, rotate 10deg -> 0
+  const centerXLocal = canvasWidth / 2;
+  const centerYLocal = canvasHeight / 2;
+
   const scaleVal = 1.55;
   const rotateVal = -10;
   const translateYVal = -10;
@@ -162,8 +171,7 @@ export default function Media() {
     const t = dropProgress.value;
     const scale = scaleVal + (1 - scaleVal) * t; // scaleVal -> 1
     const rotate = ((rotateVal * Math.PI) / 180) * (1 - t); // 10deg -> 0
-    const translateY = translateYVal + (0 - translateYVal) * t;
-    return [{ scale }, { rotate }, { translateY }];
+    return [];
   });
 
   const opacityVal = 0;
@@ -185,13 +193,16 @@ export default function Media() {
   );
 
   // Shadow rect position needs to be a SharedValue too since it depends on dropProgress
-  const shadowX = useDerivedValue(() => frameX + shadowOffsetX.value);
-  const shadowY = useDerivedValue(() => frameY + shadowOffsetY.value);
+  const shadowX = useDerivedValue(() => frameXLocal + shadowOffsetX.value);
+  const shadowY = useDerivedValue(() => frameYLocal + shadowOffsetY.value);
 
   const canvasRef = useCanvasRef();
   const [saving, setSaving] = useState(false);
 
   const [cloudStorageUrl, setCloudStorageUrl] = useState("");
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const [draftText, setDraftText] = useState("");
 
   const handleSaveImage = async () => {
     try {
@@ -204,29 +215,28 @@ export default function Media() {
         return;
       }
 
-      // take snapshot of the canvas
-      const snapshot = canvasRef.current?.makeImageSnapshot({
-        x: frameX,
-        y: frameY,
-        height: frameHeight,
-        width: frameWidth,
+      const captureUri = await captureRef(imageRef, {
+        format: "jpg",
+        quality: 0.8,
+        result: "tmpfile",
       });
 
-      if (!snapshot) {
-        Alert.alert("save failed", "could not save image");
-        return;
+      if (!captureUri) {
+        alert("Oupsie..");
       }
+      await MediaLibrary.saveToLibraryAsync(captureUri);
 
       // encoding
-      const base64 = snapshot.encodeToBase64(ImageFormat.JPEG, 80);
+      const captureFile = new File(captureUri);
+      const base64 = await captureFile.base64();
 
-      // saving
+      // // saving
       const filename = `polaroid-hug-${Date.now()}.png`;
       const file = new File(Paths.cache, filename);
       file.create();
       file.write(base64, { encoding: "base64" });
 
-      await MediaLibrary.saveToLibraryAsync(file.uri);
+      // await MediaLibrary.saveToLibraryAsync(FirebaseFirestore);
 
       // upload here to firebase
 
@@ -267,46 +277,6 @@ export default function Media() {
     });
   };
 
-  // const dragX = useSharedValue(0);
-  // const dragLockedDirection = useSharedValue<"next" | "prev" | null>(null);
-
-  // const SWIPE_THRESHOLD = 80;
-
-  // const getFilterIndex = (direction: "next" | "prev", currentIndex: number) =>
-  //   direction === "next"
-  //     ? (currentIndex + 1) % filterKeys.length
-  //     : (currentIndex - 1 + filterKeys.length) % filterKeys.length;
-
-  // const goToFilter = (direction: "next" | "prev") => {
-  //   const currentIndex = filterKeys.indexOf(selected);
-  //   const nextIndex = getFilterIndex(direction, currentIndex);
-  //   setSelected(filterKeys[nextIndex]);
-  // };
-
-  // const swipeGesture = Gesture.Pan()
-  //   .activeOffsetX([-15, 15])
-  //   .failOffsetY([-20, 20])
-  //   .onStart(() => {
-  //     "worklet";
-  //     dragLockedDirection.value = null;
-  //   })
-  //   .onUpdate((e) => {
-  //     "worklet";
-  //     if (dragLockedDirection.value === null && Math.abs(e.translationX) > 5) {
-  //       dragLockedDirection.value = e.translationX < 0 ? "next" : "prev";
-  //     }
-  //     dragX.value = e.translationX;
-  //   })
-  //   .onEnd((e) => {
-  //     "worklet";
-  //     const past = Math.abs(e.translationX) > SWIPE_THRESHOLD;
-  //     if (past && dragLockedDirection.value) {
-  //       scheduleOnRN(goToFilter, dragLockedDirection.value);
-  //     }
-  //     dragX.value = withTiming(0, { duration: 200 });
-  //     dragLockedDirection.value = null;
-  //   });
-
   const animatedMatrix = useDerivedValue(() => {
     const target = FILTERS[selected].matrix;
     return lerpMatrix(WHITE, target, developProgress.value);
@@ -316,43 +286,99 @@ export default function Media() {
 
   return (
     <View style={styles.container}>
-      <Canvas style={{ width: 400, height: 800 }} ref={canvasRef}>
-        <Group
-          origin={{ x: centerX, y: centerY }}
-          transform={polaroidTransform}
-          opacity={polaroidOpacity}
+      <View
+        style={{
+          flex: 1,
+          top: 120,
+          alignItems: "center",
+        }}
+      >
+        <View
+          ref={imageRef}
+          collapsable={false}
+          style={{
+            width: canvasWidth,
+            height: canvasHeight,
+          }}
         >
-          {/* Shadow */}
-          <Rect
-            x={shadowX}
-            y={shadowY}
-            width={frameWidth}
-            height={frameHeight}
-            color={shadowOpacity}
-          />
-          {/* White card */}
-          <Rect
-            x={frameX}
-            y={frameY}
-            width={frameWidth}
-            height={frameHeight}
-            color="white"
-          />
-          {/* Photo */}
-          <Image
-            x={photoX}
-            y={photoY}
-            width={photoWidth}
-            height={photoHeight}
-            image={image}
-            fit="cover"
+          <Canvas
+            style={{ width: canvasWidth, height: canvasHeight }}
+            ref={canvasRef}
           >
-            <ColorMatrix matrix={animatedMatrix} />
-          </Image>
-          {/* Caption */}
-          <SkiaText text={note} font={textFont} x={textX} y={textY} />
-        </Group>
-      </Canvas>
+            <Group
+              origin={{ x: centerXLocal, y: centerYLocal }}
+              transform={polaroidTransform}
+              opacity={polaroidOpacity}
+            >
+              {/* Shadow */}
+              <Rect
+                x={shadowX}
+                y={shadowY}
+                width={frameWidth}
+                height={frameHeight}
+                color={shadowOpacity}
+              />
+              {/* White card */}
+              <Rect
+                x={frameXLocal}
+                y={frameYLocal}
+                width={frameWidth}
+                height={frameHeight}
+                color="white"
+              />
+              {/* Photo */}
+              <Image
+                x={photoXLocal}
+                y={photoYLocal}
+                width={photoWidth}
+                height={photoHeight}
+                image={image}
+                fit="cover"
+              >
+                <ColorMatrix matrix={animatedMatrix} />
+              </Image>
+            </Group>
+          </Canvas>
+
+          {draftText && (
+            <DraggableText
+              item={draftText}
+              onPressed={() => {
+                setModalVisible(true);
+              }}
+            />
+          )}
+        </View>
+      </View>
+
+      {modalVisible && (
+        <Pressable
+          onPress={() => {
+            setModalVisible(!modalVisible);
+          }}
+          style={{
+            ...StyleSheet.absoluteFill,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <TextInput
+            autoFocus
+            multiline
+            value={draftText}
+            onChangeText={setDraftText}
+            maxLength={60}
+            style={{
+              color: "white",
+              fontSize: 30,
+              textAlign: "center",
+              minWidth: 100,
+              fontFamily: "CuteFont",
+            }}
+          />
+        </Pressable>
+      )}
 
       <View style={styles.filterRow}>
         {filterKeys.map((key) => {
@@ -384,7 +410,18 @@ export default function Media() {
             router.back();
           }}
         >
-          <Text style={styles.saveButtonText}>take another pic</Text>
+          <Text style={styles.saveButtonText}>back</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => {
+            setModalVisible(!modalVisible);
+          }}
+          disabled={saving}
+          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+        >
+          <Text style={styles.saveButtonText}>
+            {draftText ? "edit" : "add"} text
+          </Text>
         </Pressable>
         <Pressable
           onPress={handleSaveImage}
@@ -392,7 +429,7 @@ export default function Media() {
           style={[styles.saveButton, saving && styles.saveButtonDisabled]}
         >
           <Text style={styles.saveButtonText}>
-            {saving ? "adding.." : "add pic to hug"}
+            {saving ? "adding.." : "send"}
           </Text>
         </Pressable>
       </View>
@@ -431,7 +468,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     position: "absolute",
-    bottom: 200,
+    bottom: 150,
     flex: 1,
     gap: 12,
     alignSelf: "center",
@@ -485,3 +522,64 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
+
+const DraggableText = ({
+  item = "",
+  onPressed,
+}: {
+  item: string;
+  onPressed: () => void;
+}) => {
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+
+  const rotation = useSharedValue(0);
+  const savedRotation = useSharedValue(0);
+
+  const drag = Gesture.Pan().onChange((event) => {
+    translateX.value += event.changeX;
+    translateY.value += event.changeY;
+  });
+
+  const rotationGesture = Gesture.Rotation()
+    .onUpdate((e) => {
+      rotation.value = savedRotation.value + e.rotation;
+    })
+    .onEnd(() => {
+      savedRotation.value = rotation.value;
+    });
+
+  const containerStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        {
+          translateX: translateX.value,
+        },
+        {
+          translateY: translateY.value,
+        },
+        {
+          rotateZ: `${(rotation.value / Math.PI) * 180}deg`,
+        },
+      ],
+    };
+  });
+
+  return (
+    <GestureDetector gesture={drag}>
+      <Animated.View
+        style={[
+          containerStyle,
+          {
+            alignItems: "center",
+            bottom: 70,
+          },
+        ]}
+      >
+        <Pressable onPress={onPressed}>
+          <Text style={{ fontSize: 30, fontFamily: "CuteFont" }}>{item}</Text>
+        </Pressable>
+      </Animated.View>
+    </GestureDetector>
+  );
+};
