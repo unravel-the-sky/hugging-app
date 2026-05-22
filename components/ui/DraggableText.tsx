@@ -18,18 +18,31 @@ export default function DraggableText({
   const rotation = useSharedValue(0);
   const savedRotation = useSharedValue(0);
 
+  const scale = useSharedValue(1);
+  const offsetScale = useSharedValue(1);
+
   const drag = Gesture.Pan().onChange((event) => {
     translateX.value += event.changeX;
     translateY.value += event.changeY;
   });
 
-  const rotationGesture = Gesture.Rotation()
+  const pinch = Gesture.Pinch()
+    .onUpdate((event) => {
+      scale.value = offsetScale.value * event.scale;
+    })
+    .onEnd(() => {
+      offsetScale.value = scale.value;
+    });
+
+  const rotate = Gesture.Rotation()
     .onUpdate((e) => {
       rotation.value = savedRotation.value + e.rotation;
     })
     .onEnd(() => {
       savedRotation.value = rotation.value;
     });
+
+  const mergedGesture = Gesture.Simultaneous(drag, pinch, rotate);
 
   const containerStyle = useAnimatedStyle(() => {
     return {
@@ -43,12 +56,15 @@ export default function DraggableText({
         {
           rotateZ: `${(rotation.value / Math.PI) * 180}deg`,
         },
+        {
+          scale: scale.value,
+        },
       ],
     };
   });
 
   return (
-    <GestureDetector gesture={drag}>
+    <GestureDetector gesture={mergedGesture}>
       <Animated.View
         style={[
           containerStyle,

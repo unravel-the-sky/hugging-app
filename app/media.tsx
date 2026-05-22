@@ -34,6 +34,7 @@ import DraggableText from "@/components/ui/DraggableText";
 import { storage } from "@/lib/firebaseConfig";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { TextInput } from "react-native-gesture-handler";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 // Identity matrix — for what the image looks like as is
 const IDENTITY: number[] = [
@@ -269,6 +270,15 @@ export default function Media() {
 
   return (
     <View style={styles.container}>
+      <View style={{ position: "fixed", top: 100, left: 18 }}>
+        <Pressable
+          onPress={() => {
+            router.back();
+          }}
+        >
+          <Ionicons name="arrow-back" size={40} color={"#7c7c7c"} />
+        </Pressable>
+      </View>
       <View
         style={{
           flex: 1,
@@ -276,62 +286,68 @@ export default function Media() {
           alignItems: "center",
         }}
       >
-        <View
-          ref={imageRef}
-          collapsable={false}
-          style={{
-            width: canvasWidth,
-            height: canvasHeight,
+        <Pressable
+          onPress={() => {
+            setModalVisible(true);
           }}
         >
-          <Canvas
-            style={{ width: canvasWidth, height: canvasHeight }}
-            ref={canvasRef}
+          <View
+            ref={imageRef}
+            collapsable={false}
+            style={{
+              width: canvasWidth,
+              height: canvasHeight,
+            }}
           >
-            <Group
-              origin={{ x: centerXLocal, y: centerYLocal }}
-              transform={polaroidTransform}
-              opacity={polaroidOpacity}
+            <Canvas
+              style={{ width: canvasWidth, height: canvasHeight }}
+              ref={canvasRef}
             >
-              {/* Shadow */}
-              <Rect
-                x={shadowX}
-                y={shadowY}
-                width={frameWidth}
-                height={frameHeight}
-                color={shadowOpacity}
-              />
-              {/* White card */}
-              <Rect
-                x={frameXLocal}
-                y={frameYLocal}
-                width={frameWidth}
-                height={frameHeight}
-                color="white"
-              />
-              {/* Photo */}
-              <Image
-                x={photoXLocal}
-                y={photoYLocal}
-                width={photoWidth}
-                height={photoHeight}
-                image={image}
-                fit="cover"
+              <Group
+                origin={{ x: centerXLocal, y: centerYLocal }}
+                transform={polaroidTransform}
+                opacity={polaroidOpacity}
               >
-                <ColorMatrix matrix={animatedMatrix} />
-              </Image>
-            </Group>
-          </Canvas>
+                {/* Shadow */}
+                <Rect
+                  x={shadowX}
+                  y={shadowY}
+                  width={frameWidth}
+                  height={frameHeight}
+                  color={shadowOpacity}
+                />
+                {/* White card */}
+                <Rect
+                  x={frameXLocal}
+                  y={frameYLocal}
+                  width={frameWidth}
+                  height={frameHeight}
+                  color="white"
+                />
+                {/* Photo */}
+                <Image
+                  x={photoXLocal}
+                  y={photoYLocal}
+                  width={photoWidth}
+                  height={photoHeight}
+                  image={image}
+                  fit="cover"
+                >
+                  <ColorMatrix matrix={animatedMatrix} />
+                </Image>
+              </Group>
+            </Canvas>
 
-          {draftText && (
-            <DraggableText
-              item={draftText}
-              onPressed={() => {
-                setModalVisible(true);
-              }}
-            />
-          )}
-        </View>
+            {draftText && (
+              <DraggableText
+                item={draftText}
+                onPressed={() => {
+                  setModalVisible(true);
+                }}
+              />
+            )}
+          </View>
+        </Pressable>
       </View>
 
       {modalVisible && (
@@ -388,32 +404,26 @@ export default function Media() {
 
       <View style={styles.buttonContainer}>
         <Pressable
-          style={styles.saveButton}
-          onPress={() => {
-            router.back();
-          }}
-        >
-          <Text style={styles.saveButtonText}>back</Text>
-        </Pressable>
-        <Pressable
           onPress={() => {
             setModalVisible(!modalVisible);
           }}
           disabled={saving}
           style={[styles.saveButton, saving && styles.saveButtonDisabled]}
         >
-          <Text style={styles.saveButtonText}>
+          {/* <Text style={styles.saveButtonText}>
             {draftText ? "edit" : "add"} text
-          </Text>
+          </Text> */}
+          <Ionicons name="text" size={32} color={"#7c7c7c"} />
         </Pressable>
         <Pressable
           onPress={handleSaveImage}
           disabled={saving}
           style={[styles.saveButton, saving && styles.saveButtonDisabled]}
         >
-          <Text style={styles.saveButtonText}>
+          {/* <Text style={styles.saveButtonText}>
             {saving ? "adding.." : "send"}
-          </Text>
+          </Text> */}
+          <Ionicons name="mail-unread-outline" size={32} color={"#7c7c7c"} />
         </Pressable>
       </View>
     </View>
@@ -458,10 +468,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
   },
   saveButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 10,
+    padding: 8,
     borderRadius: 16,
     backgroundColor: "white",
+    width: 120,
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
   },
   saveButtonDisabled: {
     opacity: 0.5,
