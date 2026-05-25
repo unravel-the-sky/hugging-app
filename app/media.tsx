@@ -187,8 +187,10 @@ export default function Media() {
 
   const [cloudStorageUrl, setCloudStorageUrl] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
+  const [textArray, setTextArray] = useState([""]);
 
-  const [draftText, setDraftText] = useState("");
+  const [activeText, setActiveText] = useState("");
+  const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
 
   const handleSaveImage = async () => {
     try {
@@ -266,6 +268,44 @@ export default function Media() {
     return lerpMatrix(WHITE, target, developProgress.value);
   }, [selected]);
 
+  useEffect(() => {
+    // setTextArray([]);
+    setActiveIndex(0);
+  }, []);
+
+  const handleAddNewText = () => {
+    console.log("adding new text!");
+    setModalVisible(true);
+    setActiveText("");
+    setActiveIndex(undefined);
+  };
+  const editText = (index: number) => {
+    console.log("editing text with index: ", index);
+    setActiveIndex(index);
+    setActiveText(textArray[index]);
+    setModalVisible(true);
+  };
+  const saveActiveText = () => {
+    if (activeText === "") {
+      setModalVisible(false);
+      return;
+    }
+
+    if (activeIndex !== undefined) {
+      const temp = textArray.map((text, index) => {
+        if (index === activeIndex) {
+          return activeText;
+        } else {
+          return text;
+        }
+      });
+      setTextArray(temp);
+    } else {
+      setTextArray([...textArray, activeText]);
+    }
+    setModalVisible(false);
+  };
+
   if (!image) return null;
 
   return (
@@ -286,11 +326,7 @@ export default function Media() {
           alignItems: "center",
         }}
       >
-        <Pressable
-          onPress={() => {
-            setModalVisible(true);
-          }}
-        >
+        <Pressable onPress={handleAddNewText}>
           <View
             ref={imageRef}
             collapsable={false}
@@ -338,23 +374,30 @@ export default function Media() {
               </Group>
             </Canvas>
 
-            {draftText && (
+            {/* {draftText && (
               <DraggableText
                 item={draftText}
                 onPressed={() => {
                   setModalVisible(true);
                 }}
               />
-            )}
+            )} */}
+            {textArray.length > 0 &&
+              textArray.map((text, index) => (
+                // <Text key={index}>{text}</Text>
+                <DraggableText
+                  key={index}
+                  item={text}
+                  onPressed={() => editText(index)}
+                />
+              ))}
           </View>
         </Pressable>
       </View>
 
       {modalVisible && (
         <Pressable
-          onPress={() => {
-            setModalVisible(!modalVisible);
-          }}
+          onPress={saveActiveText}
           style={{
             ...StyleSheet.absoluteFill,
             backgroundColor: "rgba(0,0,0,0.5)",
@@ -365,8 +408,8 @@ export default function Media() {
           <TextInput
             autoFocus
             multiline
-            value={draftText}
-            onChangeText={setDraftText}
+            value={activeText}
+            onChangeText={setActiveText}
             maxLength={60}
             style={{
               color: "white",

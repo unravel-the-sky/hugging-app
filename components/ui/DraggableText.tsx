@@ -1,9 +1,10 @@
-import { Pressable, Text } from "react-native";
+import { LayoutChangeEvent, Pressable, Text } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from "react-native-reanimated";
+import { scheduleOnRN } from "react-native-worklets";
 
 export default function DraggableText({
   item = "",
@@ -20,6 +21,8 @@ export default function DraggableText({
 
   const scale = useSharedValue(1);
   const offsetScale = useSharedValue(1);
+
+  const textWidth = useSharedValue(0);
 
   const drag = Gesture.Pan().onChange((event) => {
     translateX.value += event.changeX;
@@ -63,6 +66,11 @@ export default function DraggableText({
     };
   });
 
+  const handleLayout = (event: LayoutChangeEvent) => {
+    const { width, height, x, y } = event.nativeEvent.layout;
+    textWidth.value = width;
+  };
+
   return (
     <GestureDetector gesture={mergedGesture}>
       <Animated.View
@@ -71,11 +79,19 @@ export default function DraggableText({
           {
             alignItems: "center",
             bottom: 70,
+            // backgroundColor: "green",
+            // alignSelf: "center",
+            paddingHorizontal: 20,
           },
         ]}
       >
         <Pressable onPress={onPressed}>
-          <Text style={{ fontSize: 30, fontFamily: "CuteFont" }}>{item}</Text>
+          <Text
+            onLayout={handleLayout}
+            style={{ fontSize: 30, fontFamily: "CuteFont" }}
+          >
+            {item}
+          </Text>
         </Pressable>
       </Animated.View>
     </GestureDetector>
