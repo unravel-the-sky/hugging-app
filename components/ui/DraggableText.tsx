@@ -1,10 +1,15 @@
-import { LayoutChangeEvent, Pressable, Text } from "react-native";
+import {
+  DimensionValue,
+  FlexAlignType,
+  LayoutChangeEvent,
+  Pressable,
+  Text,
+} from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from "react-native-reanimated";
-import { scheduleOnRN } from "react-native-worklets";
 
 export default function DraggableText({
   item = "",
@@ -24,10 +29,20 @@ export default function DraggableText({
 
   const textWidth = useSharedValue(0);
 
-  const drag = Gesture.Pan().onChange((event) => {
-    translateX.value += event.changeX;
-    translateY.value += event.changeY;
-  });
+  type AlignSelfType = "auto" | FlexAlignType | undefined;
+  const alignSelfValue = useSharedValue<AlignSelfType>("center");
+  const draggingWidth = useSharedValue<DimensionValue | undefined>("100%");
+
+  const drag = Gesture.Pan()
+    .onChange((event) => {
+      translateX.value += event.changeX;
+      translateY.value += event.changeY;
+      // alignSelfValue.value = "auto";
+      draggingWidth.value = "100%";
+    })
+    .onEnd(() => {
+      draggingWidth.value = "auto";
+    });
 
   const pinch = Gesture.Pinch()
     .onUpdate((event) => {
@@ -49,6 +64,8 @@ export default function DraggableText({
 
   const containerStyle = useAnimatedStyle(() => {
     return {
+      alignSelf: alignSelfValue.value,
+      width: draggingWidth.value,
       transform: [
         {
           translateX: translateX.value,
@@ -78,17 +95,14 @@ export default function DraggableText({
           containerStyle,
           {
             alignItems: "center",
-            bottom: 70,
             // backgroundColor: "green",
-            // alignSelf: "center",
-            paddingHorizontal: 20,
           },
         ]}
       >
         <Pressable onPress={onPressed}>
           <Text
             onLayout={handleLayout}
-            style={{ fontSize: 30, fontFamily: "CuteFont" }}
+            style={{ fontSize: 36, fontFamily: "CuteFont" }}
           >
             {item}
           </Text>

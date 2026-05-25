@@ -66,7 +66,7 @@ export default function TakePicture() {
       });
 
       if (!res.canceled && res.assets[0].uri) {
-        router.push({
+        router.replace({
           pathname: "/media",
           params: {
             toUid,

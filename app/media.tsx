@@ -187,12 +187,40 @@ export default function Media() {
 
   const [cloudStorageUrl, setCloudStorageUrl] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
-  const [textArray, setTextArray] = useState([""]);
+  const [textArray, setTextArray] = useState<string[]>([]);
 
   const [activeText, setActiveText] = useState("");
   const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
 
-  const handleSaveImage = async () => {
+  const handleSaveIamge = async () => {
+    try {
+      setSaving(true);
+
+      // permissions bit
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("permission needed", "allow photo lib access pls");
+        return;
+      }
+
+      const captureUri = await captureRef(imageRef, {
+        format: "jpg",
+        quality: 0.6,
+        result: "tmpfile",
+      });
+
+      if (!captureUri) {
+        alert("Oupsie..");
+      }
+      await MediaLibrary.saveToLibraryAsync(captureUri);
+    } catch (err) {
+      console.error("Error happened while saving: ", err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveAndAddImageToHug = async () => {
     try {
       setSaving(true);
 
@@ -374,22 +402,24 @@ export default function Media() {
               </Group>
             </Canvas>
 
-            {/* {draftText && (
-              <DraggableText
-                item={draftText}
-                onPressed={() => {
-                  setModalVisible(true);
-                }}
-              />
-            )} */}
             {textArray.length > 0 &&
               textArray.map((text, index) => (
-                // <Text key={index}>{text}</Text>
-                <DraggableText
+                <View
                   key={index}
-                  item={text}
-                  onPressed={() => editText(index)}
-                />
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    bottom: 20,
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <DraggableText
+                    item={text}
+                    onPressed={() => editText(index)}
+                  />
+                </View>
               ))}
           </View>
         </Pressable>
@@ -400,7 +430,7 @@ export default function Media() {
           onPress={saveActiveText}
           style={{
             ...StyleSheet.absoluteFill,
-            backgroundColor: "rgba(0,0,0,0.5)",
+            backgroundColor: "rgba(0,0,0,0.8)",
             justifyContent: "center",
             alignItems: "center",
           }}
@@ -447,26 +477,24 @@ export default function Media() {
 
       <View style={styles.buttonContainer}>
         <Pressable
-          onPress={() => {
-            setModalVisible(!modalVisible);
-          }}
+          onPress={handleSaveIamge}
           disabled={saving}
           style={[styles.saveButton, saving && styles.saveButtonDisabled]}
         >
           {/* <Text style={styles.saveButtonText}>
             {draftText ? "edit" : "add"} text
           </Text> */}
-          <Ionicons name="text" size={32} color={"#7c7c7c"} />
+          <Ionicons name="save-sharp" size={32} color={"#7c7c7c"} />
         </Pressable>
         <Pressable
-          onPress={handleSaveImage}
+          onPress={handleSaveAndAddImageToHug}
           disabled={saving}
           style={[styles.saveButton, saving && styles.saveButtonDisabled]}
         >
           {/* <Text style={styles.saveButtonText}>
             {saving ? "adding.." : "send"}
           </Text> */}
-          <Ionicons name="mail-unread-outline" size={32} color={"#7c7c7c"} />
+          <Ionicons name="mail-unread" size={32} color={"#7c7c7c"} />
         </Pressable>
       </View>
     </View>
