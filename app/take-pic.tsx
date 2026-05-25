@@ -119,44 +119,83 @@ export default function TakePicture() {
   const renderCamera = () => {
     return (
       <GestureDetector gesture={doubleTap}>
-        <SafeAreaView style={styles.cameraContainer}>
-          <CameraView
-            style={styles.camera}
-            ref={ref}
-            mode={mode}
-            facing={facing}
-            mute={false}
-            mirror={true}
-            responsiveOrientationWhenOrientationLocked
-          />
-          <View style={styles.shutterContainer}>
-            <Pressable onPress={pickImageFromMobileAsync}>
-              <AntDesign name="picture" size={32} color="white" />
-            </Pressable>
-            <Pressable onPress={takePic}>
-              {({ pressed }) => (
-                <View
-                  style={[
-                    styles.shutterBtn,
-                    {
-                      opacity: pressed ? 0.5 : 1,
-                    },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.shutterBtnInner,
-                      {
-                        backgroundColor: mode === "picture" ? "white" : "red",
-                      },
-                    ]}
-                  />
-                </View>
-              )}
-            </Pressable>
-            <Pressable onPress={toggleCameraFacing}>
-              <FontAwesome6 name="rotate-left" size={32} color="white" />
-            </Pressable>
+        <SafeAreaView
+          style={{
+            ...StyleSheet.absoluteFill,
+            paddingHorizontal: 22,
+            paddingVertical: 26,
+            marginTop: 80,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.2,
+            shadowRadius: 4,
+            elevation: 2,
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <View
+              style={{
+                flex: 3,
+                overflow: "hidden",
+                borderRadius: 12,
+              }}
+            >
+              <CameraView
+                style={styles.camera}
+                ref={ref}
+                mode={mode}
+                facing={facing}
+                mute={false}
+                mirror={true}
+                responsiveOrientationWhenOrientationLocked
+              />
+            </View>
+            <View
+              style={{
+                flex: 2,
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <View
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  margin: 40,
+                }}
+              >
+                <Pressable onPress={pickImageFromMobileAsync}>
+                  <AntDesign name="picture" size={32} color="grey" />
+                </Pressable>
+                <Pressable onPress={takePic}>
+                  {({ pressed }) => (
+                    <View
+                      style={[
+                        styles.shutterBtn,
+                        {
+                          opacity: pressed ? 0.5 : 1,
+                        },
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.shutterBtnInner,
+                          {
+                            backgroundColor:
+                              mode === "picture" ? "grey" : "red",
+                          },
+                        ]}
+                      />
+                    </View>
+                  )}
+                </Pressable>
+                <Pressable onPress={toggleCameraFacing}>
+                  <FontAwesome6 name="rotate-left" size={32} color="grey" />
+                </Pressable>
+              </View>
+            </View>
           </View>
         </SafeAreaView>
       </GestureDetector>
@@ -177,6 +216,11 @@ export default function TakePicture() {
 }
 
 const styles = StyleSheet.create({
+  overlayContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   container: {
     flex: 1,
     backgroundColor: "#fff",
