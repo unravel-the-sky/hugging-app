@@ -32,9 +32,9 @@ import { captureRef } from "react-native-view-shot";
 
 import DraggableText from "@/components/ui/DraggableText";
 import { storage } from "@/lib/firebaseConfig";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { TextInput } from "react-native-gesture-handler";
-import Ionicons from "@expo/vector-icons/Ionicons";
 
 // Identity matrix — for what the image looks like as is
 const IDENTITY: number[] = [
@@ -55,8 +55,8 @@ const FILTERS = {
   vivid: {
     name: "Vivid",
     matrix: [
-      1.0, 0.2, 0.0, 0.0, 0.088, 0.0, 1.0, 0.0, 0.0, 0.088, 0.1, 0.4, 1.2, -0.4,
-      0.388, 0.0, 0.0, 0.0, 1.0, 0.0,
+      1.438, -0.122, -0.016, 0, -0.05, -0.062, 1.378, -0.016, 0, -0.05, -0.062,
+      -0.122, 1.483, 0, -0.05, 0, 0, 0, 1, 0,
     ],
   },
   sepia: {
