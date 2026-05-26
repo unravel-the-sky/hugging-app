@@ -1,89 +1,21 @@
-import {
-  Canvas,
-  ColorMatrix,
-  Group,
-  Image,
-  Rect,
-  SkImage,
-  useCanvasRef,
-  useImage,
-} from "@shopify/react-native-skia";
+import { useImage } from "@shopify/react-native-skia";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import {
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from "react-native";
-import {
-  Easing,
-  useDerivedValue,
-  useSharedValue,
-  withDelay,
-  withTiming,
-} from "react-native-reanimated";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { File, Paths } from "expo-file-system";
 import * as MediaLibrary from "expo-media-library";
 import { captureRef } from "react-native-view-shot";
 
+import FilterPreview from "@/components/postcard/FilterPreview";
+import PostImage from "@/components/postcard/PostImage";
 import DraggableText from "@/components/ui/DraggableText";
+import { FilterKey, filterKeys, FILTERS } from "@/constants/postcardConstants";
+import usePolaroidFrameCalc from "@/hooks/usePolaroidFrameCalc";
 import { storage } from "@/lib/firebaseConfig";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { TextInput } from "react-native-gesture-handler";
-
-// Identity matrix — for what the image looks like as is
-const IDENTITY: number[] = [
-  1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0,
-];
-
-// "Pure white" matrix — every pixel forced to white
-const WHITE: number[] = [
-  0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0,
-];
-
-// Color matrix presets
-const FILTERS = {
-  normal: {
-    name: "Normal",
-    matrix: IDENTITY,
-  },
-  vivid: {
-    name: "Vivid",
-    matrix: [
-      1.438, -0.122, -0.016, 0, -0.05, -0.062, 1.378, -0.016, 0, -0.05, -0.062,
-      -0.122, 1.483, 0, -0.05, 0, 0, 0, 1, 0,
-    ],
-  },
-  sepia: {
-    name: "Sepia",
-    matrix: [
-      0.393, 0.769, 0.189, 0, 0, 0.349, 0.686, 0.168, 0, 0, 0.272, 0.534, 0.131,
-      0, 0, 0, 0, 0, 1, 0,
-    ],
-  },
-  bw: {
-    name: "B&W",
-    matrix: [
-      0.299, 0.587, 0.114, 0, 0, 0.299, 0.587, 0.114, 0, 0, 0.299, 0.587, 0.114,
-      0, 0, 0, 0, 0, 1, 0,
-    ],
-  },
-} as const;
-
-type FilterKey = keyof typeof FILTERS;
-
-const filterKeys = Object.keys(FILTERS) as FilterKey[];
-
-// Linearly interpolate between two matrices, whoa took from claude
-const lerpMatrix = (a: readonly number[], b: readonly number[], t: number) => {
-  "worklet";
-  return a.map((v, i) => v + (b[i] - v) * t);
-};
 
 export default function Media() {
   const { toUid, toName, media, note } = useLocalSearchParams<{
@@ -98,97 +30,11 @@ export default function Media() {
   const imageRef = useRef(null);
 
   const [selected, setSelected] = useState<FilterKey>("normal");
-
-  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
-
-  // 0 = mid-drop (scaled up, tilted), 1 = landed
-  const dropProgress = useSharedValue(0);
-  // 0 = pure white, 1 = fully developed
-  const developProgress = useSharedValue(0);
-
-  useEffect(() => {
-    if (image) {
-      dropProgress.value = withDelay(
-        40,
-        withTiming(1, {
-          duration: 900,
-          easing: Easing.out(Easing.back(1.5)),
-        }),
-      );
-      // Start developing slightly before the drop fully settles
-      developProgress.value = withDelay(
-        300,
-        withTiming(1, {
-          duration: 2500,
-          easing: Easing.out(Easing.cubic),
-        }),
-      );
-    }
-  }, [dropProgress, developProgress, image, selected]);
-
-  // Polaroid layout
-  const frameWidth = screenWidth * 0.88;
-  const frameHorizontalPadding = 18;
-  const frameTopPadding = 18;
-  const frameBottomPadding = 80;
-  const photoWidth = frameWidth - frameHorizontalPadding * 2;
-  const photoHeight = photoWidth;
-  const frameHeight = photoHeight + frameTopPadding + frameBottomPadding;
-
-  const frameX = (screenWidth - frameWidth) / 2;
-  const frameY = (screenHeight - frameHeight) / 2 - 60;
-
-  const canvasPadding = 10; // for shadow
-  const canvasWidth = frameWidth + canvasPadding * 2;
-  const canvasHeight = frameHeight + canvasPadding * 2;
-
-  const frameXLocal = canvasPadding;
-  const frameYLocal = canvasPadding;
-  const photoXLocal = frameXLocal + frameHorizontalPadding;
-  const photoYLocal = frameYLocal + frameTopPadding;
-
-  const centerXLocal = canvasWidth / 2;
-  const centerYLocal = canvasHeight / 2;
-
-  const scaleVal = 1.55;
-  const rotateVal = -10;
-  const translateYVal = -10;
-  const polaroidTransform = useDerivedValue(() => {
-    const t = dropProgress.value;
-    const scale = scaleVal + (1 - scaleVal) * t; // scaleVal -> 1
-    const rotate = ((rotateVal * Math.PI) / 180) * (1 - t); // 10deg -> 0
-    return [];
-  });
-
-  const opacityVal = 0;
-  const polaroidOpacity = useDerivedValue(() => {
-    const t = dropProgress.value;
-    const opacity = opacityVal + (1 - opacityVal) * t; // scaleVal -> 1
-    return opacity;
-  });
-
-  // Shadow follows the drop: larger offset and softer when "in air"
-  const shadowOffsetX = useDerivedValue(
-    () => 2 + (1 - dropProgress.value) * 14,
-  );
-  const shadowOffsetY = useDerivedValue(
-    () => 6 + (1 - dropProgress.value) * 22,
-  );
-  const shadowOpacity = useDerivedValue(
-    () => `rgba(0,0,0,${0.25 + (1 - dropProgress.value) * 0.15})`,
-  );
-
-  // Shadow rect position needs to be a SharedValue too since it depends on dropProgress
-  const shadowX = useDerivedValue(() => frameXLocal + shadowOffsetX.value);
-  const shadowY = useDerivedValue(() => frameYLocal + shadowOffsetY.value);
-
-  const canvasRef = useCanvasRef();
   const [saving, setSaving] = useState(false);
-
   const [cloudStorageUrl, setCloudStorageUrl] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
-  const [textArray, setTextArray] = useState<string[]>([]);
 
+  const [textArray, setTextArray] = useState<string[]>([]);
   const [activeText, setActiveText] = useState("");
   const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
 
@@ -291,11 +137,6 @@ export default function Media() {
     });
   };
 
-  const animatedMatrix = useDerivedValue(() => {
-    const target = FILTERS[selected].matrix;
-    return lerpMatrix(WHITE, target, developProgress.value);
-  }, [selected]);
-
   useEffect(() => {
     // setTextArray([]);
     setActiveIndex(0);
@@ -334,6 +175,8 @@ export default function Media() {
     setModalVisible(false);
   };
 
+  const { canvasWidth, canvasHeight } = usePolaroidFrameCalc();
+
   if (!image) return null;
 
   return (
@@ -363,44 +206,7 @@ export default function Media() {
               height: canvasHeight,
             }}
           >
-            <Canvas
-              style={{ width: canvasWidth, height: canvasHeight }}
-              ref={canvasRef}
-            >
-              <Group
-                origin={{ x: centerXLocal, y: centerYLocal }}
-                transform={polaroidTransform}
-                opacity={polaroidOpacity}
-              >
-                {/* Shadow */}
-                <Rect
-                  x={shadowX}
-                  y={shadowY}
-                  width={frameWidth}
-                  height={frameHeight}
-                  color={shadowOpacity}
-                />
-                {/* White card */}
-                <Rect
-                  x={frameXLocal}
-                  y={frameYLocal}
-                  width={frameWidth}
-                  height={frameHeight}
-                  color="white"
-                />
-                {/* Photo */}
-                <Image
-                  x={photoXLocal}
-                  y={photoYLocal}
-                  width={photoWidth}
-                  height={photoHeight}
-                  image={image}
-                  fit="cover"
-                >
-                  <ColorMatrix matrix={animatedMatrix} />
-                </Image>
-              </Group>
-            </Canvas>
+            <PostImage media={media} selected={selected} />
 
             {textArray.length > 0 &&
               textArray.map((text, index) => (
@@ -435,20 +241,41 @@ export default function Media() {
             alignItems: "center",
           }}
         >
-          <TextInput
-            autoFocus
-            multiline
-            value={activeText}
-            onChangeText={setActiveText}
-            maxLength={60}
+          <View
             style={{
-              color: "white",
-              fontSize: 30,
-              textAlign: "center",
-              minWidth: 100,
-              fontFamily: "CuteFont",
+              top: 0,
+              left: 0,
+              bottom: 0,
+              right: 0,
+              width: "100%",
+              position: "relative",
             }}
-          />
+          >
+            <View
+              style={{
+                position: "absolute",
+                left: 20,
+                bottom: 0,
+                backgroundColor: "green",
+              }}
+            >
+              {/* <Text>Lol</Text> */}
+            </View>
+            <TextInput
+              autoFocus
+              multiline
+              value={activeText}
+              onChangeText={setActiveText}
+              maxLength={60}
+              style={{
+                color: "white",
+                fontSize: 30,
+                textAlign: "center",
+                minWidth: 100,
+                fontFamily: "CuteFont",
+              }}
+            />
+          </View>
         </Pressable>
       )}
 
@@ -481,9 +308,6 @@ export default function Media() {
           disabled={saving}
           style={[styles.saveButton, saving && styles.saveButtonDisabled]}
         >
-          {/* <Text style={styles.saveButtonText}>
-            {draftText ? "edit" : "add"} text
-          </Text> */}
           <Ionicons name="save-sharp" size={32} color={"#7c7c7c"} />
         </Pressable>
         <Pressable
@@ -491,39 +315,12 @@ export default function Media() {
           disabled={saving}
           style={[styles.saveButton, saving && styles.saveButtonDisabled]}
         >
-          {/* <Text style={styles.saveButtonText}>
-            {saving ? "adding.." : "send"}
-          </Text> */}
           <Ionicons name="mail-unread" size={32} color={"#7c7c7c"} />
         </Pressable>
       </View>
     </View>
   );
 }
-
-const FILTER_PREVIEW_SIZE = 48;
-
-type FilterPreviewProps = {
-  image: SkImage;
-  matrix: readonly number[];
-};
-
-const FilterPreview = ({ image, matrix }: FilterPreviewProps) => {
-  return (
-    <Canvas style={{ width: FILTER_PREVIEW_SIZE, height: FILTER_PREVIEW_SIZE }}>
-      <Image
-        x={0}
-        y={0}
-        width={FILTER_PREVIEW_SIZE}
-        height={FILTER_PREVIEW_SIZE}
-        image={image}
-        fit="cover"
-      >
-        <ColorMatrix matrix={[...matrix]} />
-      </Image>
-    </Canvas>
-  );
-};
 
 const styles = StyleSheet.create({
   container: {
