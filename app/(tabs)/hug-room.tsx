@@ -221,7 +221,7 @@ export default function HugRoom() {
                   router.push("/friend-picker");
                 }}
               >
-                <Text>Invite a friend to hug</Text>
+                <Text>Invite</Text>
               </Pressable>
             </View>
           )}
@@ -250,34 +250,57 @@ export default function HugRoom() {
 
       {hugRoomId && fromId && (
         <View style={{ flex: 1 }}>
-          <GestureDetector gesture={holdGesture}>
-            <Animated.View style={[styles.hugButton, buttonAnimatedStyle]}>
-              <Text style={styles.buttonText}>🤗</Text>
-              <Text style={styles.subText}>Press & Hold</Text>
-            </Animated.View>
-          </GestureDetector>
-          {hugRoomId && imInRoom && (
-            <Pressable style={styles.hugButton} onPress={handleLeaveRoom}>
-              <Text>leave room</Text>
-            </Pressable>
-          )}
+          <View style={{ flex: 4 }}>
+            <GestureDetector gesture={holdGesture}>
+              <Animated.View
+                style={[
+                  styles.mainHugButton,
+                  buttonAnimatedStyle,
+                  roomStatus === "waiting" && styles.disabledButton,
+                ]}
+              >
+                <Text style={styles.subText}>Press & Hold</Text>
+              </Animated.View>
+            </GestureDetector>
+            {areAllPressing && (
+              <View
+                style={{
+                  flex: 1,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <Text>yay begge pressinggg</Text>
+              </View>
+            )}
+          </View>
+          <View
+            style={{
+              flex: 3,
+              padding: 12,
+              gap: 6,
+              flexDirection: "row",
+              justifyContent: "space-between",
+            }}
+          >
+            {hugRoomId && imInRoom && (
+              <Pressable style={styles.hugButton} onPress={handleLeaveRoom}>
+                <Text>leave room</Text>
+              </Pressable>
+            )}
 
-          {hugRoomId && !imInRoom && partnerInRoom && (
-            <Pressable style={styles.hugButton} onPress={handleJoinAgain}>
-              <Text>rejoin hug</Text>
-            </Pressable>
-          )}
+            {hugRoomId && !imInRoom && partnerInRoom && (
+              <Pressable style={styles.hugButton} onPress={handleJoinAgain}>
+                <Text>rejoin hug</Text>
+              </Pressable>
+            )}
 
-          {hugRoomId && (
-            <Pressable style={styles.hugButton} onPress={handleExitRoom}>
-              <Text>exit</Text>
-            </Pressable>
-          )}
-          {areAllPressing && (
-            <View>
-              <Text>yay begge pressinggg</Text>
-            </View>
-          )}
+            {hugRoomId && (
+              <Pressable style={styles.hugButton} onPress={handleExitRoom}>
+                <Text>exit</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
       )}
     </View>
@@ -325,10 +348,10 @@ const styles = StyleSheet.create({
     marginBottom: 40,
     fontFamily: "System", // Replace with your cartoonish font later
   },
-  hugButton: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
+  mainHugButton: {
+    width: 320,
+    height: 120,
+    borderRadius: 30,
     backgroundColor: "#FF6B6B",
     alignItems: "center",
     justifyContent: "center",
@@ -337,8 +360,25 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
-    borderWidth: 4,
-    borderColor: "#FFF",
+  },
+  disabledButton: {
+    backgroundColor: "#969696",
+    shadowColor: "#969696", // iOS shadow
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+  },
+  hugButton: {
+    width: 140,
+    height: 50,
+    borderRadius: 20,
+    backgroundColor: "#FF6B6B",
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 8, // Android shadow
+    shadowColor: "#FF6B6B", // iOS shadow
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
   },
   buttonText: {
     fontSize: 50,

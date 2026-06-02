@@ -33,7 +33,7 @@ export default function FriendPicker() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>asdf</Text>
+      <Text style={styles.title}>Choose someone to start a session</Text>
       <FlatList
         data={friends}
         keyExtractor={(f) => f.uid}
@@ -65,15 +65,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#FAFAFA",
   },
   title: {
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 16,
     color: "#1A1A1A",
     paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingTop: 24,
     paddingBottom: 12,
   },
   listContent: {
-    paddingTop: 45,
+    paddingTop: 52,
     paddingHorizontal: 24,
     paddingBottom: 32,
   },

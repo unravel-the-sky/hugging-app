@@ -78,6 +78,7 @@ export const sendHugRoomInvite = async (
 export const joinHugRoom = (myId: string, partnerId: string) => {
   const roomId = getHugRoomId(myId, partnerId);
   const meRef = ref(rtdb, `hugRooms/${roomId}/participants/${myId}`);
+  const inviteRef = ref(rtdb, `hugRooms/${roomId}/invite`);
 
   // handle disconnect
   onDisconnect(meRef).set({
@@ -85,6 +86,8 @@ export const joinHugRoom = (myId: string, partnerId: string) => {
     pressing: false,
     lastActive: serverTimestamp(),
   });
+
+  onDisconnect(inviteRef).update({ status: "declined" });
 
   // arrival
   set(meRef, { inRoom: true, pressing: false, lastActive: serverTimestamp() });
