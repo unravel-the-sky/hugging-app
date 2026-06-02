@@ -95,6 +95,10 @@ export default function TabsLayout() {
               </NativeTabs.Trigger.Badge>
             )}
           </NativeTabs.Trigger>
+          <NativeTabs.Trigger name="hug-room">
+            <Label>Hug room</Label>
+            <NativeTabs.Trigger.Icon sf="person.crop.rectangle" md="settings" />
+          </NativeTabs.Trigger>
         </NativeTabs>
       </SafeAreaView>
     </ThemeProvider>

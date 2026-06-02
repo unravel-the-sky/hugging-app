@@ -12,6 +12,8 @@ import { setGlobalOptions } from "firebase-functions";
 import * as admin from "firebase-admin";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import fetch from "node-fetch";
+import { onValueCreated, onValueUpdated } from "firebase-functions/database";
+import { getDatabase } from "firebase-admin/database";
 
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
@@ -120,3 +122,80 @@ const sendPushNotification = async (
   });
   console.log("Expo push response:", json);
 };
+
+export const onHugRoomInvite = onValueCreated(
+  {
+    ref: `hugRooms/{roomId}/invite`,
+    region: "europe-west1",
+  },
+  async (event) => {
+    const snap = event.data;
+    if (!snap) return;
+
+    const invite = snap.val();
+    if (invite.status !== "pending") return;
+
+    const roomId = event.params.roomId;
+
+    console.log("Writing inbox entry", { to: invite.to, roomId });
+    await getDatabase().ref(`userInvites/${invite.to}/${roomId}`).set({
+      from: invite.from,
+      fromName: invite.fromName,
+      createdAt: invite.createdAt,
+    });
+    console.log("Inbox entry written");
+
+    // the bottom is copy pasta, but make a generic function for sending notifications afterwards
+    // get user
+    const userSnap = await db.doc(`users/${invite.to}`).get();
+    const user = userSnap.data();
+
+    if (!user?.pushToken) {
+      console.log("No push token for user", invite.to);
+      return;
+    }
+
+    // send the msgggg, whoaa!
+    const message = {
+      to: user.pushToken,
+      sound: "default",
+      title: "You got a hug 🥹",
+      body: `${invite.fromName} invites you to the room`,
+      data: {
+        type: "hug_invite",
+        roomId: snap.key,
+      },
+      categoryId: "hug_invite",
+    };
+
+    const json = await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(message),
+    });
+    console.log("Expo push response:", json);
+  },
+);
+
+export const onInviteStatusChanged = onValueUpdated(
+  {
+    ref: "hugRooms/{roomId}/invite",
+    region: "europe-west1",
+  },
+  async (event) => {
+    const before = event.data?.before.val();
+    const after = event.data?.after.val();
+
+    if (!after || before?.status === after.status) return;
+
+    // remove the invitation after handled
+    if (after.status === "accepted" || after.status === "declined") {
+      await getDatabase()
+        .ref(`userInvites/${after.to}/${event.params.roomId}`)
+        .remove();
+    }
+  },
+);

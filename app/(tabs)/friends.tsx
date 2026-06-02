@@ -1,4 +1,5 @@
 import Loader from "@/components/ui/Loader";
+import { Friend } from "@/hooks/useFriends";
 import useCreateHugWithNote from "@/hooks/useCreateHugWithNote";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getFriendsForCurrentUser } from "@/lib/handleFriends";
@@ -13,12 +14,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-export type Friend = {
-  uid: string;
-  displayName: string;
-  addedAt?: Date;
-};
 
 export default function FriendsListScreen() {
   const [friends, setFriends] = useState<Friend[]>([]);

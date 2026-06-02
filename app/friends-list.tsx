@@ -1,19 +1,13 @@
 import Loader from "@/components/ui/Loader";
+import { Friend } from "@/hooks/useFriends";
 import useCreateHugWithNote from "@/hooks/useCreateHugWithNote";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getFriendsForCurrentUser } from "@/lib/handleFriends";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
-export type Friend = {
-  uid: string;
-  displayName: string;
-  addedAt?: Date;
-};
-
-export default function FriendsListModal() {
+export default function FriendsListModal({ onPress }: { onPress: () => void }) {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -53,13 +47,8 @@ export default function FriendsListModal() {
       </View>
 
       <View style={styles.friendInfo}>
-        <Text style={styles.friendUsername}>@{item.displayName}</Text>
-        <Text style={styles.friendAddedAt}>Friend</Text>
+        <Text style={styles.friendUsername}>{item.displayName}</Text>
       </View>
-
-      <Pressable style={styles.hugButton} onPress={() => handleSendHug(item)}>
-        <Text style={styles.hugButtonEmoji}>🤗</Text>
-      </Pressable>
     </View>
   );
 
@@ -99,8 +88,7 @@ export default function FriendsListModal() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: "#FAFAFA",
+    // flex: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -147,10 +135,12 @@ const styles = StyleSheet.create({
     paddingBottom: 80, // Space for floating button
   },
   friendItem: {
+    display: "flex",
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFF",
-    borderRadius: 12,
+    backgroundColor: "#fff",
+    borderRadius: 30,
     padding: 16,
     marginBottom: 12,
     shadowColor: "#000",

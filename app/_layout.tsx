@@ -90,8 +90,8 @@ export default function RootLayout() {
         <Stack.Screen
           name="add-user"
           options={{
-            presentation: "modal",
-            sheetGrabberVisible: true,
+            presentation: "formSheet",
+            sheetAllowedDetents: "fitToContents",
             headerTransparent: false,
             headerShadowVisible: true,
             headerLargeTitleShadowVisible: true,
@@ -110,14 +110,13 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen
-          name="friends-list"
+          name="friend-picker"
           options={{
             presentation: "formSheet",
-            sheetAllowedDetents: "fitToContents",
-            sheetGrabberVisible: true,
-            headerTransparent: false,
-            headerShadowVisible: true,
-            headerLargeTitleShadowVisible: true,
+            sheetAllowedDetents: [0.5, 0.9], // half-screen and almost-full
+            sheetInitialDetentIndex: 0, // open at 0.5
+            sheetGrabberVisible: true, // adds the drag handle for free!
+            headerShown: false, // cleaner look in a sheet
           }}
         />
       </Stack>

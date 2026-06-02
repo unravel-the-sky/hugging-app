@@ -8,9 +8,9 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
+import { User } from "./createUser";
 import { auth, db } from "./firebaseConfig";
 import { normalizeUsername } from "./util";
-import { User } from "./createUser";
 
 export async function getUserByUsername(username: string) {
   const normalized = normalizeUsername(username); // just in case
@@ -98,6 +98,7 @@ export async function getFriendsForCurrentUser(userId?: string) {
   const data = snapshot.docs.map((doc) => ({
     uid: doc.id,
     displayName: doc.data()?.displayName || "",
+    avatar: doc.data()?.avatar || "",
   }));
 
   // console.log("whoa, all users data: ", data);
