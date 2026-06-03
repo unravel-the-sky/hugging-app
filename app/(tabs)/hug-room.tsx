@@ -1,23 +1,34 @@
+import HeartbeatOverlay from "@/components/hug/HeartBeatOverlay";
+import HeartParticles from "@/components/hug/HeartParticles";
 import { useHugRoomData, useIncomingInvites } from "@/hooks/useHugRoom";
 import { auth } from "@/lib/firebaseConfig";
 import {
   acceptHugRoomInvite,
-  cancelMyDisconnect,
   declineHugRoomInvite,
-  endHugRoom,
   getHugRoomId,
   joinHugRoom,
   leaveHugRoom,
   setPressingButton,
 } from "@/lib/handleHugRoom";
+import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
+  cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
   withTiming,
 } from "react-native-reanimated";
 
@@ -59,14 +70,37 @@ export default function HugRoom() {
     }
   }, [roomParticipants]);
 
+  const pulse = useSharedValue(0);
+
   useEffect(() => {
-    pressProgress.value = withTiming(areAllPressing ? 1 : 0, { duration: 120 });
+    if (areAllPressing) {
+      pressProgress.value = withTiming(1, { duration: 120 });
+
+      pulse.value = withDelay(
+        150,
+        withRepeat(
+          withSequence(
+            withTiming(0.06, { duration: 130 }),
+            withTiming(0.0, { duration: 130 }),
+            withTiming(0.035, { duration: 110 }),
+            withTiming(0.0, { duration: 140 }),
+            withTiming(0.0, { duration: 450 }),
+          ),
+          -1,
+          false,
+        ),
+      );
+    } else {
+      cancelAnimation(pulse);
+      pulse.value = withTiming(0, { duration: 150 });
+      pressProgress.value = withTiming(0, { duration: 150 });
+    }
     if (areAllPressing) {
       startVibrationLoop();
     } else {
       stopVibrationLoop();
     }
-  }, [areAllPressing, pressProgress]);
+  }, [areAllPressing]);
 
   const startVibrationLoop = async () => {
     if (!isPressing.current) return;
@@ -115,19 +149,22 @@ export default function HugRoom() {
         setPressingButton(hugRoomId, myId, isPressing.current);
     });
 
-  const buttonAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: pressProgress.value * 2 },
-      { scale: 1 - pressProgress.value * 0.05 }, // optional: slight shrink, feels squishy
-    ],
-    shadowOpacity: 0.3 - pressProgress.value * 0.22,
-    shadowOffset: { width: 0, height: 10 - pressProgress.value * 9 },
-    elevation: 8 - pressProgress.value * 7,
-  }));
+  const buttonAnimatedStyle = useAnimatedStyle(() => {
+    const pressedScale = 1 - 0.1 * pressProgress.value;
+    return {
+      transform: [
+        { translateY: pressProgress.value * 2 },
+        { scale: pressedScale * (1 + pulse.value) }, // optional: slight shrink, feels squishy
+      ],
+      shadowOpacity: 0.3 - pressProgress.value * 0.22,
+      shadowOffset: { width: 0, height: 10 - pressProgress.value * 9 },
+      elevation: 8 - pressProgress.value * 7,
+    };
+  });
 
   const borderColor =
     roomStatus === "active"
-      ? "#4CAF50"
+      ? "#4caf4f93"
       : roomStatus === "waiting"
         ? "#FFD60A"
         : "transparent";
@@ -189,8 +226,11 @@ export default function HugRoom() {
     leaveHugRoom(hugRoomId, myId);
   };
 
+  const { width, height } = useWindowDimensions();
+
   return (
-    <View style={[styles.container, { borderColor }]}>
+    <View style={[styles.container, { borderColor }]} collapsable={false}>
+      <HeartParticles active={!!areAllPressing} />
       <Text style={styles.title}>Send a Real-Time Hug</Text>
 
       {inviteEntries.length > 0
@@ -250,19 +290,31 @@ export default function HugRoom() {
 
       {hugRoomId && fromId && (
         <View style={{ flex: 1 }}>
-          <View style={{ flex: 4 }}>
+          <View
+            style={{
+              flex: 4,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
             <GestureDetector gesture={holdGesture}>
               <Animated.View
-                style={[
-                  styles.mainHugButton,
-                  buttonAnimatedStyle,
-                  roomStatus === "waiting" && styles.disabledButton,
-                ]}
+                style={[styles.mainHugButton, buttonAnimatedStyle]}
               >
-                <Text style={styles.subText}>Press & Hold</Text>
+                <Ionicons
+                  name="heart"
+                  size={200}
+                  color="#FF6B6B"
+                  style={[
+                    roomStatus === "waiting"
+                      ? styles.disabledButton
+                      : styles.mainHugButton,
+                  ]}
+                />
+                {/* <Text style={styles.subText}>Press & Hold</Text> */}
               </Animated.View>
             </GestureDetector>
-            {areAllPressing && (
+            {/* {areAllPressing && (
               <View
                 style={{
                   flex: 1,
@@ -270,9 +322,9 @@ export default function HugRoom() {
                   alignItems: "center",
                 }}
               >
-                <Text>yay begge pressinggg</Text>
+                <Text style={{ color: "#fff" }}>yay begge pressinggg</Text>
               </View>
-            )}
+            )} */}
           </View>
           <View
             style={{
@@ -285,19 +337,19 @@ export default function HugRoom() {
           >
             {hugRoomId && imInRoom && (
               <Pressable style={styles.hugButton} onPress={handleLeaveRoom}>
-                <Text>leave room</Text>
+                <Text style={{ color: "#fff" }}>leave room</Text>
               </Pressable>
             )}
 
             {hugRoomId && !imInRoom && partnerInRoom && (
               <Pressable style={styles.hugButton} onPress={handleJoinAgain}>
-                <Text>rejoin hug</Text>
+                <Text style={{ color: "#fff" }}>rejoin hug</Text>
               </Pressable>
             )}
 
             {hugRoomId && (
               <Pressable style={styles.hugButton} onPress={handleExitRoom}>
-                <Text>exit</Text>
+                <Text style={{ color: "#fff" }}>exit</Text>
               </Pressable>
             )}
           </View>
@@ -349,12 +401,13 @@ const styles = StyleSheet.create({
     fontFamily: "System", // Replace with your cartoonish font later
   },
   mainHugButton: {
-    width: 320,
-    height: 120,
-    borderRadius: 30,
-    backgroundColor: "#FF6B6B",
-    alignItems: "center",
-    justifyContent: "center",
+    // width: 120,
+    // height: 120,
+    // borderRadius: 500,
+    // backgroundColor: "#ff6b6b",
+    // alignItems: "center",
+    // justifyContent: "center",
+    transform: [{ rotate: "-5deg" }],
     elevation: 8, // Android shadow
     shadowColor: "#FF6B6B", // iOS shadow
     shadowOffset: { width: 0, height: 10 },
@@ -362,7 +415,8 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
   },
   disabledButton: {
-    backgroundColor: "#969696",
+    // backgroundColor: "#969696",
+    color: "#969696",
     shadowColor: "#969696", // iOS shadow
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0,
@@ -382,11 +436,5 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 50,
-  },
-  subText: {
-    color: "#FFF",
-    fontWeight: "bold",
-    fontSize: 14,
-    marginTop: 5,
   },
 });
