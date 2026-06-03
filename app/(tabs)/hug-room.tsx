@@ -260,13 +260,17 @@ export default function HugRoom() {
                   style={styles.hugButton}
                   onPress={() => handleAceptInvite(invite.from)}
                 >
-                  <Text>join</Text>
+                  <Text style={{ color: "#fff", fontFamily: "SpaceMono" }}>
+                    join
+                  </Text>
                 </Pressable>
                 <Pressable
                   style={styles.hugButton}
                   onPress={() => handleDeclineInvite(invite.from)}
                 >
-                  <Text>decline</Text>
+                  <Text style={{ color: "#fff", fontFamily: "SpaceMono" }}>
+                    decline
+                  </Text>
                 </Pressable>
               </View>
             </View>
@@ -279,7 +283,9 @@ export default function HugRoom() {
                   router.push("/friend-picker");
                 }}
               >
-                <Text>Invite</Text>
+                <Text style={{ color: "#fff", fontFamily: "SpaceMono" }}>
+                  Invite
+                </Text>
               </Pressable>
             </View>
           )}
@@ -355,19 +361,25 @@ export default function HugRoom() {
           >
             {hugRoomId && imInRoom && (
               <Pressable style={styles.hugButton} onPress={handleLeaveRoom}>
-                <Text style={{ color: "#fff" }}>leave room</Text>
+                <Text style={{ color: "#fff", fontFamily: "SpaceMono" }}>
+                  leave room
+                </Text>
               </Pressable>
             )}
 
             {hugRoomId && !imInRoom && partnerInRoom && (
               <Pressable style={styles.hugButton} onPress={handleJoinAgain}>
-                <Text style={{ color: "#fff" }}>rejoin hug</Text>
+                <Text style={{ color: "#fff", fontFamily: "SpaceMono" }}>
+                  rejoin hug
+                </Text>
               </Pressable>
             )}
 
             {hugRoomId && (
               <Pressable style={styles.hugButton} onPress={handleExitRoom}>
-                <Text style={{ color: "#fff" }}>exit</Text>
+                <Text style={{ color: "#fff", fontFamily: "SpaceMono" }}>
+                  exit
+                </Text>
               </Pressable>
             )}
           </View>
@@ -412,11 +424,11 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   title: {
-    fontSize: 24,
+    fontSize: 34,
     fontWeight: "bold",
     color: "#FF6B6B",
     marginBottom: 40,
-    fontFamily: "System", // Replace with your cartoonish font later
+    fontFamily: "CuteFont",
   },
   mainHugButton: {
     // width: 120,

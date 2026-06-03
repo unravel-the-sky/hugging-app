@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import Animated, {
   Easing,
   runOnJS,
@@ -79,7 +79,11 @@ function HeatParticle({ active }: { active: boolean }) {
       style={[StyleSheet.absoluteFill, styles.center, heartStyle]}
       pointerEvents="none"
     >
-      <Ionicons name="heart" size={26} color="#FF6B6B" />
+      {Math.random() > 0.5 ? (
+        <Ionicons name="heart" size={26} color="#FF6B6B" />
+      ) : (
+        <Text>my dear</Text>
+      )}
     </Animated.View>
   );
 }
