@@ -70,6 +70,12 @@ export default function HugRoom() {
     }
   }, [roomParticipants]);
 
+  const areSomePressing = useMemo(() => {
+    if (roomParticipants && roomParticipants.length > 0) {
+      return roomParticipants.some((item) => item.pressing);
+    }
+  }, [roomParticipants]);
+
   const pulse = useSharedValue(0);
 
   useEffect(() => {
@@ -95,12 +101,17 @@ export default function HugRoom() {
       pulse.value = withTiming(0, { duration: 150 });
       pressProgress.value = withTiming(0, { duration: 150 });
     }
+
+    if (areSomePressing) {
+      pressProgress.value = withTiming(0.2, { duration: 150 });
+    }
     if (areAllPressing) {
+      console.log("all pressing yayy");
       startVibrationLoop();
     } else {
       stopVibrationLoop();
     }
-  }, [areAllPressing]);
+  }, [areAllPressing, areSomePressing]);
 
   const startVibrationLoop = async () => {
     if (!isPressing.current) return;
@@ -235,9 +246,16 @@ export default function HugRoom() {
 
       {inviteEntries.length > 0
         ? inviteEntries.map(([roomId, invite]) => (
-            <View key={roomId}>
+            <View key={roomId} style={{ flex: 1, gap: 12 }}>
               <Text>invite from: {invite.fromName}</Text>
-              <View style={{ flex: 1, flexDirection: "row" }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  gap: 8,
+                  alignItems: "flex-end",
+                  height: "75%",
+                }}
+              >
                 <Pressable
                   style={styles.hugButton}
                   onPress={() => handleAceptInvite(invite.from)}

@@ -20,6 +20,7 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { scheduleOnRN } from "react-native-worklets";
 import { HugPhase } from "./HugController";
 import SprinklesController from "./SprinklesController";
+import HeartParticles from "./HeartParticles";
 
 type HugButtonProps = {
   hugProgress: SharedValue<number>;
@@ -172,7 +173,14 @@ export default function HugButton({
                   hugProgress={hugProgress}
                   userAvatar={user?.avatar || "male"}
                 />
-                <SprinklesController
+                {/* <SprinklesController
+                  active={
+                    hugPhase === "formed" ||
+                    hugPhase === "hugging" ||
+                    hugPhase === "pulling"
+                  }
+                /> */}
+                <HeartParticles
                   active={
                     hugPhase === "formed" ||
                     hugPhase === "hugging" ||

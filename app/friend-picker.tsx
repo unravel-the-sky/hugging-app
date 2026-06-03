@@ -4,6 +4,7 @@ import { auth } from "@/lib/firebaseConfig";
 import { sendHugRoomInvite } from "@/lib/handleHugRoom";
 import { router } from "expo-router";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function FriendPicker() {
   const { friends } = useFriends();
@@ -32,30 +33,33 @@ export default function FriendPicker() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Choose someone to start a session</Text>
-      <FlatList
-        data={friends}
-        keyExtractor={(f) => f.uid}
-        contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => (
-          <Pressable
-            style={styles.friendItem}
-            onPress={() => handleSelectFriend(item)}
-          >
-            <View style={styles.friendAvatar}>
-              <Text style={styles.friendInitial}>
-                {item.displayName.charAt(0).toUpperCase()}
-              </Text>
-            </View>
+    <SafeAreaView style={styles.container}>
+      <View style={{ flex: 1 }}>
+        {/* <Text style={styles.title}>Choose someone to start a session</Text> */}
+        <FlatList
+          data={friends}
+          keyExtractor={(f) => f.uid}
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.listContent}
+          renderItem={({ item }) => (
+            <Pressable
+              style={styles.friendItem}
+              onPress={() => handleSelectFriend(item)}
+            >
+              <View style={styles.friendAvatar}>
+                <Text style={styles.friendInitial}>
+                  {item.displayName.charAt(0).toUpperCase()}
+                </Text>
+              </View>
 
-            <View style={styles.friendInfo}>
-              <Text style={styles.friendUsername}>{item.displayName}</Text>
-            </View>
-          </Pressable>
-        )}
-      />
-    </View>
+              <View style={styles.friendInfo}>
+                <Text style={styles.friendUsername}>{item.displayName}</Text>
+              </View>
+            </Pressable>
+          )}
+        />
+      </View>
+    </SafeAreaView>
   );
 }
 
