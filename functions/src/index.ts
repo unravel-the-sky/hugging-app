@@ -12,7 +12,11 @@ import { setGlobalOptions } from "firebase-functions";
 import * as admin from "firebase-admin";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import fetch from "node-fetch";
-import { onValueCreated, onValueUpdated } from "firebase-functions/database";
+import {
+  onValueCreated,
+  onValueDeleted,
+  onValueUpdated,
+} from "firebase-functions/database";
 import { getDatabase } from "firebase-admin/database";
 
 // Start writing functions
@@ -136,12 +140,16 @@ export const onHugRoomInvite = onValueCreated(
     if (invite.status !== "pending") return;
 
     const roomId = event.params.roomId;
+    // const db = getDatabase();
 
     console.log("Writing inbox entry", { to: invite.to, roomId });
+
     await getDatabase().ref(`userInvites/${invite.to}/${roomId}`).set({
       from: invite.from,
       fromName: invite.fromName,
       createdAt: invite.createdAt,
+      status: "pending",
+      sessionState: "ongoing",
     });
     console.log("Inbox entry written");
 
@@ -159,7 +167,7 @@ export const onHugRoomInvite = onValueCreated(
     const message = {
       to: user.pushToken,
       sound: "default",
-      title: "You got a hug 🥹",
+      title: "You got an invite!",
       body: `${invite.fromName} invites you to the room`,
       data: {
         type: "hug_invite",
@@ -191,11 +199,32 @@ export const onInviteStatusChanged = onValueUpdated(
 
     if (!after || before?.status === after.status) return;
 
-    // remove the invitation after handled
-    if (after.status === "accepted" || after.status === "declined") {
-      await getDatabase()
-        .ref(`userInvites/${after.to}/${event.params.roomId}`)
-        .remove();
+    const roomId = event.params.roomId;
+
+    const entry = getDatabase().ref(`userInvites/${after.to}/${roomId}`);
+
+    if (after.status === "accepted") {
+      await entry.update({ status: "accepted", sessionState: "ongoing" });
+    } else if (after.status === "declined") {
+      await entry.update({ status: "declined", sessionState: "ended" });
     }
+
+    // // remove the invitation after handled
+    // if (after.status === "accepted" || after.status === "declined") {
+    //   await getDatabase()
+    //     .ref(`userInvites/${after.to}/${event.params.roomId}`)
+    //     .remove();
+    // }
+  },
+);
+
+export const onHugRoomDeleted = onValueDeleted(
+  { ref: "hugRooms/{roomId}", region: "europe-west1" },
+  async (event) => {
+    const invite = event.data.val()?.invite;
+    if (!invite) return;
+    await getDatabase()
+      .ref(`userInvites/${invite.to}/${event.params.roomId}`)
+      .update({ sessionState: "ended" });
   },
 );

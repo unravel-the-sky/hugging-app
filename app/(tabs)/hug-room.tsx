@@ -1,4 +1,3 @@
-import HeartbeatOverlay from "@/components/hug/HeartBeatOverlay";
 import HeartParticles from "@/components/hug/HeartParticles";
 import { useHugRoomData, useIncomingInvites } from "@/hooks/useHugRoom";
 import { auth } from "@/lib/firebaseConfig";
@@ -14,13 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   cancelAnimation,
@@ -31,57 +24,103 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
+import MaskedView from "@react-native-masked-view/masked-view";
 
-const sleep = (ms: number) =>
-  new Promise<void>((resolve) => setTimeout(resolve, ms));
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 export default function HugRoom() {
   const myId = auth.currentUser?.uid;
 
-  const isPressing = useRef(false);
-  const loopTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const timeoutVal = useRef(750);
-
-  const [hugRoomId, setHugRoomId] = useState<string | undefined>(undefined);
-  const { invites } = useIncomingInvites(auth.currentUser?.uid || "");
-
-  const { roomParticipants, activeCount, roomStatus, roomInvite } =
-    useHugRoomData(hugRoomId);
+  const [hugRoomId, setHugRoomId] = useState<string>();
+  const [partnerId, setPartnerId] = useState<string>();
 
   const { roomId: roomIdParam, partnerId: partnerIdParam } =
     useLocalSearchParams<{ roomId?: string; partnerId?: string }>();
 
   useEffect(() => {
     if (roomIdParam) setHugRoomId(roomIdParam);
-    if (partnerIdParam) setFromId(partnerIdParam);
+    if (partnerIdParam) setPartnerId(partnerIdParam);
   }, [roomIdParam, partnerIdParam]);
 
-  const me = roomParticipants?.find((p) => p.id === myId);
-  const imInRoom = me?.inRoom ?? false;
+  const { invites } = useIncomingInvites(myId ?? "");
+  const { roomParticipants, activeCount, roomStatus, roomInvite } =
+    useHugRoomData(hugRoomId);
+
+  // only one invite shown at a time for now, later make a ui for multiple invites
+  const incomingInvite = useMemo(() => {
+    const first = Object.values(invites ?? {})[0];
+    return first?.status === "pending" && first?.sessionState === "ongoing"
+      ? first
+      : undefined;
+  }, [invites]);
+
+  const imInRoom =
+    roomParticipants?.find((p) => p.id === myId)?.inRoom ?? false;
   const partnerInRoom =
     roomParticipants?.some((p) => p.id !== myId && p.inRoom) ?? false;
-  const partnerId = roomParticipants?.find((p) => p.id !== myId)?.id;
 
-  const pressProgress = useSharedValue(0);
+  // "pressing" only counts people actually in the room; a hug needs both
+  const present = roomParticipants?.filter((p) => p.inRoom) ?? [];
+  const areAllPressing =
+    present.length >= 2 && present.every((p) => p.pressing);
+  const areSomePressing = present.some((p) => p.pressing);
 
-  const areAllPressing = useMemo(() => {
-    if (roomParticipants && roomParticipants.length > 0) {
-      return roomParticipants.every((item) => item.pressing);
-    }
-  }, [roomParticipants]);
+  const borderColor =
+    roomStatus === "active"
+      ? "#4caf4f93"
+      : roomStatus === "waiting"
+        ? "#FFD60A"
+        : "transparent";
 
-  const areSomePressing = useMemo(() => {
-    if (roomParticipants && roomParticipants.length > 0) {
-      return roomParticipants.some((item) => item.pressing);
-    }
-  }, [roomParticipants]);
-
+  const pressProgress = useSharedValue(0); // 0 idle · 0.2 one pressing · 1 both
   const pulse = useSharedValue(0);
+
+  const buttonAnimatedStyle = useAnimatedStyle(() => {
+    const pressedScale = 1 - 0.1 * pressProgress.value;
+    return {
+      transform: [
+        { translateY: pressProgress.value * 2 },
+        { scale: pressedScale * (1 + pulse.value) },
+      ],
+      shadowOpacity: 0.3 - pressProgress.value * 0.22,
+      shadowOffset: { width: 0, height: 10 - pressProgress.value * 9 },
+      elevation: 8 - pressProgress.value * 7,
+    };
+  });
+
+  // ── haptics loop (decoupled from the gesture) ────────────────────
+  const vibrating = useRef(false);
+  const loopTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timeoutVal = useRef(750);
+
+  const vibrationLoop = async () => {
+    if (!vibrating.current) return;
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await sleep(160);
+      if (!vibrating.current) return;
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft);
+    } catch (err) {
+      console.error("Haptics error:", err);
+    }
+    if (!vibrating.current) return;
+    loopTimeout.current = setTimeout(vibrationLoop, timeoutVal.current);
+  };
+  const startVibration = () => {
+    if (vibrating.current) return;
+    vibrating.current = true;
+    vibrationLoop();
+  };
+  const stopVibration = () => {
+    vibrating.current = false;
+    if (loopTimeout.current) clearTimeout(loopTimeout.current);
+    loopTimeout.current = null;
+  };
 
   useEffect(() => {
     if (areAllPressing) {
       pressProgress.value = withTiming(1, { duration: 120 });
-
       pulse.value = withDelay(
         150,
         withRepeat(
@@ -96,199 +135,97 @@ export default function HugRoom() {
           false,
         ),
       );
-    } else {
-      cancelAnimation(pulse);
-      pulse.value = withTiming(0, { duration: 150 });
-      pressProgress.value = withTiming(0, { duration: 150 });
+      startVibration();
+      return;
     }
-
-    if (areSomePressing) {
-      pressProgress.value = withTiming(0.2, { duration: 150 });
-    }
-    if (areAllPressing) {
-      console.log("all pressing yayy");
-      startVibrationLoop();
-    } else {
-      stopVibrationLoop();
-    }
+    cancelAnimation(pulse);
+    pulse.value = withTiming(0, { duration: 150 });
+    pressProgress.value = withTiming(areSomePressing ? 0.2 : 0, {
+      duration: 150,
+    });
+    stopVibration();
   }, [areAllPressing, areSomePressing]);
 
-  const startVibrationLoop = async () => {
-    if (!isPressing.current) return;
-    // if (timeoutVal.current > 150) timeoutVal.current -= 15;
-
-    try {
-      // harder
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      await sleep(160);
-      if (!isPressing.current) return;
-      // softer
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft);
-    } catch (err) {
-      console.error("Haptics did not start properly.. Error: ", err);
-    }
-
-    if (!isPressing.current) return;
-    loopTimeout.current = setTimeout(startVibrationLoop, timeoutVal.current);
-  };
-
-  const stopVibrationLoop = () => {
-    isPressing.current = false;
-    if (loopTimeout.current) {
-      clearTimeout(loopTimeout.current);
-      loopTimeout.current = null;
-    }
-  };
-
+  // ── gesture: report MY pressing to rtdb, nothing else ────────────
+  const isPressing = useRef(false);
   const holdGesture = Gesture.LongPress()
     .runOnJS(true)
     .onBegin(() => {
       isPressing.current = true;
-
-      // pressProgress.value = withTiming(1, { duration: 120 });
-
-      console.log("hug started..");
-      if (hugRoomId && myId)
-        setPressingButton(hugRoomId, myId, isPressing.current);
+      if (hugRoomId && myId) setPressingButton(hugRoomId, myId, true);
     })
     .onFinalize(() => {
-      // pressProgress.value = withTiming(0, { duration: 120 });
-      stopVibrationLoop();
-
-      console.log("hug ended..");
-      if (hugRoomId && myId)
-        setPressingButton(hugRoomId, myId, isPressing.current);
+      isPressing.current = false;
+      if (hugRoomId && myId) setPressingButton(hugRoomId, myId, false);
     });
 
-  const buttonAnimatedStyle = useAnimatedStyle(() => {
-    const pressedScale = 1 - 0.1 * pressProgress.value;
-    return {
-      transform: [
-        { translateY: pressProgress.value * 2 },
-        { scale: pressedScale * (1 + pulse.value) }, // optional: slight shrink, feels squishy
-      ],
-      shadowOpacity: 0.3 - pressProgress.value * 0.22,
-      shadowOffset: { width: 0, height: 10 - pressProgress.value * 9 },
-      elevation: 8 - pressProgress.value * 7,
-    };
-  });
-
-  const borderColor =
-    roomStatus === "active"
-      ? "#4caf4f93"
-      : roomStatus === "waiting"
-        ? "#FFD60A"
-        : "transparent";
-
-  useEffect(() => {
-    console.log("roomInvite status: ", roomInvite?.status);
-
-    if (roomInvite?.status === "declined") {
-      handleExitRoom();
-    }
-  }, [roomInvite]);
-
-  const inviteEntries = Object.entries(invites);
-
-  const [fromId, setFromId] = useState("");
-
-  const handleAceptInvite = (inviterId: string) => {
+  // ── actions ──────────────────────────────────────────────────────
+  const handleAcceptInvite = (inviterId: string) => {
     if (!myId) return;
-
     const roomId = joinHugRoom(myId, inviterId);
     acceptHugRoomInvite(roomId);
     setHugRoomId(roomId);
-    setFromId(inviterId);
+    setPartnerId(inviterId);
   };
 
   const handleDeclineInvite = (inviterId: string) => {
     if (!myId) return;
-
-    const roomId = getHugRoomId(myId, inviterId);
-    declineHugRoomInvite(roomId);
+    declineHugRoomInvite(getHugRoomId(myId, inviterId));
   };
 
   const handleJoinAgain = () => {
     if (myId && partnerId) joinHugRoom(myId, partnerId);
   };
 
+  const handleLeaveRoom = () => {
+    if (myId && hugRoomId) leaveHugRoom(hugRoomId, myId);
+  };
+
   const handleExitRoom = () => {
     if (!myId || !hugRoomId) return;
-
-    if (partnerId) {
-      handleDeclineInvite(partnerId);
-    }
-
+    if (partnerId) handleDeclineInvite(partnerId);
     leaveHugRoom(hugRoomId, myId);
     setHugRoomId(undefined);
+    setPartnerId(undefined);
   };
 
-  const handleJoinHugRoom = (inviterId: string) => {
-    if (!myId) return;
-
-    const roomId = joinHugRoom(myId, inviterId);
-    setHugRoomId(roomId);
-    setFromId(inviterId);
-  };
-
-  const handleLeaveRoom = () => {
-    if (!myId || !hugRoomId) return;
-
-    leaveHugRoom(hugRoomId, myId);
-  };
-
-  const { width, height } = useWindowDimensions();
+  // partner ended the session
+  useEffect(() => {
+    if (roomInvite?.status === "declined") handleExitRoom();
+  }, [roomInvite]);
 
   return (
     <View style={[styles.container, { borderColor }]} collapsable={false}>
-      <HeartParticles active={!!areAllPressing} />
+      <HeartParticles active={areAllPressing} />
       <Text style={styles.title}>Send a Real-Time Hug</Text>
 
-      {inviteEntries.length > 0
-        ? inviteEntries.map(([roomId, invite]) => (
-            <View key={roomId} style={{ flex: 1, gap: 12 }}>
-              <Text>invite from: {invite.fromName}</Text>
-              <View
-                style={{
-                  flexDirection: "row",
-                  gap: 8,
-                  alignItems: "flex-end",
-                  height: "75%",
-                }}
-              >
-                <Pressable
-                  style={styles.hugButton}
-                  onPress={() => handleAceptInvite(invite.from)}
-                >
-                  <Text style={{ color: "#fff", fontFamily: "SpaceMono" }}>
-                    join
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={styles.hugButton}
-                  onPress={() => handleDeclineInvite(invite.from)}
-                >
-                  <Text style={{ color: "#fff", fontFamily: "SpaceMono" }}>
-                    decline
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-          ))
-        : !hugRoomId && (
-            <View style={{ flex: 1 }}>
+      {!hugRoomId &&
+        (incomingInvite ? (
+          <View style={{ gap: 12, alignItems: "center" }}>
+            <Text>invite from: {incomingInvite.fromName}</Text>
+            <View style={{ flexDirection: "row", gap: 8 }}>
               <Pressable
                 style={styles.hugButton}
-                onPress={() => {
-                  router.push("/friend-picker");
-                }}
+                onPress={() => handleAcceptInvite(incomingInvite.from)}
               >
-                <Text style={{ color: "#fff", fontFamily: "SpaceMono" }}>
-                  Invite
-                </Text>
+                <Text style={styles.buttonLabel}>join</Text>
+              </Pressable>
+              <Pressable
+                style={styles.hugButton}
+                onPress={() => handleDeclineInvite(incomingInvite.from)}
+              >
+                <Text style={styles.buttonLabel}>decline</Text>
               </Pressable>
             </View>
-          )}
+          </View>
+        ) : (
+          <Pressable
+            style={styles.hugButton}
+            onPress={() => router.push("/friend-picker")}
+          >
+            <Text style={styles.buttonLabel}>Invite</Text>
+          </Pressable>
+        ))}
 
       {hugRoomId && roomParticipants && roomParticipants.length > 0 && (
         <View style={styles.participantList}>
@@ -304,7 +241,7 @@ export default function HugRoom() {
                 ]}
               />
               <Text>
-                {p.id.slice(0, 4) + "..."} {p.inRoom ? "(in room)" : "(away)"}{" "}
+                {p.id.slice(0, 4)}... {p.inRoom ? "(in room)" : "(away)"}{" "}
                 {p.pressing ? "pressing" : ""}
               </Text>
             </View>
@@ -312,76 +249,59 @@ export default function HugRoom() {
         </View>
       )}
 
-      {hugRoomId && fromId && (
+      {hugRoomId && (
         <View style={{ flex: 1 }}>
-          <View
-            style={{
-              flex: 4,
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
+          <View style={styles.hugButtonArea}>
             <GestureDetector gesture={holdGesture}>
               <Animated.View
                 style={[styles.mainHugButton, buttonAnimatedStyle]}
               >
-                <Ionicons
-                  name="heart"
-                  size={200}
-                  color="#FF6B6B"
-                  style={[
-                    roomStatus === "waiting"
-                      ? styles.disabledButton
-                      : styles.mainHugButton,
-                  ]}
-                />
-                {/* <Text style={styles.subText}>Press & Hold</Text> */}
+                <MaskedView
+                  style={styles.maskedView}
+                  maskElement={
+                    <View
+                      style={{
+                        backgroundColor: "transparent",
+                        flex: 1,
+                        justifyContent: "center",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Ionicons
+                        name="heart"
+                        size={200}
+                        color={roomStatus === "waiting" ? "#969696" : "#FF6B6B"}
+                      />
+                    </View>
+                  }
+                >
+                  <LinearGradient
+                    // Define the gradient colors from start to finish
+                    colors={["#FF6B6B", "#ff7b7b", "#ffabab"]}
+                    // Optional: Control the direction of the gradient
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                </MaskedView>
               </Animated.View>
             </GestureDetector>
-            {/* {areAllPressing && (
-              <View
-                style={{
-                  flex: 1,
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
-              >
-                <Text style={{ color: "#fff" }}>yay begge pressinggg</Text>
-              </View>
-            )} */}
           </View>
-          <View
-            style={{
-              flex: 3,
-              padding: 12,
-              gap: 6,
-              flexDirection: "row",
-              justifyContent: "space-between",
-            }}
-          >
-            {hugRoomId && imInRoom && (
+
+          <View style={styles.roomActions}>
+            {imInRoom && (
               <Pressable style={styles.hugButton} onPress={handleLeaveRoom}>
-                <Text style={{ color: "#fff", fontFamily: "SpaceMono" }}>
-                  leave room
-                </Text>
+                <Text style={styles.buttonLabel}>leave room</Text>
               </Pressable>
             )}
-
-            {hugRoomId && !imInRoom && partnerInRoom && (
+            {!imInRoom && partnerInRoom && (
               <Pressable style={styles.hugButton} onPress={handleJoinAgain}>
-                <Text style={{ color: "#fff", fontFamily: "SpaceMono" }}>
-                  rejoin hug
-                </Text>
+                <Text style={styles.buttonLabel}>rejoin hug</Text>
               </Pressable>
             )}
-
-            {hugRoomId && (
-              <Pressable style={styles.hugButton} onPress={handleExitRoom}>
-                <Text style={{ color: "#fff", fontFamily: "SpaceMono" }}>
-                  exit
-                </Text>
-              </Pressable>
-            )}
+            <Pressable style={styles.hugButton} onPress={handleExitRoom}>
+              <Text style={styles.buttonLabel}>exit</Text>
+            </Pressable>
           </View>
         </View>
       )}
@@ -397,32 +317,37 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 8,
     borderColor: "transparent",
-    borderBottomLeftRadius: 55, // approx iPhone screen corner radius — tune 45–55 to taste
-    borderBottomRightRadius: 55, // approx iPhone screen corner radius — tune 45–55 to taste
-    borderCurve: "continuous", // iOS superellipse; makes the corners match the device
+    borderBottomLeftRadius: 55,
+    borderBottomRightRadius: 55,
+    borderCurve: "continuous",
   },
-  participantList: {
-    marginVertical: 20,
-    alignItems: "flex-start",
+  hugButtonArea: { flex: 4, justifyContent: "center", alignItems: "center" },
+  gradient: {
+    padding: 15,
+    alignItems: "center",
+    borderRadius: 8, // Crucial: put your border radius here
   },
-  participantHeader: {
-    fontWeight: "bold",
-    color: "#FF6B6B",
-    marginBottom: 8,
+  maskedView: {
+    // You must match the width and height to your icon size
+    width: 260,
+    height: 260,
   },
+  roomActions: {
+    flex: 3,
+    padding: 12,
+    gap: 6,
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  participantList: { marginVertical: 20, alignItems: "flex-start" },
+  participantHeader: { fontWeight: "bold", color: "#FF6B6B", marginBottom: 8 },
   participantRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-start",
     width: 300,
     marginBottom: 4,
   },
-  statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
-  },
+  statusDot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
   title: {
     fontSize: 34,
     fontWeight: "bold",
@@ -431,25 +356,12 @@ const styles = StyleSheet.create({
     fontFamily: "CuteFont",
   },
   mainHugButton: {
-    // width: 120,
-    // height: 120,
-    // borderRadius: 500,
-    // backgroundColor: "#ff6b6b",
-    // alignItems: "center",
-    // justifyContent: "center",
     transform: [{ rotate: "-5deg" }],
-    elevation: 8, // Android shadow
-    shadowColor: "#FF6B6B", // iOS shadow
+    elevation: 8,
+    shadowColor: "#FF6B6B",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
-  },
-  disabledButton: {
-    // backgroundColor: "#969696",
-    color: "#969696",
-    shadowColor: "#969696", // iOS shadow
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0,
   },
   hugButton: {
     width: 140,
@@ -458,13 +370,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#FF6B6B",
     alignItems: "center",
     justifyContent: "center",
-    elevation: 8, // Android shadow
-    shadowColor: "#FF6B6B", // iOS shadow
+    elevation: 8,
+    shadowColor: "#FF6B6B",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
   },
-  buttonText: {
-    fontSize: 50,
-  },
+  buttonLabel: { color: "#fff", fontFamily: "SpaceMono" },
 });

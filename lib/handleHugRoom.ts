@@ -23,9 +23,11 @@ export type HugRoomInvite = {
   fromName: string;
   toName: string;
   status: HugInviteStatus;
+  sessionState: HugInviteSessionState;
 };
 
 type HugInviteStatus = "pending" | "accepted" | "declined";
+type HugInviteSessionState = "ongoing" | "ended" | "pending";
 
 export type Participant = {
   inRoom: boolean;
@@ -53,6 +55,7 @@ export const sendHugRoomInvite = async (
       fromName: myName,
       toName: partnerName,
       status: "pending",
+      sessionState: "pending",
     };
     await set(ref(rtdb, `hugRooms/${roomId}/invite`), {
       ...hugInvite,

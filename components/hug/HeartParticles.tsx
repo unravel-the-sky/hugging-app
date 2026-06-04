@@ -12,7 +12,7 @@ import { scheduleOnRN } from "react-native-worklets";
 
 const NUM_HEARTS = 20;
 
-function HeatParticle({ active }: { active: boolean }) {
+function HeatParticle({ active, text }: { active: boolean; text?: string }) {
   const progress = useSharedValue(0);
   const tx = useSharedValue(0);
   const ty = useSharedValue(0);
@@ -79,10 +79,14 @@ function HeatParticle({ active }: { active: boolean }) {
       style={[StyleSheet.absoluteFill, styles.center, heartStyle]}
       pointerEvents="none"
     >
-      {Math.random() > 0.5 ? (
-        <Ionicons name="heart" size={26} color="#FF6B6B" />
+      {text ? (
+        Math.random() > 0.5 ? (
+          <Ionicons name="heart" size={26} color="#FF6B6B" />
+        ) : (
+          <Text>my dear</Text>
+        )
       ) : (
-        <Text>my dear</Text>
+        <Ionicons name="heart" size={26} color="#FF6B6B" />
       )}
     </Animated.View>
   );
