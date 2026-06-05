@@ -21,6 +21,22 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import SetupScreen from "../setup";
 import SignInScreen from "../sign-in";
+import { colors } from "../../components/ui/squish/theme";
+
+const getGreetingMessage = (): string => {
+  const currentHour = new Date().getHours();
+  let timeOfDay = "";
+
+  if (currentHour >= 5 && currentHour < 12) {
+    timeOfDay = "morning";
+  } else if (currentHour >= 12 && currentHour < 18) {
+    timeOfDay = "afternoon";
+  } else {
+    timeOfDay = "night"; // orEvening, depending on your preference
+  }
+
+  return `good ${timeOfDay},`;
+};
 
 export default function TabsLayout() {
   const { authUser, user, loading } = useCurrentUser();
@@ -70,7 +86,12 @@ export default function TabsLayout() {
       <SafeAreaView style={styles.container} edges={["top"]}>
         {/* Shared Header */}
         <View style={styles.header}>
-          <Text style={styles.usernameText}>@{user?.displayName || ""}</Text>
+          <View>
+            <Text style={{ fontFamily: "CuteFont", fontSize: 20 }}>
+              {getGreetingMessage()}
+            </Text>
+            <Text style={styles.usernameText}>{user?.displayName || ""}</Text>
+          </View>
           <Pressable onPress={() => router.push("/profile")}>
             <AvatarImage avatar={user?.avatar || "male"} size="s" />
           </Pressable>
@@ -108,23 +129,23 @@ export default function TabsLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: colors.lilac,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#FAFAFA",
+    backgroundColor: colors.lilac,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: "#E0E0E0",
-    backgroundColor: "#FAFAFA",
+    backgroundColor: colors.lilac,
   },
   usernameText: {
     fontSize: 18,

@@ -1,7 +1,7 @@
 import Loader from "@/components/ui/Loader";
-import { Friend } from "@/hooks/useFriends";
 import useCreateHugWithNote from "@/hooks/useCreateHugWithNote";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { Friend } from "@/hooks/useFriends";
 import { getFriendsForCurrentUser } from "@/lib/handleFriends";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";

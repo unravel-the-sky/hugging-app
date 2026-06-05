@@ -1,4 +1,5 @@
 import HugViewOverlay from "@/components/hug/HugViewOverlay";
+import { colors, radius } from "../../components/ui/squish/theme";
 import useCreateHugWithNote from "@/hooks/useCreateHugWithNote";
 import { useHugs } from "@/hooks/useIncomingHugs";
 import { auth, db } from "@/lib/firebaseConfig";
@@ -252,7 +253,7 @@ const HugRow = ({ hug, direction, onPress }: HugRowProps) => {
 const styles = StyleSheet.create({
   tabs: {
     flexDirection: "row",
-    backgroundColor: "#F0F0F0",
+    backgroundColor: colors.mistBg,
     borderRadius: 12,
     padding: 4,
     margin: 16,
@@ -282,21 +283,21 @@ const styles = StyleSheet.create({
   // Reuse the same styles for incoming and outgoing tabs, just change the background color
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: colors.soft,
     flexDirection: "column",
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#FAFAFA",
+    backgroundColor: colors.soft,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 40,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: colors.soft,
   },
   emptyEmoji: {
     fontSize: 80,
@@ -332,7 +333,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFF",
-    borderRadius: 12,
+    borderRadius: radius.lg,
     padding: 16,
     marginBottom: 12,
     shadowColor: "#000",

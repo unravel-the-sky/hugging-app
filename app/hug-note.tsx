@@ -1,3 +1,4 @@
+import { PlushButton } from "@/components/ui/squish/PlushButton";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
@@ -85,19 +86,18 @@ export default function HugNoteModal() {
       </View>
 
       <View style={styles.actionsContainer}>
-        <TouchableOpacity
-          style={[styles.button, styles.cancelButton]}
+        <PlushButton
+          label="cancel"
+          variant="soft"
           onPress={handleCancel}
-        >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.button, styles.continueButton]}
+          style={{ width: "48%" }}
+        />
+        <PlushButton
+          label="continue"
+          variant="blush"
           onPress={handleContinue}
-        >
-          <Text style={styles.continueButtonText}>Continue</Text>
-        </TouchableOpacity>
+          style={{ width: "48%" }}
+        />
       </View>
     </KeyboardAvoidingView>
   );
@@ -105,7 +105,6 @@ export default function HugNoteModal() {
 
 const styles = StyleSheet.create({
   container: {
-    // backgroundColor: "#ffffff",
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 24,
@@ -162,7 +161,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   actionsContainer: {
+    flex: 1,
     flexDirection: "row",
+    width: "100%",
     gap: 12,
   },
   button: {

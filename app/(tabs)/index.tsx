@@ -2,11 +2,13 @@ import HugController from "@/components/hug/HugController";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppText } from "@/components/ui/AppText";
 import { Logo } from "@/components/ui/Logo";
+import { colors } from "../../components/ui/squish/theme";
 import { SendableHug } from "@/lib/handleHugs";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { PlushButton } from "@/components/ui/squish/PlushButton";
 
 export default function HomeScreen() {
   const { toUid, toName, note, imagePath } = useLocalSearchParams<{
@@ -103,9 +105,10 @@ export default function HomeScreen() {
             </Text>
             {/* Action Buttons */}
             <View style={styles.actionsContainer}>
-              <AppButton
+              <PlushButton
                 onPress={handleInitiateHug}
-                buttonText="Send a hug 🥹"
+                label="send a hug 🥹"
+                fullWidth
               />
             </View>
           </View>
@@ -122,7 +125,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 40,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: colors.lilac,
   },
   emptyTitle: {
     fontSize: 24,
@@ -152,12 +155,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: colors.soft,
   },
   container: {
-    backgroundColor: "#FAFAFA",
+    backgroundColor: colors.soft,
     borderRadius: 24,
-    padding: 32,
+    padding: 20,
     width: "100%",
     height: "100%",
     display: "flex",
@@ -169,7 +172,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   actionsContainer: {
-    flexDirection: "row",
     width: "100%",
   },
 });

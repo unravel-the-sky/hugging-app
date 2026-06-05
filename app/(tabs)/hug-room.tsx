@@ -17,6 +17,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   cancelAnimation,
+  interpolateColor,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -26,6 +27,8 @@ import Animated, {
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import MaskedView from "@react-native-masked-view/masked-view";
+import { PlushButton } from "@/components/ui/squish/PlushButton";
+import { colors, darken } from "../../components/ui/squish";
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -89,7 +92,16 @@ export default function HugRoom() {
     };
   });
 
-  // ── haptics loop (decoupled from the gesture) ────────────────────
+  const hugroomAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      backgroundColor: interpolateColor(
+        pressProgress.value,
+        [0, 2.4],
+        [colors.soft, colors.peach],
+      ),
+    };
+  });
+
   const vibrating = useRef(false);
   const loopTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const timeoutVal = useRef(750);
@@ -146,7 +158,6 @@ export default function HugRoom() {
     stopVibration();
   }, [areAllPressing, areSomePressing]);
 
-  // ── gesture: report MY pressing to rtdb, nothing else ────────────
   const isPressing = useRef(false);
   const holdGesture = Gesture.LongPress()
     .runOnJS(true)
@@ -159,7 +170,6 @@ export default function HugRoom() {
       if (hugRoomId && myId) setPressingButton(hugRoomId, myId, false);
     });
 
-  // ── actions ──────────────────────────────────────────────────────
   const handleAcceptInvite = (inviterId: string) => {
     if (!myId) return;
     const roomId = joinHugRoom(myId, inviterId);
@@ -195,7 +205,10 @@ export default function HugRoom() {
   }, [roomInvite]);
 
   return (
-    <View style={[styles.container, { borderColor }]} collapsable={false}>
+    <Animated.View
+      style={[styles.container, hugroomAnimatedStyle, { borderColor }]}
+      collapsable={false}
+    >
       <HeartParticles active={areAllPressing} />
       <Text style={styles.title}>Send a Real-Time Hug</Text>
 
@@ -219,12 +232,11 @@ export default function HugRoom() {
             </View>
           </View>
         ) : (
-          <Pressable
-            style={styles.hugButton}
+          <PlushButton
+            variant="blush"
+            label="invite"
             onPress={() => router.push("/friend-picker")}
-          >
-            <Text style={styles.buttonLabel}>Invite</Text>
-          </Pressable>
+          />
         ))}
 
       {hugRoomId && roomParticipants && roomParticipants.length > 0 && (
@@ -241,7 +253,7 @@ export default function HugRoom() {
                 ]}
               />
               <Text>
-                {p.id.slice(0, 4)}... {p.inRoom ? "(in room)" : "(away)"}{" "}
+                {p.id.slice(0, 4)}... {p.inRoom ? "(in room)" : "(away)"}
                 {p.pressing ? "pressing" : ""}
               </Text>
             </View>
@@ -305,14 +317,14 @@ export default function HugRoom() {
           </View>
         </View>
       )}
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFF5F5",
+    // backgroundColor: "#FFF5F5",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 8,

@@ -1,0 +1,119 @@
+/**
+ * Squish — design tokens
+ * "soft · plush · lavender"
+ */
+
+export const avatarColors = {
+  primary: "#7A67D9",
+  deep: "#5A48B0",
+  plumInk: "#382F52",
+  softInk: "#8B82A6",
+
+  blush: "#EE83AE",
+  peach: "#F2A06A",
+  mint: "#6FC9A6",
+  butter: "#EDC25C",
+} as const;
+
+export const colors = {
+  // Core palette
+  primary: "#7A67D9",
+  deep: "#5A48B0",
+  lilac: "#B5A7EC",
+  soft: "#E7E1FA",
+  mistBg: "#F3EFFA",
+  surface: "#FFFFFF",
+  plumInk: "#382F52",
+  softInk: "#8B82A6",
+
+  // Accents — hug types & stickers
+  blush: "#EE83AE",
+  peach: "#F2A06A",
+  mint: "#6FC9A6",
+  butter: "#EDC25C",
+  sky: "#7FA9E8",
+} as const;
+
+/** Darken a hex color toward black. amount: 0..1 */
+export function darken(hex: string, amount: number): string {
+  const n = parseInt(hex.replace("#", ""), 16);
+  const r = Math.round(((n >> 16) & 255) * (1 - amount));
+  const g = Math.round(((n >> 8) & 255) * (1 - amount));
+  const b = Math.round((n & 255) * (1 - amount));
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+}
+
+/** Mix a hex color toward white. amount: 0..1 */
+export function tint(hex: string, amount: number): string {
+  const n = parseInt(hex.replace("#", ""), 16);
+  const r = Math.round(((n >> 16) & 255) + (255 - ((n >> 16) & 255)) * amount);
+  const g = Math.round(((n >> 8) & 255) + (255 - ((n >> 8) & 255)) * amount);
+  const b = Math.round((n & 255) + (255 - (n & 255)) * amount);
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+}
+
+/**
+ * Font family names. These match the @expo-google-fonts exports.
+ * Load them once at app root (see README) — until loaded, RN falls back
+ * to the system font, so components stay safe to render.
+ */
+export const font = {
+  display: "Fredoka_600SemiBold", // headings / display
+  displayBold: "Fredoka_700Bold",
+  ui: "Quicksand_600SemiBold", // interface / body
+  uiBold: "Quicksand_700Bold",
+  hand: "Caveat_600SemiBold", // handwritten accents
+} as const;
+
+export const radius = {
+  sm: 12,
+  md: 18,
+  lg: 24,
+  button: 24,
+  pill: 999,
+} as const;
+
+export const spacing = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+} as const;
+
+/** Soft lavender drop shadow used across plush surfaces. */
+export const shadow = {
+  shadowColor: colors.deep,
+  shadowOpacity: 0.22,
+  shadowRadius: 8,
+  shadowOffset: { width: 0, height: 6 },
+  elevation: 6,
+} as const;
+
+export type HugTypeKey =
+  | "bear"
+  | "squeeze"
+  | "morning"
+  | "night"
+  | "cuddle"
+  | "cheer";
+
+/** The canonical hug types from the stylesheet. */
+export const hugTypes: Record<HugTypeKey, { label: string; accent: string }> = {
+  bear: { label: "Bear hug", accent: colors.peach },
+  squeeze: { label: "Squeeze", accent: colors.blush },
+  morning: { label: "Good morning", accent: colors.butter },
+  night: { label: "Goodnight", accent: colors.primary },
+  cuddle: { label: "Cuddle", accent: colors.sky },
+  cheer: { label: "Cheer up", accent: colors.mint },
+};
+
+export const theme = {
+  colors,
+  font,
+  radius,
+  spacing,
+  shadow,
+  hugTypes,
+} as const;
+export default theme;

@@ -14,6 +14,13 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { avatarColors, colors, radius } from "../../components/ui/squish/theme";
+import Avatar from "@/components/ui/squish/Avatar";
+
+const getRandomProperty = (obj: typeof avatarColors) => {
+  const keys = Object.keys(obj) as (keyof typeof obj)[];
+  return obj[keys[(keys.length * Math.random()) << 0]];
+};
 
 export default function FriendsListScreen() {
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -102,6 +109,25 @@ export default function FriendsListScreen() {
         <Text style={styles.removeButtonText}>×</Text>
       </TouchableOpacity>
     </View>
+    // <View
+    //   style={[
+    //     {
+    //       flex: 1,
+    //       justifyContent: "center",
+    //       width: "auto",
+    //       alignItems: "center",
+    //       gap: 4,
+    //     },
+    //     styles.friendItem,
+    //   ]}
+    // >
+    //   <Avatar
+    //     initials={item.displayName.charAt(0).toUpperCase()}
+    //     color={getRandomProperty(avatarColors)}
+    //     size={110}
+    //   />
+    //   <Text style={{ fontSize: 16 }}>{item.displayName}</Text>
+    // </View>
   );
 
   if (isLoading) {
@@ -149,7 +175,7 @@ export default function FriendsListScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: colors.soft,
   },
   loadingContainer: {
     flex: 1,
@@ -192,6 +218,10 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   listContainer: {
+    // display: "flex",
+    // flexDirection: "row",
+    // flexWrap: "wrap",
+    // gap: 12,
     padding: 16,
     paddingBottom: 80, // Space for floating button
   },
@@ -199,7 +229,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFF",
-    borderRadius: 12,
+    borderRadius: radius.lg,
     padding: 16,
     marginBottom: 12,
     shadowColor: "#000",
