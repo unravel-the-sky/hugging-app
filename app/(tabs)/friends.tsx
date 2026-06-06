@@ -4,10 +4,12 @@ import useCreateHugWithNote from "@/hooks/useCreateHugWithNote";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getFriendsForCurrentUser } from "@/lib/handleFriends";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Animated,
   FlatList,
+  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -16,6 +18,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { avatarColors, colors, radius } from "../../components/ui/squish/theme";
 import Avatar from "@/components/ui/squish/Avatar";
+import { FriendRow } from "@/components/friend/FriendRow";
 
 const getRandomProperty = (obj: typeof avatarColors) => {
   const keys = Object.keys(obj) as (keyof typeof obj)[];
@@ -82,33 +85,59 @@ export default function FriendsListScreen() {
     startHugWithNote(friend);
   };
 
+  const press = useRef(new Animated.Value(0)).current;
+
+  const animate = (to: number) =>
+    Animated.spring(press, {
+      toValue: to,
+      useNativeDriver: false,
+      speed: 40,
+      bounciness: 6,
+    }).start();
+
+  const translateY = press.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 5],
+  });
+  const shadowOpacity = press.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.1, 0.0],
+  });
+
   const renderFriendItem = ({ item }: { item: Friend }) => (
-    <View style={styles.friendItem}>
-      <View style={styles.friendAvatar}>
-        <Text style={styles.friendInitial}>
-          {item.displayName.charAt(0).toUpperCase()}
-        </Text>
-      </View>
-
-      <View style={styles.friendInfo}>
-        <Text style={styles.friendUsername}>@{item.displayName}</Text>
-        <Text style={styles.friendAddedAt}>Friend</Text>
-      </View>
-
-      <TouchableOpacity
-        style={styles.hugButton}
-        onPress={() => handleSendHug(item)}
+    <Pressable
+      onPressIn={() => animate(1)}
+      onPressOut={() => animate(0)}
+      onPress={() => handleSendHug(item)}
+    >
+      <Animated.View
+        style={[
+          styles.friendItem,
+          { transform: [{ translateY }], shadowOpacity },
+        ]}
       >
-        <Text style={styles.hugButtonEmoji}>🤗</Text>
-      </TouchableOpacity>
+        <View style={styles.friendAvatar}>
+          <Text style={styles.friendInitial}>
+            {item.displayName.charAt(0).toUpperCase()}
+          </Text>
+        </View>
 
-      <TouchableOpacity
-        style={styles.removeButton}
-        onPress={() => handleRemoveFriend(item.uid, item.displayName)}
-      >
-        <Text style={styles.removeButtonText}>×</Text>
-      </TouchableOpacity>
-    </View>
+        <View style={styles.friendInfo}>
+          <Text style={styles.friendUsername}>{item.displayName}</Text>
+        </View>
+
+        {/* <Pressable style={styles.hugButton} onPress={() => handleSendHug(item)}>
+          <Text style={styles.hugButtonEmoji}>🤗</Text>
+        </Pressable>
+
+        <Pressable
+          style={styles.removeButton}
+          onPress={() => handleRemoveFriend(item.uid, item.displayName)}
+        >
+          <Text style={styles.removeButtonText}>×</Text>
+        </Pressable> */}
+      </Animated.View>
+    </Pressable>
     // <View
     //   style={[
     //     {
@@ -156,18 +185,20 @@ export default function FriendsListScreen() {
     <SafeAreaView style={styles.container}>
       <FlatList
         data={friends}
-        renderItem={renderFriendItem}
+        renderItem={({ item }) => (
+          <FriendRow item={item} onPress={handleSendHug} key={item.uid} />
+        )}
         keyExtractor={(item) => item.uid}
         contentContainerStyle={styles.listContainer}
       />
 
       {/* Floating Add Button */}
-      <TouchableOpacity
+      <Pressable
         style={styles.floatingButton}
         onPress={() => router.push("/add-user")}
       >
         <Text style={styles.floatingButtonText}>+</Text>
-      </TouchableOpacity>
+      </Pressable>
     </SafeAreaView>
   );
 }

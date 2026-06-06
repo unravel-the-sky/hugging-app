@@ -6,10 +6,10 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -63,7 +63,7 @@ export default function AddUserScreen() {
       {/* Content */}
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Ionicons name="person-add" size={64} color={"#7c7c7c"} />
+          <Ionicons name="person-add" size={48} color={"#7c7c7c"} />
         </View>
 
         <Text style={styles.title}>Add a Friend</Text>
@@ -85,7 +85,7 @@ export default function AddUserScreen() {
           </View>
         </View>
 
-        <TouchableOpacity
+        <Pressable
           style={[styles.button, isLoading && styles.buttonDisabled]}
           onPress={handleAddUser}
           disabled={isLoading}
@@ -93,14 +93,11 @@ export default function AddUserScreen() {
           <Text style={styles.buttonText}>
             {isLoading ? "Adding..." : "Add Friend"}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
 
-        <TouchableOpacity
-          style={styles.cancelButton}
-          onPress={() => router.back()}
-        >
+        <Pressable style={styles.cancelButton} onPress={() => router.back()}>
           <Text style={styles.cancelButtonText}>Cancel</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </KeyboardAvoidingView>
   );

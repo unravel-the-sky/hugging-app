@@ -16,6 +16,9 @@ import { storage } from "@/lib/firebaseConfig";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { TextInput } from "react-native-gesture-handler";
+import { PlushButton } from "@/components/ui/squish/PlushButton";
+import { colors } from "@/components/ui/squish";
+import { useImageColors } from "@/hooks/useImageColors";
 
 export default function Media() {
   const { toUid, toName, media, note } = useLocalSearchParams<{
@@ -177,6 +180,9 @@ export default function Media() {
 
   const { canvasWidth, canvasHeight } = usePolaroidFrameCalc();
 
+  const { colors: imageColors } = useImageColors(media);
+  console.log("colors from image is: ", imageColors?.colorThree);
+
   if (!image) return null;
 
   return (
@@ -303,20 +309,11 @@ export default function Media() {
       </View>
 
       <View style={styles.buttonContainer}>
-        <Pressable
-          onPress={handleSaveIamge}
+        <PlushButton
+          label="send it!"
           disabled={saving}
-          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-        >
-          <Ionicons name="save-sharp" size={32} color={"#7c7c7c"} />
-        </Pressable>
-        <Pressable
           onPress={handleSaveAndAddImageToHug}
-          disabled={saving}
-          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-        >
-          <Ionicons name="mail-unread" size={32} color={"#7c7c7c"} />
-        </Pressable>
+        />
       </View>
     </View>
   );
@@ -325,7 +322,7 @@ export default function Media() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#bbbbbb",
+    backgroundColor: "#D7C2B2",
   },
   buttonContainer: {
     position: "absolute",

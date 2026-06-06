@@ -7,11 +7,25 @@ import * as Notifications from "expo-notifications";
 import { SplashScreen, Stack, router } from "expo-router";
 import { useEffect, useRef } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import {
+  Fredoka_600SemiBold,
+  Fredoka_700Bold,
+} from "@expo-google-fonts/fredoka";
+import {
+  Quicksand_600SemiBold,
+  Quicksand_700Bold,
+} from "@expo-google-fonts/quicksand";
+import { Caveat_600SemiBold } from "@expo-google-fonts/caveat";
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require("@/assets/fonts/SpaceMono-Regular.ttf"),
     CuteFont: require("@/assets/fonts/JustMeAgainDownHere-Regular.ttf"),
+    Fredoka_600SemiBold,
+    Fredoka_700Bold,
+    Quicksand_600SemiBold,
+    Quicksand_700Bold,
+    Caveat_600SemiBold,
   });
 
   const { user, loading } = useCurrentUser();
