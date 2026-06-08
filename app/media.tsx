@@ -180,13 +180,20 @@ export default function Media() {
 
   const { canvasWidth, canvasHeight } = usePolaroidFrameCalc();
 
+  const [imgColor, setImgColor] = useState<string | undefined>(undefined);
+
   const { colors: imageColors } = useImageColors(media);
-  console.log("colors from image is: ", imageColors?.colorThree);
+
+  useEffect(() => {
+    setImgColor(imageColors?.colorOne.value);
+  }, [imageColors?.colorOne.value]);
 
   if (!image) return null;
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[styles.container, { backgroundColor: imgColor || "#D7C2B2" }]}
+    >
       <View style={{ position: "fixed", top: 100, left: 18 }}>
         <Pressable
           onPress={() => {
@@ -322,7 +329,6 @@ export default function Media() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#D7C2B2",
   },
   buttonContainer: {
     position: "absolute",

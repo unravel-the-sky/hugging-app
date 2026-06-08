@@ -1,12 +1,10 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import Animated, {
-  Easing,
   Extrapolation,
   interpolate,
   SharedValue,
   useAnimatedStyle,
   useSharedValue,
-  withRepeat,
   withSpring,
   withTiming,
 } from "react-native-reanimated";
@@ -15,12 +13,12 @@ import HugArms from "./HugArms";
 
 import { BUTTON_SIZE } from "@/constants";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useEffect } from "react";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { scheduleOnRN } from "react-native-worklets";
-import { HugPhase } from "./HugController";
-import SprinklesController from "./SprinklesController";
 import HeartParticles from "./HeartParticles";
+import { HugPhase } from "./HugController";
+import { PlushButton } from "../ui/squish/PlushButton";
+import { useState } from "react";
 
 type HugButtonProps = {
   hugProgress: SharedValue<number>;
@@ -30,6 +28,11 @@ type HugButtonProps = {
   onSendHugProcess: (val: HugPhase) => void;
 };
 
+const PULL_MULTIPLIER = 1.5;
+const RELEASE_THRESHOLD = 80;
+const THROW_TARGET = -800;
+const THROW_VELOCITY = -2200;
+
 export default function HugButton({
   hugProgress,
   hugPhase,
@@ -38,86 +41,68 @@ export default function HugButton({
   onSendHugProcess,
 }: HugButtonProps) {
   const translateY = useSharedValue(0);
-  const isDragging = useSharedValue(false);
   const canRelease = useSharedValue(false);
+  const isPulling = useSharedValue(false);
+  const pressed = useSharedValue(false); // drives the plush squish
 
   const { user } = useCurrentUser();
 
-  const panGesture = Gesture.Pan()
+  const [isPressed, setIsPressed] = useState(false);
+
+  const gesture = Gesture.Pan()
+    .onBegin(() => {
+      // replaces Pressable.onPressIn
+      pressed.value = true;
+      scheduleOnRN(onPressIn);
+      scheduleOnRN(setIsPressed, true);
+    })
     .onUpdate((event) => {
       if (hugPhase === "hugging" || hugPhase === "idle") return;
-      // if (hugProgress.value < 0.99 || hugProgress.value > 1.5) return;
 
-      scheduleOnRN(onSendHugProcess, "pulling");
-      // console.log("translateY.value is: ", translateY.value);
+      if (!isPulling.value) {
+        // fire the phase change ONCE, not every frame
+        isPulling.value = true;
+        scheduleOnRN(onSendHugProcess, "pulling");
+      }
 
-      // drag only downward
-      translateY.value = Math.max(0, event.translationY * 1.5);
-
-      // threshold to release the hug
-      canRelease.value = translateY.value > 80; // test this value
+      translateY.value = Math.max(0, event.translationY * PULL_MULTIPLIER);
+      canRelease.value = translateY.value > RELEASE_THRESHOLD;
     })
     .onEnd(() => {
-      isDragging.value = false;
-
       if (canRelease.value) {
-        // throw the slingshotttt
         scheduleOnRN(onSendHugProcess, "sending");
         translateY.value = withSpring(
-          -800,
-          {
-            velocity: -2200,
-            // damping: 14,
-            // stiffness: 160,
-          },
-          () => {
+          THROW_TARGET,
+          { velocity: THROW_VELOCITY },
+          (finished) => {
+            if (!finished) return; // don't reset if the throw was interrupted
             translateY.value = 0;
             hugProgress.value = 0;
             scheduleOnRN(onSendHugProcess, "thrown");
           },
         );
       } else {
-        // snap it back
         translateY.value = withSpring(0);
         scheduleOnRN(onSendHugProcess, "idle");
       }
-
       canRelease.value = false;
+    })
+    .onFinalize(() => {
+      // replaces Pressable.onPressOut — always fires, even on a tap with no pull
+      pressed.value = false;
+      isPulling.value = false;
+      scheduleOnRN(onPressOut);
+      scheduleOnRN(setIsPressed, false);
     });
 
-  const hugContainerStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateY: translateY.value }],
-    };
-  });
+  const hugContainerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
 
   const releaseTextStyle = useAnimatedStyle(() => ({
     opacity: withTiming(canRelease.value ? 1 : 0),
-    transform: [
-      {
-        translateY: withTiming(canRelease.value ? 0 : 6),
-      },
-    ],
+    transform: [{ translateY: withTiming(canRelease.value ? 0 : 6) }],
   }));
-
-  const breathingScale = useSharedValue(1);
-
-  useEffect(() => {
-    breathingScale.value = withRepeat(
-      withTiming(1.06, {
-        duration: 1500,
-        easing: Easing.inOut(Easing.ease),
-      }),
-      -1,
-      true,
-    );
-  }, [breathingScale]);
-
-  const faceBreathingAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      // transform: [{ scale: breathingScale.value }],
-    };
-  });
 
   const faceAnimatedStyle = useAnimatedStyle(() => {
     const scale = interpolate(
@@ -126,12 +111,8 @@ export default function HugButton({
       [1, 1.8],
       Extrapolation.CLAMP,
     );
-
     const jiggleX = Math.sin(hugProgress.value * Math.PI * 18) * 2;
-
-    return {
-      transform: [{ scale }, { translateX: jiggleX }],
-    };
+    return { transform: [{ scale }, { translateX: jiggleX }] };
   });
 
   const animatedStyle = useAnimatedStyle(() => {
@@ -141,75 +122,45 @@ export default function HugButton({
       [1, 1.12],
       Extrapolation.CLAMP,
     );
-
-    return {
-      transform: [{ scale }],
-    };
+    return { transform: [{ scale }] };
   });
-
-  // const [sprinklesActive, setSprinklesActive] = useState(true);
-
-  // useAnimatedReaction(
-  //   () => hugProgress.value > 0.001,
-  //   (isActive, prev) => {
-  //     if (isActive !== prev) {
-  //       scheduleOnRN(setSprinklesActive, isActive);
-  //     }
-  //   },
-  // );
 
   return (
     <View style={styles.hugContainer}>
       <Animated.Text style={[styles.releaseText, releaseTextStyle]}>
         Release the hug
       </Animated.Text>
-      <Animated.View style={[styles.button, animatedStyle]}>
-        <Animated.View style={styles.faceWrapper}>
-          <Animated.View style={hugContainerStyle}>
-            <HugArms hugProgress={hugProgress} />
-            <Animated.View style={faceBreathingAnimatedStyle}>
-              <Animated.View style={faceAnimatedStyle}>
-                <Face
-                  hugProgress={hugProgress}
-                  userAvatar={user?.avatar || "male"}
-                />
-                {/* <SprinklesController
-                  active={
-                    hugPhase === "formed" ||
-                    hugPhase === "hugging" ||
-                    hugPhase === "pulling"
-                  }
-                /> */}
-                <HeartParticles
-                  active={
-                    hugPhase === "formed" ||
-                    hugPhase === "hugging" ||
-                    hugPhase === "pulling"
-                  }
-                />
-              </Animated.View>
-            </Animated.View>
+
+      {/* Avatar visual — never touchable */}
+      <Animated.View
+        style={[styles.button, animatedStyle]}
+        pointerEvents="none"
+      >
+        <Animated.View style={hugContainerStyle}>
+          <HugArms hugProgress={hugProgress} />
+          <Animated.View style={faceAnimatedStyle}>
+            <Face
+              hugProgress={hugProgress}
+              userAvatar={user?.avatar || "male"}
+            />
+            <HeartParticles
+              active={
+                hugPhase === "formed" ||
+                hugPhase === "hugging" ||
+                hugPhase === "pulling"
+              }
+            />
           </Animated.View>
         </Animated.View>
       </Animated.View>
-      <Pressable
-        onPressIn={onPressIn}
-        onPressOut={onPressOut}
-        pressRetentionOffset={150}
-      >
-        <GestureDetector gesture={panGesture}>
-          <View
-            style={{
-              width: 200,
-              height: 230,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Text>HUG</Text>
+
+      <GestureDetector gesture={gesture}>
+        <View style={styles.touchArea}>
+          <View pointerEvents="none">
+            <PlushButton onPress={() => {}} label={"hug"} pressed={isPressed} />
           </View>
-        </GestureDetector>
-      </Pressable>
+        </View>
+      </GestureDetector>
     </View>
   );
 }
@@ -234,5 +185,11 @@ const styles = StyleSheet.create({
   },
   releaseText: {
     fontSize: 16,
+  },
+  touchArea: {
+    width: 200,
+    height: 230,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

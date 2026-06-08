@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   Animated,
   Pressable,
@@ -23,6 +23,7 @@ export interface PlushButtonProps {
   /** Height of the button face (the box is this + DEPTH). */
   height?: number;
   style?: StyleProp<ViewStyle>;
+  pressed?: boolean;
 }
 
 /** Visible depth of the plush "underside", in px. */
@@ -61,10 +62,13 @@ export function PlushButton({
   fullWidth = false,
   height = 52,
   style,
+  pressed,
 }: PlushButtonProps) {
   const v = VARIANTS[variant];
   // Driven on the JS thread so we can animate shadow/elevation too.
   const press = useRef(new Animated.Value(0)).current;
+
+  const isControlled = pressed !== undefined;
 
   const animate = (to: number) =>
     Animated.spring(press, {
@@ -73,6 +77,11 @@ export function PlushButton({
       speed: 40,
       bounciness: 6,
     }).start();
+
+  // Controlled mode: follow the prop instead of touch events.
+  useEffect(() => {
+    if (isControlled) animate(pressed ? 1 : 0);
+  }, [isControlled, pressed]);
 
   const translateY = press.interpolate({
     inputRange: [0, 1],
@@ -91,6 +100,56 @@ export function PlushButton({
     outputRange: [8, 2],
   });
 
+  const content = (
+    <View
+      style={[
+        styles.box,
+        fullWidth && styles.fullWidth,
+        { height: height + DEPTH },
+      ]}
+    >
+      <Animated.View
+        style={[
+          styles.base,
+          {
+            height,
+            backgroundColor: v.underside,
+            shadowColor: v.shadowColor,
+            shadowOpacity,
+            shadowRadius,
+            elevation,
+          },
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.face,
+          { height, backgroundColor: v.face, transform: [{ translateY }] },
+        ]}
+      >
+        {icon ? <View style={styles.icon}>{icon}</View> : null}
+        <Text style={[styles.label, { color: v.text }]} numberOfLines={1}>
+          {label}
+        </Text>
+      </Animated.View>
+    </View>
+  );
+
+  if (isControlled) {
+    return (
+      <View
+        style={[
+          fullWidth && styles.fullWidth,
+          disabled && styles.disabled,
+          style,
+        ]}
+        pointerEvents="none"
+      >
+        {content}
+      </View>
+    );
+  }
+
   return (
     <Pressable
       onPress={onPress}
@@ -105,40 +164,7 @@ export function PlushButton({
       accessibilityRole="button"
       accessibilityLabel={label}
     >
-      <View
-        style={[
-          styles.box,
-          fullWidth && styles.fullWidth,
-          { height: height + DEPTH },
-        ]}
-      >
-        {/* Underside: anchored to the bottom, carries the drop shadow. */}
-        <Animated.View
-          style={[
-            styles.base,
-            {
-              height,
-              backgroundColor: v.underside,
-              shadowColor: v.shadowColor,
-              shadowOpacity,
-              shadowRadius,
-              elevation,
-            },
-          ]}
-        />
-        {/* Face: sinks down onto the base on press, collapsing the thickness. */}
-        <Animated.View
-          style={[
-            styles.face,
-            { height, backgroundColor: v.face, transform: [{ translateY }] },
-          ]}
-        >
-          {icon ? <View style={styles.icon}>{icon}</View> : null}
-          <Text style={[styles.label, { color: v.text }]} numberOfLines={1}>
-            {label}
-          </Text>
-        </Animated.View>
-      </View>
+      {content}
     </Pressable>
   );
 }
