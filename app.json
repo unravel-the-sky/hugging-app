@@ -12,7 +12,8 @@
       "bundleIdentifier": "com.anonymous.huggingapp",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSPhotoLibraryAddUsageDescription": "Save your polaroids to your photo library."
+        "NSPhotoLibraryAddUsageDescription": "Save your polaroids to your photo library.",
+        "NSMotionUsageDescription": "Used to tilt the hug card as you move your phone."
       },
       "icon": "./assets/ios-app.icon/"
     },

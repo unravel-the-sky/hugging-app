@@ -14,7 +14,7 @@ import {
   useCanvasRef,
   useImage,
 } from "@shopify/react-native-skia";
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   Easing,
   useDerivedValue,

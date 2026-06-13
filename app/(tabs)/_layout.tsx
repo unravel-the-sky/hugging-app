@@ -39,7 +39,7 @@ const getGreetingMessage = (): string => {
 };
 
 export default function TabsLayout() {
-  const { authUser, user, loading } = useCurrentUser();
+  const { authUser, user, loading, isInitializing } = useCurrentUser();
   const [unreadHugsCount, setUnreadHugsCount] = useState<number>(0);
 
   const currentUser = auth.currentUser;
@@ -68,7 +68,7 @@ export default function TabsLayout() {
     return <Loader />;
   }
 
-  if (!authUser && !isOnSetup) {
+  if (!authUser && !isOnSetup && !user) {
     return <SignInScreen />;
   }
 

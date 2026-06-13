@@ -1,11 +1,11 @@
 import { Image } from "expo-image";
-import { useState } from "react";
+import React, { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import Loader from "../ui/Loader";
 
 // this is some weird workaround for adding %2F instead of / on firebase downloadUrl
 // fix this better when you have time
-const fixFirebaseUrl = (url: string): string => {
+export const fixFirebaseUrl = (url: string): string => {
   // Match the path between /o/ and ? and re-encode any unencoded slashes
   return url.replace(/\/o\/([^?]+)/, (_, path) => {
     // Decode first (in case it's partially encoded), then re-encode

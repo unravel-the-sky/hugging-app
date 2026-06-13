@@ -23,7 +23,8 @@
     "@react-navigation/bottom-tabs": "^7.4.0",
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",
-    "@shopify/react-native-skia": "2.4.18",
+    "@react-three/fiber": "^9.6.1",
+    "@shopify/react-native-skia": "2.6.2",
     "expo": "^55.0.17",
     "expo-apple-authentication": "~55.0.13",
     "expo-camera": "~55.0.16",
@@ -41,6 +42,7 @@
     "expo-media-library": "~55.0.15",
     "expo-notifications": "~55.0.19",
     "expo-router": "~55.0.12",
+    "expo-sensors": "~55.0.15",
     "expo-splash-screen": "~55.0.18",
     "expo-status-bar": "~55.0.5",
     "expo-symbols": "~55.0.7",
@@ -58,13 +60,18 @@
     "react-native-svg": "15.15.3",
     "react-native-view-shot": "4.0.3",
     "react-native-web": "~0.21.0",
-    "react-native-worklets": "0.7.4"
+    "react-native-webgpu": "^0.5.15",
+    "react-native-worklets": "0.7.4",
+    "three": "^0.184.0"
   },
   "devDependencies": {
     "@types/react": "~19.2.10",
+    "@types/three": "^0.184.1",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~55.0.0",
+    "patch-package": "^8.0.1",
     "typescript": "~5.9.2"
   },
+  "postinstall": "patch-package",
   "private": true
 }

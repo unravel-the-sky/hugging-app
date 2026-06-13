@@ -28,7 +28,7 @@ export default function RootLayout() {
     Caveat_600SemiBold,
   });
 
-  const { user, loading } = useCurrentUser();
+  const { user, loading, isInitializing } = useCurrentUser();
   const tokenRegisteredRef = useRef(false);
 
   useEffect(() => {

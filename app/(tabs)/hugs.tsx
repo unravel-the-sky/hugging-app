@@ -17,6 +17,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import HugReveal from "@/components/hug/HugRevealer";
+import { fixFirebaseUrl } from "@/components/hug/HugImage";
 
 export default function HugsListScreen() {
   const currentUser = auth.currentUser;
@@ -160,12 +162,17 @@ export default function HugsListScreen() {
         contentContainerStyle={styles.listContainer}
       />
 
-      <HugViewOverlay
+      {!!seeHug?.id && seeHug?.imagePath && (
+        <HugReveal photoUri={fixFirebaseUrl(seeHug?.imagePath || "") || ""} />
+      )}
+
+      {/* old component to show hug here */}
+      {/* <HugViewOverlay
         visible={!!seeHug?.id}
         hug={seeHug}
         onHugBack={handleHugBack}
         onIgnore={handleIgnore}
-      />
+      /> */}
     </View>
   );
 }
