@@ -22,6 +22,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import SetupScreen from "../setup";
 import SignInScreen from "../sign-in";
 import { colors } from "../../components/ui/squish/theme";
+import { TabBarContext } from "../context/TabBarContext";
 
 const getGreetingMessage = (): string => {
   const currentHour = new Date().getHours();
@@ -41,6 +42,8 @@ const getGreetingMessage = (): string => {
 export default function TabsLayout() {
   const { authUser, user, loading, isInitializing } = useCurrentUser();
   const [unreadHugsCount, setUnreadHugsCount] = useState<number>(0);
+
+  const [isTabBarHidden, setIsTabBarHidden] = useState(false);
 
   const currentUser = auth.currentUser;
   const uid = currentUser?.uid;
@@ -98,29 +101,34 @@ export default function TabsLayout() {
         </View>
 
         {/* Tab Content */}
-        <NativeTabs>
-          <NativeTabs.Trigger name="index">
-            <Label>Home</Label>
-            <NativeTabs.Trigger.Icon sf="house.fill" md="settings" />
-          </NativeTabs.Trigger>
-          <NativeTabs.Trigger name="friends">
-            <Label>Friends</Label>
-            <NativeTabs.Trigger.Icon sf="person.2.fill" md="settings" />
-          </NativeTabs.Trigger>
-          <NativeTabs.Trigger name="hugs">
-            <Label>Hugs</Label>
-            <NativeTabs.Trigger.Icon sf="heart.circle.fill" md="settings" />
-            {unreadHugsCount > 0 && (
-              <NativeTabs.Trigger.Badge>
-                {unreadHugsCount > 9 ? "9+" : unreadHugsCount.toString()}
-              </NativeTabs.Trigger.Badge>
-            )}
-          </NativeTabs.Trigger>
-          <NativeTabs.Trigger name="hug-room">
-            <Label>Hug room</Label>
-            <NativeTabs.Trigger.Icon sf="person.crop.rectangle" md="settings" />
-          </NativeTabs.Trigger>
-        </NativeTabs>
+        <TabBarContext value={{ setIsTabBarHidden }}>
+          <NativeTabs blurEffect="light" hidden={isTabBarHidden}>
+            <NativeTabs.Trigger name="index">
+              <Label>Home</Label>
+              <NativeTabs.Trigger.Icon sf="house.fill" md="settings" />
+            </NativeTabs.Trigger>
+            <NativeTabs.Trigger name="friends">
+              <Label>Friends</Label>
+              <NativeTabs.Trigger.Icon sf="person.2.fill" md="settings" />
+            </NativeTabs.Trigger>
+            <NativeTabs.Trigger name="hugs">
+              <Label>Hugs</Label>
+              <NativeTabs.Trigger.Icon sf="heart.circle.fill" md="settings" />
+              {unreadHugsCount > 0 && (
+                <NativeTabs.Trigger.Badge>
+                  {unreadHugsCount > 9 ? "9+" : unreadHugsCount.toString()}
+                </NativeTabs.Trigger.Badge>
+              )}
+            </NativeTabs.Trigger>
+            <NativeTabs.Trigger name="hug-room">
+              <Label>Hug room</Label>
+              <NativeTabs.Trigger.Icon
+                sf="person.crop.rectangle"
+                md="settings"
+              />
+            </NativeTabs.Trigger>
+          </NativeTabs>
+        </TabBarContext>
       </SafeAreaView>
     </ThemeProvider>
   );

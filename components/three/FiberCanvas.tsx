@@ -80,6 +80,11 @@ export const FiberCanvas = ({
         };
         await gl.init();
         ready = true;
+        (
+          state.gl as unknown as {
+            setClearColor: (c: number, a: number) => void;
+          }
+        ).setClearColor(0x000000, 0);
         console.log("[webgpu] ready");
       },
     });
@@ -98,5 +103,5 @@ export const FiberCanvas = ({
     root.current?.render(children);
   }, [children]);
 
-  return <Canvas ref={canvasRef} style={style} />;
+  return <Canvas ref={canvasRef} style={style} transparent />;
 };

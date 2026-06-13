@@ -1,5 +1,4 @@
-import HugViewOverlay from "@/components/hug/HugViewOverlay";
-import { colors, radius } from "../../components/ui/squish/theme";
+import HugViewOverlay3d from "@/components/hug/HugViewOverlay3d";
 import useCreateHugWithNote from "@/hooks/useCreateHugWithNote";
 import { useHugs } from "@/hooks/useIncomingHugs";
 import { auth, db } from "@/lib/firebaseConfig";
@@ -17,8 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import HugReveal from "@/components/hug/HugRevealer";
-import { fixFirebaseUrl } from "@/components/hug/HugImage";
+import { colors, radius } from "../../components/ui/squish/theme";
 
 export default function HugsListScreen() {
   const currentUser = auth.currentUser;
@@ -162,8 +160,19 @@ export default function HugsListScreen() {
         contentContainerStyle={styles.listContainer}
       />
 
-      {!!seeHug?.id && seeHug?.imagePath && (
+      {/* {!!seeHug?.id && seeHug?.imagePath && (
         <HugReveal photoUri={fixFirebaseUrl(seeHug?.imagePath || "") || ""} />
+      )} */}
+
+      {seeHug?.id && (
+        <HugViewOverlay3d
+          hug={seeHug}
+          onHugBack={() => handleHugBack(seeHug)} // you already have this
+          onClose={() => {
+            handleValidateHug(seeHug.id);
+            setSeeHug(undefined);
+          }}
+        />
       )}
 
       {/* old component to show hug here */}
