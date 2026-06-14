@@ -17,6 +17,15 @@ import {
   View,
 } from "react-native";
 import { colors, radius } from "../../components/ui/squish/theme";
+import { Host, Picker, Text as SwiftText } from "@expo/ui/swift-ui";
+import {
+  pickerStyle,
+  tag,
+  padding,
+  glassEffect,
+  font,
+} from "@expo/ui/swift-ui/modifiers";
+import { HugTabs } from "@/components/hug/HugTabs";
 
 export default function HugsListScreen() {
   const currentUser = auth.currentUser;
@@ -125,28 +134,21 @@ export default function HugsListScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.tabs}>
-        <Pressable
-          style={[styles.tab, tab === "incoming" && styles.tabActive]}
-          onPress={() => setTab("incoming")}
+      {/* <Host style={styles.tabs}>
+        <Picker
+          modifiers={[pickerStyle("segmented")]}
+          selection={tab}
+          onSelectionChange={(selection) =>
+            setTab(selection as "incoming" | "outgoing")
+          }
         >
-          <Text
-            style={[styles.tabText, tab === "incoming" && styles.tabTextActive]}
-          >
-            Received
-          </Text>
-        </Pressable>
-        <Pressable
-          style={[styles.tab, tab === "outgoing" && styles.tabActive]}
-          onPress={() => setTab("outgoing")}
-        >
-          <Text
-            style={[styles.tabText, tab === "outgoing" && styles.tabTextActive]}
-          >
-            Sent
-          </Text>
-        </Pressable>
-      </View>
+          <SwiftText modifiers={[tag("incoming")]}>Received</SwiftText>
+          <SwiftText modifiers={[tag("outgoing")]}>Sent</SwiftText>
+        </Picker>
+      </Host> */}
+
+      <HugTabs value={tab} onChange={setTab} />
+
       <FlatList
         data={hugs}
         renderItem={({ item }) => (
@@ -269,10 +271,10 @@ const HugRow = ({ hug, direction, onPress }: HugRowProps) => {
 
 const styles = StyleSheet.create({
   tabs: {
+    width: "80%",
     flexDirection: "row",
     backgroundColor: colors.mistBg,
     borderRadius: 12,
-    padding: 4,
     margin: 16,
   },
   tab: {

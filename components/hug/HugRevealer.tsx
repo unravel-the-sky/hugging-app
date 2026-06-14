@@ -80,11 +80,15 @@ function Card({
     <mesh ref={ref} position={[0, 0.5, 0]}>
       <planeGeometry args={[width, height]} />
       <meshPhysicalMaterial
-        map={texture}
-        roughness={0.5}
-        metalness={0}
-        clearcoat={1}
-        clearcoatRoughness={0.4} // lower = sharper, glossier highlight
+        color="#000000" // no diffuse → lights can't darken/tint the photo
+        emissive="#ffffff"
+        emissiveMap={texture} // the photo, shown at full brightness
+        emissiveIntensity={1}
+        toneMapped={false} // don't compress the photo's colors
+        roughness={0.6}
+        metalness={0.2}
+        clearcoat={0.5}
+        clearcoatRoughness={0.18}
         side={THREE.DoubleSide}
       />
     </mesh>
@@ -147,7 +151,7 @@ export default function HugReveal({
           <HeartsGrid tilt={tilt} />
           <ambientLight intensity={1} />
           {hasImage && <ShineLight tilt={tilt} />}
-          <directionalLight position={[2, 3, 4]} intensity={0.2} />
+          {/* <directionalLight position={[2, 3, 14]} intensity={0.4} /> */}
           {hasImage && loaded && (
             <Card
               texture={loaded.texture}
@@ -166,7 +170,7 @@ export default function HugReveal({
         <View style={styles.messageWrap} pointerEvents="none">
           <View style={styles.messageCard}>
             <Text style={styles.messageText}>
-              {message ?? "Sending you a hug 💜"}
+              {message !== "" ? `${message}` : "Sending you a hug 💜"}
             </Text>
           </View>
         </View>
@@ -186,11 +190,11 @@ function ShineLight({ tilt }: { tilt: TiltRef }) {
   useFrame(() => {
     const l = ref.current;
     if (!l) return;
-    const R = 6; // how far the highlight travels — tune to taste
-    l.position.set(tilt.current.y * R, -tilt.current.x * R, 5);
+    const R = 2; // how far the highlight travels — tune to taste
+    l.position.set(tilt.current.y * R, -tilt.current.x * R, 15);
   });
 
-  return <directionalLight ref={ref} intensity={0.6} color="#fad9d9" />;
+  return <directionalLight ref={ref} intensity={0.2} color="#fff" />;
 }
 
 const styles = StyleSheet.create({
