@@ -172,6 +172,7 @@ export default function HugsListScreen() {
             handleValidateHug(seeHug.id);
             setSeeHug(undefined);
           }}
+          onIgnore={() => setSeeHug(undefined)}
         />
       )}
 

@@ -11,6 +11,7 @@ import { HeartsGrid } from "./HeartsGrid";
 import { PlushButton } from "../ui/squish/PlushButton";
 import { TabBarContext } from "@/app/context/TabBarContext";
 import { useFocusEffect } from "expo-router";
+import TiltDebug from "./TiltDebug";
 
 // Soft lavender -> soft pink, matching the reveal screens in the design.
 // Swap for your theme gradient tokens if you have them.
@@ -143,9 +144,9 @@ export default function HugReveal({
             see the FiberCanvas edit in the message. */}
         <FiberCanvas style={styles.fill}>
           <HeartsGrid tilt={tilt} />
-          <ambientLight intensity={0.8} />
+          <ambientLight intensity={1} />
           {hasImage && <ShineLight tilt={tilt} />}
-          <directionalLight position={[2, 3, 4]} intensity={2} />
+          <directionalLight position={[2, 3, 4]} intensity={0.2} />
           {hasImage && loaded && (
             <Card
               texture={loaded.texture}
@@ -156,6 +157,8 @@ export default function HugReveal({
           )}
         </FiberCanvas>
       </GestureDetector>
+
+      <TiltDebug />
 
       {/* text-only hug → message box */}
       {!hasImage && (

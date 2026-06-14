@@ -14,6 +14,7 @@ interface Props {
   hug?: Hug | undefined;
   onHugBack: (hug: Hug) => void;
   onClose: () => void;
+  onIgnore: () => void;
 }
 
 // Stylized envelope built from Views (no extra deps). Swap for your own
@@ -30,7 +31,12 @@ function Envelope() {
   );
 }
 
-export default function HugViewOverlay({ hug, onHugBack, onClose }: Props) {
+export default function HugViewOverlay({
+  hug,
+  onHugBack,
+  onClose,
+  onIgnore,
+}: Props) {
   const [opened, setOpened] = useState(false);
   const loaded = useHugTexture(fixFirebaseUrl(hug?.imagePath || ""));
 
@@ -71,8 +77,7 @@ export default function HugViewOverlay({ hug, onHugBack, onClose }: Props) {
         />
       </View>
 
-      {/* a quiet dismiss in the corner, in case they don't want to open yet */}
-      <Pressable style={styles.dismiss} onPress={onClose} hitSlop={12}>
+      <Pressable style={styles.dismiss} onPress={onIgnore} hitSlop={12}>
         <Text style={styles.dismissTxt}>✕</Text>
       </Pressable>
     </View>
@@ -80,7 +85,7 @@ export default function HugViewOverlay({ hug, onHugBack, onClose }: Props) {
 }
 
 const styles = StyleSheet.create({
-  fill: { ...StyleSheet.absoluteFillObject },
+  fill: { ...StyleSheet.absoluteFill },
   center: {
     flex: 1,
     alignItems: "center",

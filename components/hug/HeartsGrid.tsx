@@ -7,7 +7,7 @@ const COLS = 20;
 const ROWS = 30;
 const SPACING = 0.7;
 const PARALLAX = 1.2;
-const PULSE_AMP = 0.22; // ±22% size
+const PULSE_AMP = 0.22;
 const PULSE_SPEED = 1.3;
 
 function makeHeartGeometry() {
