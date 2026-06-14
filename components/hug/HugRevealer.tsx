@@ -12,6 +12,7 @@ import { PlushButton } from "../ui/squish/PlushButton";
 import { TabBarContext } from "@/app/context/TabBarContext";
 import { useFocusEffect } from "expo-router";
 import TiltDebug from "./TiltDebug";
+import TiltRefDebug from "./TiltRefDebug";
 
 // Soft lavender -> soft pink, matching the reveal screens in the design.
 // Swap for your theme gradient tokens if you have them.
@@ -158,7 +159,7 @@ export default function HugReveal({
         </FiberCanvas>
       </GestureDetector>
 
-      <TiltDebug />
+      <TiltRefDebug tiltRef={tilt} />
 
       {/* text-only hug → message box */}
       {!hasImage && (

@@ -3,7 +3,6 @@ import { DeviceMotion } from "expo-sensors";
 
 export type TiltRef = React.RefObject<{ x: number; y: number }>;
 
-// this hook is done by claude - revise later
 /**
  * Phone-tilt as a JS-thread ref (so R3F's useFrame can read it directly).
  *
@@ -16,6 +15,13 @@ export type TiltRef = React.RefObject<{ x: number; y: number }>;
  * NOTE: uses expo-sensors (JS thread) on purpose, NOT Reanimated's
  * useAnimatedSensor (UI thread) — useFrame can't reliably read a
  * UI-thread shared value.
+ *
+ * Raw device motion (gyro/accelerometer) requires NO runtime permission
+ * on iOS, so we subscribe directly. Do NOT gate on
+ * requestPermissionsAsync(): that checks Motion & Fitness
+ * (CMMotionActivityManager), which this feature doesn't use and which
+ * returns not-granted on production/TestFlight builds — the listener
+ * then never attaches and the ref stays at 0.
  */
 export function useTilt(
   enabled = true,
@@ -27,32 +33,26 @@ export function useTilt(
   useEffect(() => {
     if (!enabled) return;
 
-    let sub: { remove: () => void } | undefined;
     let baseline: { x: number; y: number } | null = null;
     const clampAbs = (v: number) => Math.max(-clamp, Math.min(clamp, v));
 
-    (async () => {
-      const { granted } = await DeviceMotion.requestPermissionsAsync();
-      if (!granted) return;
+    DeviceMotion.setUpdateInterval(16); // ~60 Hz
+    const sub = DeviceMotion.addListener((data) => {
+      const r = data.rotation;
+      if (!r) return;
 
-      DeviceMotion.setUpdateInterval(16); // ~60 Hz
-      sub = DeviceMotion.addListener((data) => {
-        const r = data.rotation;
-        if (!r) return;
+      // First reading becomes the rest pose.
+      if (!baseline) baseline = { x: r.beta, y: r.gamma };
 
-        // First reading becomes the rest pose.
-        if (!baseline) baseline = { x: r.beta, y: r.gamma };
+      const targetX = clampAbs(r.beta - baseline.x);
+      const targetY = clampAbs(r.gamma - baseline.y);
 
-        const targetX = clampAbs(r.beta - baseline.x);
-        const targetY = clampAbs(r.gamma - baseline.y);
+      // Exponential smoothing toward the new reading.
+      tilt.current.x += (targetX - tilt.current.x) * smoothing;
+      tilt.current.y += (targetY - tilt.current.y) * smoothing;
+    });
 
-        // Exponential smoothing toward the new reading.
-        tilt.current.x += (targetX - tilt.current.x) * smoothing;
-        tilt.current.y += (targetY - tilt.current.y) * smoothing;
-      });
-    })();
-
-    return () => sub?.remove();
+    return () => sub.remove();
   }, [enabled, smoothing, clamp]);
 
   return tilt;
