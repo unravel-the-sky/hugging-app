@@ -10,15 +10,14 @@ import { captureRef } from "react-native-view-shot";
 import FilterPreview from "@/components/postcard/FilterPreview";
 import PostImage from "@/components/postcard/PostImage";
 import DraggableText from "@/components/ui/DraggableText";
+import { PlushButton } from "@/components/ui/squish/PlushButton";
 import { FilterKey, filterKeys, FILTERS } from "@/constants/postcardConstants";
+import { useImageColors } from "@/hooks/useImageColors";
 import usePolaroidFrameCalc from "@/hooks/usePolaroidFrameCalc";
-import { storage } from "@/lib/firebaseConfig";
+import { auth, storage } from "@/lib/firebaseConfig";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { TextInput } from "react-native-gesture-handler";
-import { PlushButton } from "@/components/ui/squish/PlushButton";
-import { colors } from "@/components/ui/squish";
-import { useImageColors } from "@/hooks/useImageColors";
 
 export default function Media() {
   const { toUid, toName, media, note } = useLocalSearchParams<{
@@ -108,8 +107,11 @@ export default function Media() {
       const blob = await response.blob();
 
       // create reference
+      const uid = auth.currentUser?.uid;
+      if (!uid) throw new Error("not signed in");
+
       const imgName = `polaroid-hug-${Date.now()}`;
-      const storageRef = ref(storage, `images/${imgName}`);
+      const storageRef = ref(storage, `images/${uid}/${imgName}`);
 
       // upload blob/bytes
       const storageSnapshot = await uploadBytes(storageRef, blob);
