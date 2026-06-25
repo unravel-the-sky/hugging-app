@@ -175,7 +175,6 @@ const styles = StyleSheet.create({
   box: {
     // height set inline; relative positioning anchors the absolute base
     justifyContent: "flex-start",
-    minWidth: 150,
   },
   base: {
     position: "absolute",
