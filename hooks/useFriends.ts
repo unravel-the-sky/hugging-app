@@ -1,48 +1,37 @@
-import { User } from "@/lib/createUser";
-import { auth, db } from "@/lib/firebaseConfig";
+import { auth } from "@/lib/firebaseConfig";
 import { getFriendsForCurrentUser } from "@/lib/handleFriends";
-import { Hug } from "@/lib/handleHugs";
-import {
-  collection,
-  onSnapshot,
-  orderBy,
-  query,
-  where,
-} from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { Timestamp } from "firebase/firestore";
+import { useCallback, useEffect, useState } from "react";
 
 export type Friend = {
   uid: string;
   displayName: string;
   avatar?: string;
   addedAt?: Date;
+  lastHugAt?: Timestamp | null;
+  online?: boolean;
 };
 
-export function useFriends(uid?: string) {
+export function useFriends() {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     const uid = auth.currentUser?.uid;
     if (!uid) return;
-
-    const handleFriends = async (uid: string) => {
-      try {
-        setIsLoading(true);
-        const list = await getFriendsForCurrentUser(uid);
-        setFriends(list);
-      } catch (err) {
-        console.error("error while fethcing friends for friend-picker: ", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    handleFriends(uid);
+    try {
+      setIsLoading(true);
+      setFriends(await getFriendsForCurrentUser(uid));
+    } catch (err) {
+      console.error("useFriends:", err);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  return {
-    friends,
-    isLoading,
-  };
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  return { friends, isLoading, refresh: load };
 }

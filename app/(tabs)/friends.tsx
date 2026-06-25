@@ -1,347 +1,250 @@
-import Loader from "@/components/ui/Loader";
-import { Friend } from "@/hooks/useFriends";
+import { IconButton, iconButtonTint } from "@/components/ui/squish";
+import { FriendAvatar } from "@/components/ui/squish/FriendAvatar";
 import useCreateHugWithNote from "@/hooks/useCreateHugWithNote";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { getFriendsForCurrentUser } from "@/lib/handleFriends";
+import { Friend, useFriends } from "@/hooks/useFriends";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
-  Alert,
-  Animated,
-  FlatList,
-  Pressable,
+  ActivityIndicator,
   StyleSheet,
   Text,
-  TouchableOpacity,
+  TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { avatarColors, colors, radius } from "../../components/ui/squish/theme";
-import Avatar from "@/components/ui/squish/Avatar";
-import { FriendRow } from "@/components/friend/FriendRow";
+import { FlatList } from "react-native-gesture-handler";
+import {
+  colors,
+  font,
+  radius,
+  shadow,
+  spacing,
+} from "../../components/ui/squish/theme";
+import { PlushButton } from "@/components/ui/squish/PlushButton";
 
-const getRandomProperty = (obj: typeof avatarColors) => {
-  const keys = Object.keys(obj) as (keyof typeof obj)[];
-  return obj[keys[(keys.length * Math.random()) << 0]];
-};
+const lastHugLabel = (friend: Friend): string => {
+  if (!friend.lastHugAt) return "no hugs yet";
 
-export default function FriendsListScreen() {
-  const [friends, setFriends] = useState<Friend[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const { user, loading } = useCurrentUser();
-
-  const { startHugWithNote } = useCreateHugWithNote();
-
-  useEffect(() => {
-    if (user) loadFriends(user?.avatar || "");
-  }, [user]);
-
-  const loadFriends = async (userId: string) => {
-    try {
-      // the shiiiit
-      const friendsForCurrentUser = (await getFriendsForCurrentUser(
-        userId,
-      )) as Friend[];
-      setFriends(friendsForCurrentUser);
-    } catch (error) {
-      console.error("Error loading friends:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRemoveFriend = (friendId: string, username: string) => {
-    Alert.alert(
-      "Remove Friend",
-      `Remove people already?? Whoaaa bad karma. And nope. (didn't implement it yet lol)`,
-      [
-        {
-          text: "Nope",
-          style: "cancel",
-        },
-        {
-          text: "Ok da",
-          style: "default",
-          onPress: async () => {
-            // try {
-            //   // TODO: Remove friend from Firebase
-            //   setFriends((prevFriends) =>
-            //     prevFriends.filter((f) => f.uid !== friendId),
-            //   );
-            // } catch (error) {
-            //   console.error("Error removing friend:", error);
-            //   Alert.alert("Error", "Failed to remove friend");
-            // }
-          },
-        },
-      ],
-    );
-  };
-
-  const handleSendHug = (friend: Friend) => {
-    // Navigate to home screen to send hug
-    // TODO: You might want to pre-select this friend when sending
-    startHugWithNote(friend);
-  };
-
-  const press = useRef(new Animated.Value(0)).current;
-
-  const animate = (to: number) =>
-    Animated.spring(press, {
-      toValue: to,
-      useNativeDriver: false,
-      speed: 40,
-      bounciness: 6,
-    }).start();
-
-  const translateY = press.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 5],
-  });
-  const shadowOpacity = press.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.1, 0.0],
-  });
-
-  const renderFriendItem = ({ item }: { item: Friend }) => (
-    <Pressable
-      onPressIn={() => animate(1)}
-      onPressOut={() => animate(0)}
-      onPress={() => handleSendHug(item)}
-    >
-      <Animated.View
-        style={[
-          styles.friendItem,
-          { transform: [{ translateY }], shadowOpacity },
-        ]}
-      >
-        <View style={styles.friendAvatar}>
-          <Text style={styles.friendInitial}>
-            {item.displayName.charAt(0).toUpperCase()}
-          </Text>
-        </View>
-
-        <View style={styles.friendInfo}>
-          <Text style={styles.friendUsername}>{item.displayName}</Text>
-        </View>
-
-        {/* <Pressable style={styles.hugButton} onPress={() => handleSendHug(item)}>
-          <Text style={styles.hugButtonEmoji}>🤗</Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.removeButton}
-          onPress={() => handleRemoveFriend(item.uid, item.displayName)}
-        >
-          <Text style={styles.removeButtonText}>×</Text>
-        </Pressable> */}
-      </Animated.View>
-    </Pressable>
-    // <View
-    //   style={[
-    //     {
-    //       flex: 1,
-    //       justifyContent: "center",
-    //       width: "auto",
-    //       alignItems: "center",
-    //       gap: 4,
-    //     },
-    //     styles.friendItem,
-    //   ]}
-    // >
-    //   <Avatar
-    //     initials={item.displayName.charAt(0).toUpperCase()}
-    //     color={getRandomProperty(avatarColors)}
-    //     size={110}
-    //   />
-    //   <Text style={{ fontSize: 16 }}>{item.displayName}</Text>
-    // </View>
+  const mins = Math.floor(
+    (Date.now() - friend.lastHugAt.toDate().getTime()) / 60000,
   );
 
-  if (isLoading) {
-    return <Loader />;
-  }
+  if (mins < 1) return "hugged just now";
+  if (mins < 60) return `hugged ${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `hugged ${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return "hugged yesterday";
+  return `hugged ${days}d ago`;
+};
 
-  if (friends.length === 0) {
-    return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyEmoji}>👥</Text>
-        <Text style={styles.emptyTitle}>No friends yet</Text>
-        <Text style={styles.emptySubtitle}>
-          Add friends to start sending hugs!
+const FriendRow = ({
+  friend,
+  isFirst,
+  isLast,
+  onHug,
+}: {
+  friend: Friend;
+  isFirst: boolean;
+  isLast: boolean;
+  onHug?: () => void;
+}) => (
+  <View
+    style={[
+      styles.cardItem,
+      isFirst && styles.cardItemFirst,
+      isLast && styles.cardItemLast,
+    ]}
+  >
+    <View style={[styles.row, !isLast && styles.rowDivider]}>
+      <FriendAvatar name={friend.displayName} online={friend.online} />
+
+      <View style={styles.rowBody}>
+        <Text style={styles.name} numberOfLines={1}>
+          {friend.displayName}
         </Text>
-        <TouchableOpacity
-          style={styles.addFriendButton}
-          onPress={() => router.push("/add-user")}
-        >
-          <Text style={styles.addFriendButtonText}>Add Friend</Text>
-        </TouchableOpacity>
+        {/* <Text style={styles.subText} numberOfLines={1}>
+          {lastHugLabel(friend)}
+        </Text> */}
+      </View>
+      <PlushButton label="hug!" variant="primary" height={40} onPress={onHug} />
+    </View>
+  </View>
+);
+
+export default function FriendsListScreen() {
+  const [search, setSearch] = useState("");
+  const { startHugWithNote } = useCreateHugWithNote();
+  const { friends, isLoading } = useFriends();
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLocaleLowerCase();
+    return q
+      ? friends.filter((f) => f.displayName.toLowerCase().includes(q))
+      : friends;
+  }, [friends, search]);
+
+  const handleHug = (friend: Friend) =>
+    startHugWithNote({ displayName: friend.displayName, uid: friend.uid });
+
+  const handleAdd = () => router.push("/add-user");
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <FlatList
-        data={friends}
-        renderItem={({ item }) => (
-          <FriendRow item={item} onPress={handleSendHug} key={item.uid} />
-        )}
-        keyExtractor={(item) => item.uid}
-        contentContainerStyle={styles.listContainer}
-      />
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.titleRow}>
+          <Text style={styles.headerTitle}>Friends</Text>
+          <Text style={styles.headerCount}>{friends.length}</Text>
+        </View>
 
-      {/* Floating Add Button */}
-      <Pressable
-        style={styles.floatingButton}
-        onPress={() => router.push("/add-user")}
-      >
-        <Text style={styles.floatingButtonText}>+</Text>
-      </Pressable>
-    </SafeAreaView>
+        <IconButton
+          variant="surface"
+          size={44}
+          onPress={handleAdd}
+          accessibilityLabel="add friend"
+          icon={
+            <Ionicons name="add" size={24} color={iconButtonTint("surface")} />
+          }
+        />
+      </View>
+
+      <View style={styles.searchBar}>
+        <Ionicons name="search" size={20} color={colors.softInk} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search people"
+          placeholderTextColor={colors.softInk}
+          value={search}
+          onChangeText={setSearch}
+        />
+      </View>
+
+      <Text style={styles.sectionTitle}>FRIENDS</Text>
+
+      <FlatList
+        data={filtered}
+        keyExtractor={(f) => f.uid}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        renderItem={({ item, index }) => (
+          <FriendRow
+            friend={item}
+            isFirst={index === 0}
+            isLast={index === filtered.length - 1}
+            onHug={() => handleHug(item)}
+          />
+        )}
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Text style={styles.emptyTitle}>
+              {search ? "no matches.." : "no friends, yet!"}
+            </Text>
+          </View>
+        }
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.soft,
-  },
+  container: { flex: 1, backgroundColor: colors.mistBg },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#FAFAFA",
+    backgroundColor: colors.mistBg,
   },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 40,
-    backgroundColor: "#FAFAFA",
-  },
-  emptyEmoji: {
-    fontSize: 80,
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#1A1A1A",
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 16,
-    color: "#666",
-    textAlign: "center",
-    marginBottom: 24,
-  },
-  addFriendButton: {
-    backgroundColor: "#FF6B6B",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  addFriendButtonText: {
-    color: "#FFF",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  listContainer: {
-    // display: "flex",
-    // flexDirection: "row",
-    // flexWrap: "wrap",
-    // gap: 12,
-    padding: 16,
-    paddingBottom: 80, // Space for floating button
-  },
-  friendItem: {
+
+  header: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFF",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  titleRow: { flexDirection: "row", alignItems: "baseline", gap: spacing.sm },
+  headerTitle: {
+    fontFamily: font.displayBold,
+    fontSize: 34,
+    color: colors.plumInk,
+  },
+  headerCount: { fontFamily: font.ui, fontSize: 18, color: colors.softInk },
+
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    paddingHorizontal: spacing.lg,
+    height: 52,
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.lg,
+    ...shadow,
+    shadowOpacity: 0.12,
   },
-  friendAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: "#FF6B6B",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  friendInitial: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#FFF",
-  },
-  friendInfo: {
+  searchInput: {
     flex: 1,
-  },
-  friendUsername: {
+    fontFamily: font.ui,
     fontSize: 16,
-    fontWeight: "600",
-    color: "#1A1A1A",
-    marginBottom: 2,
+    color: colors.plumInk,
   },
-  friendAddedAt: {
+
+  sectionTitle: {
+    fontFamily: font.uiBold,
+    fontSize: 13,
+    letterSpacing: 1,
+    color: colors.softInk,
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.md,
+  },
+
+  listContent: { paddingHorizontal: spacing.xl, paddingBottom: 120 },
+
+  // these mirror hugs.tsx — see note below about extracting them
+  cardItem: { backgroundColor: colors.surface, overflow: "hidden" },
+  cardItemFirst: {
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    ...shadow,
+  },
+  cardItemLast: {
+    borderBottomLeftRadius: radius.lg,
+    borderBottomRightRadius: radius.lg,
+    ...shadow,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  rowDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.soft,
+  },
+  rowBody: { flex: 1, marginLeft: spacing.md },
+  name: { fontFamily: font.uiBold, fontSize: 16, color: colors.plumInk },
+  subText: {
+    fontFamily: font.ui,
     fontSize: 14,
-    color: "#999",
+    color: colors.softInk,
+    marginTop: 2,
   },
-  hugButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#FFE8E8",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 8,
-  },
-  hugButtonEmoji: {
-    fontSize: 24,
-  },
-  removeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#F5F5F5",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  removeButtonText: {
-    fontSize: 24,
-    color: "#999",
-    fontWeight: "bold",
-    marginTop: -2,
-  },
-  floatingButton: {
-    position: "absolute",
-    bottom: 100,
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#FF6B6B",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#FF6B6B",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  floatingButtonText: {
-    fontSize: 32,
-    color: "#FFF",
-    fontWeight: "bold",
-    marginTop: -2,
+
+  empty: { alignItems: "center", paddingTop: 80 },
+  emptyTitle: {
+    fontFamily: font.displayBold,
+    fontSize: 22,
+    color: colors.plumInk,
   },
 });

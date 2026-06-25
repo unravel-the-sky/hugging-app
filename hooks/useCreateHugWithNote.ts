@@ -1,5 +1,5 @@
-import { Friend } from "@/app/(tabs)/friends";
 import { router } from "expo-router";
+import { Friend } from "./useFriends";
 
 export default function useCreateHugWithNote() {
   const startHugWithNote = (friend: Friend) => {

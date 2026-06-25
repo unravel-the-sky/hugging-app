@@ -120,7 +120,7 @@ export default function TabsLayout() {
                 </NativeTabs.Trigger.Badge>
               )}
             </NativeTabs.Trigger>
-            <NativeTabs.Trigger name="hug-room">
+            <NativeTabs.Trigger name="hug-room" hidden>
               <Label>Hug room</Label>
               <NativeTabs.Trigger.Icon
                 sf="person.crop.rectangle"
