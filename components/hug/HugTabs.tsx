@@ -7,9 +7,11 @@ import {
   View,
 } from "react-native";
 import Animated, {
+  Easing,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
 } from "react-native-reanimated";
 import { colors } from "../ui/squish/theme";
 
@@ -44,7 +46,7 @@ export function HugTabs({
       translateX.value = target; // no slide on first layout
       isFirst.current = false;
     } else {
-      translateX.value = withSpring(target, { damping: 36, stiffness: 180 });
+      translateX.value = withTiming(target);
     }
   }, [activeIndex, segmentWidth, translateX]);
 

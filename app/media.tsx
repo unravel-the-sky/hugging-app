@@ -3,7 +3,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { File, Paths } from "expo-file-system";
 import * as MediaLibrary from "expo-media-library";
 import { captureRef } from "react-native-view-shot";
 
@@ -86,25 +85,10 @@ export default function Media() {
       });
 
       if (!captureUri) {
-        alert("Oupsie..");
+        alert("Capture failed!");
       }
-      await MediaLibrary.saveToLibraryAsync(captureUri);
 
-      // encoding
-      const captureFile = new File(captureUri);
-      const base64 = await captureFile.base64();
-
-      // // saving
-      const filename = `polaroid-hug-${Date.now()}.png`;
-      const file = new File(Paths.cache, filename);
-      file.create();
-      file.write(base64, { encoding: "base64" });
-
-      // upload here to firebase
-
-      // create blob
-      const response = await fetch(file.uri);
-      const blob = await response.blob();
+      const blob = await (await fetch(captureUri)).blob();
 
       // create reference
       const uid = auth.currentUser?.uid;
@@ -113,15 +97,19 @@ export default function Media() {
       const imgName = `polaroid-hug-${Date.now()}`;
       const storageRef = ref(storage, `images/${uid}/${imgName}`);
 
-      // upload blob/bytes
-      const storageSnapshot = await uploadBytes(storageRef, blob);
+      // upload blob/bytes and save media
+      const [, storageSnapshot] = await Promise.all([
+        MediaLibrary.saveToLibraryAsync(captureUri).catch((e) =>
+          console.warn("library save failed, but sending anyway"),
+        ),
+        uploadBytes(storageRef, blob, { contentType: "image/jpeg" }),
+      ]);
 
       // get url
       const downloadUrl = await getDownloadURL(storageSnapshot.ref);
-      setCloudStorageUrl(downloadUrl);
-      console.log("OMG did it work?? : ", downloadUrl);
 
-      // send to main screen to send the hug
+      // save and exit
+      setCloudStorageUrl(downloadUrl);
       handleSendNoteWithPicture(downloadUrl);
     } catch (err) {
       console.error("Error happened while saving: ", err);

@@ -1,3 +1,4 @@
+import { HugTabs } from "@/components/hug/HugTabs";
 import HugViewOverlay3d from "@/components/hug/HugViewOverlay3d";
 import useCreateHugWithNote from "@/hooks/useCreateHugWithNote";
 import { useHugs } from "@/hooks/useIncomingHugs";
@@ -13,19 +14,9 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { colors, radius } from "../../components/ui/squish/theme";
-import { Host, Picker, Text as SwiftText } from "@expo/ui/swift-ui";
-import {
-  pickerStyle,
-  tag,
-  padding,
-  glassEffect,
-  font,
-} from "@expo/ui/swift-ui/modifiers";
-import { HugTabs } from "@/components/hug/HugTabs";
 
 export default function HugsListScreen() {
   const currentUser = auth.currentUser;
@@ -134,18 +125,20 @@ export default function HugsListScreen() {
 
   return (
     <View style={styles.container}>
-      {/* <Host style={styles.tabs}>
-        <Picker
-          modifiers={[pickerStyle("segmented")]}
-          selection={tab}
-          onSelectionChange={(selection) =>
-            setTab(selection as "incoming" | "outgoing")
-          }
-        >
-          <SwiftText modifiers={[tag("incoming")]}>Received</SwiftText>
-          <SwiftText modifiers={[tag("outgoing")]}>Sent</SwiftText>
-        </Picker>
-      </Host> */}
+      {/* <View style={{ marginVertical: 10, width: "80%" }}>
+        <Host matchContents>
+          <Picker
+            modifiers={[pickerStyle("segmented")]}
+            selection={tab}
+            onSelectionChange={(selection) =>
+              setTab(selection as "incoming" | "outgoing")
+            }
+          >
+            <SwiftText modifiers={[tag("incoming")]}>Received</SwiftText>
+            <SwiftText modifiers={[tag("outgoing")]}>Sent</SwiftText>
+          </Picker>
+        </Host>
+      </View> */}
 
       <HugTabs value={tab} onChange={setTab} />
 
@@ -216,18 +209,12 @@ const HugRow = ({ hug, direction, onPress }: HugRowProps) => {
           </Text>
         </View>
 
-        {!hug.seenAt ? (
-          <TouchableOpacity
-            style={styles.hugBackButton}
-            onPress={() => onPress && onPress(hug)}
-          >
-            <Text style={styles.hugBackText}>See</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.validatedBadge}>
-            <Text style={styles.validatedText}>✓</Text>
-          </View>
-        )}
+        <Pressable
+          style={styles.hugBackButton}
+          onPress={() => onPress && onPress(hug)}
+        >
+          <Text style={styles.hugBackText}>See</Text>
+        </Pressable>
       </View>
     );
   }
