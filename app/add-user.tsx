@@ -1,4 +1,4 @@
-import { addFriendByUsername } from "@/lib/handleFriends";
+import { sendFriendRequest } from "@/lib/handleFriends";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import React, { useState } from "react";
@@ -29,7 +29,7 @@ export default function AddUserScreen() {
     setIsLoading(true);
 
     try {
-      const res = await addFriendByUsername(username);
+      const res = await sendFriendRequest(username);
       if (!res) {
         Alert.alert("poop");
         return;

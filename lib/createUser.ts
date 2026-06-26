@@ -112,3 +112,17 @@ export async function updateUserAvatar(avatar: AvatarType) {
 
   return true;
 }
+
+export async function getUserFromCollection(uid: string) {
+  const userRef = doc(db, "users", uid);
+  const snap = await getDoc(userRef);
+
+  if (snap.exists()) {
+    const userData = snap.data() as User;
+    console.log("userdata is: ", userData);
+
+    return userData;
+  }
+
+  return null;
+}

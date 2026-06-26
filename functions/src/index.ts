@@ -10,14 +10,16 @@
 import { setGlobalOptions } from "firebase-functions";
 
 import * as admin from "firebase-admin";
-import { onDocumentCreated } from "firebase-functions/v2/firestore";
-import fetch from "node-fetch";
+import { getDatabase } from "firebase-admin/database";
+import { FieldValue } from "firebase-admin/firestore";
 import {
   onValueCreated,
   onValueDeleted,
   onValueUpdated,
 } from "firebase-functions/database";
-import { getDatabase } from "firebase-admin/database";
+import { HttpsError, onCall } from "firebase-functions/https";
+import { onDocumentCreated } from "firebase-functions/v2/firestore";
+import fetch from "node-fetch";
 
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
@@ -61,6 +63,19 @@ export const onHugCreated = onDocumentCreated("hugs/{hugId}", async (event) => {
     await sendBotReply(hug);
     return;
   }
+
+  // update stats here
+  const batch = db.batch();
+  batch.update(db.doc(`users/${hug.from}/friends/${hug.to}`), {
+    // cache
+    totalHugsSent: FieldValue.increment(1),
+    lastSentHug: FieldValue.serverTimestamp(),
+  });
+  batch.update(db.doc(`users/${hug.to}/friends/${hug.from}`), {
+    totalHugsReceived: FieldValue.increment(1),
+  });
+
+  await batch.commit();
 
   // send notification
   await sendPushNotification(hug, snap.id);
@@ -228,3 +243,122 @@ export const onHugRoomDeleted = onValueDeleted(
       .update({ sessionState: "ended" });
   },
 );
+
+export const onFriendshipRequestCreated = onDocumentCreated(
+  "friendshipRequests/{id}",
+  async (event) => {
+    const req = event.data?.data();
+    if (!req || req.status !== "pending") return;
+
+    const toSnap = await db.doc(`users/${req.to}`).get();
+    const token = toSnap.get("pushToken");
+
+    // send notification
+    if (token) {
+      await sendExpoPush(token, {
+        title: "New hug friend?",
+        body: `${req.fromName} wants to be your friend`,
+        data: { type: "friend_request", requestId: req.id },
+      });
+    }
+  },
+);
+
+async function linkFriends(a: string, b: string) {
+  const [aSnap, bSnap] = await Promise.all([
+    db.doc(`users/${a}`).get(),
+    db.doc(`users/${b}`).get(),
+  ]);
+  const now = FieldValue.serverTimestamp();
+  const base = {
+    friendedAt: now,
+    totalHugsSent: 0,
+    totalHugsReceived: 0,
+    numStreakDays: 0,
+  };
+
+  const batch = db.batch();
+  batch.set(db.doc(`users/${a}/friends/${b}`), {
+    id: b,
+    displayName: bSnap.get("displayName"),
+    avatar: bSnap.get("avatar") ?? null,
+    ...base,
+  });
+  batch.set(db.doc(`users/${b}/friends/${a}`), {
+    id: a,
+    displayName: aSnap.get("displayName"),
+    avatar: aSnap.get("avatar") ?? null,
+    ...base,
+  });
+  batch.update(db.doc(`users/${a}`), { friends: FieldValue.arrayUnion(b) });
+  batch.update(db.doc(`users/${b}`), { friends: FieldValue.arrayUnion(a) });
+  await batch.commit();
+  return { aSnap, bSnap };
+}
+
+export const acceptFriendRequest = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in");
+
+  const reqRef = db.doc(`friendshipRequests/${request.data.requestId}`);
+  const snap = await reqRef.get();
+  if (!snap.exists) throw new HttpsError("not-found", "Request gone");
+  const req = snap.data()!;
+  if (req.to !== uid)
+    throw new HttpsError("permission-denied", "Not your request");
+  if (req.status !== "pending")
+    throw new HttpsError("failed-precondition", "Already handled");
+
+  const { aSnap, bSnap } = await linkFriends(req.from, req.to);
+  await reqRef.delete();
+
+  const token = aSnap.get("pushToken");
+  if (token) {
+    await sendExpoPush(token, {
+      title: "New friend! 🤗",
+      body: `${bSnap.get("displayName")} accepted your request`,
+    });
+  }
+  return { ok: true };
+});
+
+export const declineFriendRequest = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in");
+  const reqRef = db.doc(`friendshipRequests/${request.data.requestId}`);
+  const snap = await reqRef.get();
+  if (snap.exists && snap.get("to") === uid) await reqRef.delete();
+  return { ok: true };
+});
+
+async function sendExpoPush(
+  token: string,
+  {
+    title,
+    body,
+    data,
+  }: { title: string; body: string; data?: { type: string; requestId: any } },
+) {
+  if (!token) return;
+
+  const message = {
+    to: token,
+    sound: "default",
+    title,
+    body,
+    ...(data && { data }),
+  };
+
+  const res = await fetch("https://exp.host/--/api/v2/push/send", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(message),
+  });
+
+  if (!res.ok) {
+    console.error("Expo push failed", await res.text());
+  }
+}

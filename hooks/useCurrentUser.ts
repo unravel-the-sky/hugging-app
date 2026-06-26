@@ -2,8 +2,8 @@ import { User } from "@/lib/createUser";
 import { auth, db } from "@/lib/firebaseConfig";
 import { registerForPushNotifications } from "@/lib/registerForPushNotifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { onAuthStateChanged, User as FirebaseAuthUser } from "firebase/auth";
-import { doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
+import { User as FirebaseAuthUser, onAuthStateChanged } from "firebase/auth";
+import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 
 export const savePushTokenOnUser = async (userId: string) => {
@@ -17,20 +17,6 @@ export const savePushTokenOnUser = async (userId: string) => {
     });
   }
 };
-
-export async function getUserFromCollection(uid: string) {
-  const userRef = doc(db, "users", uid);
-  const snap = await getDoc(userRef);
-
-  if (snap.exists()) {
-    const userData = snap.data() as User;
-    console.log("userdata is: ", userData);
-
-    return userData;
-  }
-
-  return null;
-}
 
 export function useCurrentUser() {
   const [authUser, setAuthUser] = useState<FirebaseAuthUser | null | undefined>(

@@ -1,3 +1,4 @@
+import { AvatarType } from "@/components/user/Avatar";
 import {
   arrayUnion,
   collection,
@@ -5,12 +6,40 @@ import {
   getDoc,
   getDocs,
   query,
+  serverTimestamp,
+  setDoc,
+  Timestamp,
   updateDoc,
   where,
 } from "firebase/firestore";
-import { User } from "./createUser";
+import { getFunctions, httpsCallable } from "firebase/functions";
+import { getUserFromCollection, User } from "./createUser";
 import { auth, db } from "./firebaseConfig";
 import { normalizeUsername } from "./util";
+
+export type FriendshipRequest = {
+  id: string;
+  from: string;
+  fromName: string;
+  fromAvatar?: AvatarType | null;
+  to: string;
+  toName: string;
+  createdAt: Timestamp;
+  status: "pending" | "declined" | "accepted";
+};
+
+export type UserFriend = {
+  id: string; // friend's uid (== doc id)
+  displayName: string;
+  avatar?: AvatarType | null;
+  friendedAt: Timestamp;
+  lastSentHug?: Timestamp | null;
+  totalHugsSent?: number;
+  totalHugsReceived?: number;
+  numStreakDays?: number;
+  addedAt?: Timestamp;
+  online?: boolean;
+};
 
 export async function getUserByUsername(username: string) {
   const normalized = normalizeUsername(username); // just in case
@@ -105,3 +134,68 @@ export async function getFriendsForCurrentUser(userId?: string) {
 
   return data;
 }
+
+export async function sendFriendRequest(username: string) {
+  const me = auth?.currentUser;
+  if (!me) throw new Error("User not signed in!");
+
+  const target = await getUserByUsername(username);
+  if (!target) throw new Error("User not found!");
+  if (target.uid === me.uid)
+    throw new Error(
+      "although i appreciate self love, in this app you cannot add yourself",
+    );
+
+  try {
+    const friendDoc = await getDoc(
+      doc(db, "users", me.uid, "friends", target.uid),
+    );
+    if (friendDoc.exists()) throw new Error("you are already friends <3");
+
+    const [myProfile, targetProfile] = await Promise.all([
+      getUserFromCollection(me.uid),
+      getUserFromCollection(target.uid),
+    ]);
+
+    const reqId = `${me.uid}_${target.uid}`;
+
+    await setDoc(doc(db, "friendshipRequests", reqId), {
+      id: reqId,
+      from: me.uid,
+      fromName: myProfile?.displayName,
+      fromAvatar: myProfile?.avatar ?? null,
+      to: target.uid,
+      toName: targetProfile?.displayName,
+      status: "pending",
+      createdAt: serverTimestamp(),
+    });
+    return true;
+  } catch (err) {
+    console.error("Error while creating friendship request: ", err);
+  }
+}
+
+const functions = getFunctions(); // or getFunctions(app, "your-region") if not us-central1
+
+// one callable per function
+const acceptFriendRequestFn = httpsCallable(functions, "acceptFriendRequest");
+const declineFriendRequestFn = httpsCallable(functions, "declineFriendRequest");
+
+export const onAccept = async (requestId: string) => {
+  try {
+    const result = await acceptFriendRequestFn({ requestId });
+    // result.data is what your function returned, i.e. { ok: true }
+    console.log("accepted", result.data);
+  } catch (e: any) {
+    // HttpsError from the server arrives here, typed
+    console.log(e.code, e.message); // e.g. "failed-precondition", "Already handled"
+  }
+};
+
+export const onDecline = async (requestId: string) => {
+  try {
+    await declineFriendRequestFn({ requestId });
+  } catch (e: any) {
+    console.log(e.code, e.message);
+  }
+};
