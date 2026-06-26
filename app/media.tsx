@@ -18,6 +18,8 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { TextInput } from "react-native-gesture-handler";
 
+import { File, Paths } from "expo-file-system";
+
 export default function Media() {
   const { toUid, toName, media, note } = useLocalSearchParams<{
     toUid: string;
@@ -88,7 +90,16 @@ export default function Media() {
         alert("Capture failed!");
       }
 
-      const blob = await (await fetch(captureUri)).blob();
+      const captureFile = new File(captureUri);
+      const base64 = await captureFile.base64();
+
+      // // saving
+      const filename = `polaroid-hug-${Date.now()}.png`;
+      const file = new File(Paths.cache, filename);
+      file.create();
+      file.write(base64, { encoding: "base64" });
+      const response = await fetch(file.uri);
+      const blob = await response.blob();
 
       // create reference
       const uid = auth.currentUser?.uid;
@@ -97,16 +108,18 @@ export default function Media() {
       const imgName = `polaroid-hug-${Date.now()}`;
       const storageRef = ref(storage, `images/${uid}/${imgName}`);
 
-      // upload blob/bytes and save media
-      const [, storageSnapshot] = await Promise.all([
-        MediaLibrary.saveToLibraryAsync(captureUri).catch((e) =>
-          console.warn("library save failed, but sending anyway"),
-        ),
-        uploadBytes(storageRef, blob, { contentType: "image/jpeg" }),
-      ]);
+      console.log("upload size (KB):", Math.round(blob.size / 1024));
 
-      // get url
+      const t0 = Date.now();
+      const storageSnapshot = await uploadBytes(storageRef, blob, {
+        contentType: "image/webp",
+      });
+      const t1 = Date.now();
+      console.log("uploadBytes took (ms):", t1 - t0);
+
       const downloadUrl = await getDownloadURL(storageSnapshot.ref);
+      const t2 = Date.now();
+      console.log("getDownloadURL took (ms):", t2 - t1);
 
       // save and exit
       setCloudStorageUrl(downloadUrl);
