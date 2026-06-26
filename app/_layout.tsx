@@ -124,6 +124,16 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen
+          name="friend-stats"
+          options={{
+            presentation: "modal",
+            sheetGrabberVisible: true,
+            headerTransparent: false,
+            headerShadowVisible: true,
+            headerLargeTitleShadowVisible: true,
+          }}
+        />
+        <Stack.Screen
           name="friend-picker"
           options={{
             presentation: "formSheet",

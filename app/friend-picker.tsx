@@ -1,22 +1,23 @@
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Friend, useFriends } from "@/hooks/useFriends";
 import { auth } from "@/lib/firebaseConfig";
+import { UserFriend } from "@/lib/handleFriends";
 import { sendHugRoomInvite } from "@/lib/handleHugRoom";
 import { router } from "expo-router";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function FriendPicker() {
-  const { friends } = useFriends();
+  const { friends } = useFriends(auth.currentUser?.uid);
   const myId = auth.currentUser?.uid;
   const { user } = useCurrentUser();
 
-  const handleSelectFriend = async (item: Friend) => {
+  const handleSelectFriend = async (item: UserFriend) => {
     if (!myId || !user) return;
 
     const roomId = await sendHugRoomInvite(
       myId,
-      item.uid,
+      item.id,
       user?.displayName,
       item.displayName,
     );
@@ -27,7 +28,7 @@ export default function FriendPicker() {
       console.log("navigating back to hug-room");
       router.replace({
         pathname: "/hug-room",
-        params: { roomId, partnerId: item.uid },
+        params: { roomId, partnerId: item.id },
       });
     }
   };
@@ -38,7 +39,7 @@ export default function FriendPicker() {
         {/* <Text style={styles.title}>Choose someone to start a session</Text> */}
         <FlatList
           data={friends}
-          keyExtractor={(f) => f.uid}
+          keyExtractor={(f) => f.id}
           style={{ flex: 1 }}
           contentContainerStyle={styles.listContent}
           renderItem={({ item }) => (

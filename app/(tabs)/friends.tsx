@@ -57,27 +57,44 @@ const FriendRow = ({
   isLast: boolean;
   onHug?: () => void;
 }) => (
-  <View
-    style={[
-      styles.cardItem,
-      isFirst && styles.cardItemFirst,
-      isLast && styles.cardItemLast,
-    ]}
+  <Pressable
+    onPress={() => {
+      // console.log("clciked on the friend id: ", friend.id);
+      router.push({
+        pathname: "/friend-stats",
+        params: {
+          friendId: friend.id,
+        },
+      });
+    }}
   >
-    <View style={[styles.row, !isLast && styles.rowDivider]}>
-      <FriendAvatar name={friend.displayName} online={friend.online} />
+    <View
+      style={[
+        styles.cardItem,
+        isFirst && styles.cardItemFirst,
+        isLast && styles.cardItemLast,
+      ]}
+    >
+      <View style={[styles.row, !isLast && styles.rowDivider]}>
+        <FriendAvatar name={friend.displayName} online={friend.online} />
 
-      <View style={styles.rowBody}>
-        <Text style={styles.name} numberOfLines={1}>
-          {friend.displayName}
-        </Text>
-        <Text style={styles.subText} numberOfLines={1}>
-          {lastHugLabel(friend)}
-        </Text>
+        <View style={styles.rowBody}>
+          <Text style={styles.name} numberOfLines={1}>
+            {friend.displayName}
+          </Text>
+          <Text style={styles.subText} numberOfLines={1}>
+            {lastHugLabel(friend)}
+          </Text>
+        </View>
+        <PlushButton
+          label="hug!"
+          variant="primary"
+          height={40}
+          onPress={onHug}
+        />
       </View>
-      <PlushButton label="hug!" variant="primary" height={40} onPress={onHug} />
     </View>
-  </View>
+  </Pressable>
 );
 
 const FriendRequestRow = ({
