@@ -1,9 +1,13 @@
+import {
+  searchUsersByPrefix,
+  type UserSearchResult,
+} from "@/lib/searchUsersByPrefix"; // adjust path
 import { sendFriendRequest } from "@/lib/handleFriends";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  Alert,
+  ActivityIndicator,
+  FlatList,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -12,183 +16,194 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { colors, font, radius, shadow, spacing } from "@/components/ui/squish";
+import Avatar from "@/components/ui/squish/Avatar";
+
+type SentState = Record<string, "idle" | "sending" | "sent">;
 
 export default function AddUserScreen() {
-  const [username, setUsername] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [term, setTerm] = useState("");
+  const [results, setResults] = useState<UserSearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [sent, setSent] = useState<SentState>({});
+  const [loading, setLoading] = useState(false);
 
-  const handleAddUser = async () => {
-    if (username.trim().length < 3) {
-      Alert.alert(
-        "Invalid Username",
-        "Username must be at least 3 characters long",
-      );
+  // tracks the latest query so out-of-order responses get discarded
+  const latestTerm = useRef("");
+
+  useEffect(() => {
+    const trimmed = term.trim();
+    latestTerm.current = trimmed;
+
+    if (trimmed.length < 3) {
+      setResults([]);
+      setSearching(false);
       return;
     }
 
-    setIsLoading(true);
-
-    try {
-      const res = await sendFriendRequest(username);
-      if (!res) {
-        Alert.alert("poop");
-        return;
+    setSearching(true);
+    const handle = setTimeout(async () => {
+      try {
+        const found = await searchUsersByPrefix(trimmed);
+        // discard if the user kept typing while this was in flight
+        if (latestTerm.current !== trimmed) return;
+        setResults(found);
+      } catch (e) {
+        if (latestTerm.current === trimmed) setResults([]);
+        console.error("search failed", e);
+      } finally {
+        if (latestTerm.current === trimmed) setSearching(false);
       }
+    }, 300); // debounce
 
-      Alert.alert(
-        "Success! 🎉",
-        `Added @${username.trim()} to your contacts!`,
-        [
-          {
-            text: "OK",
-            onPress: () => router.back(),
-          },
-        ],
-      );
+    return () => clearTimeout(handle);
+  }, [term]);
 
-      setUsername("");
-    } catch (error) {
-      Alert.alert("Error", "Failed to add user. Please try again.");
-      console.error(error);
-    } finally {
-      setIsLoading(false);
+  const handleAdd = async (user: UserSearchResult) => {
+    setSent((s) => ({ ...s, [user.uid]: "sending" }));
+    try {
+      await sendFriendRequest(user.displayName);
+      setSent((s) => ({ ...s, [user.uid]: "sent" }));
+    } catch (e) {
+      setSent((s) => ({ ...s, [user.uid]: "idle" }));
+      console.error("send request failed", e);
     }
   };
+
+  const showEmpty =
+    term.trim().length >= 3 && !searching && results.length === 0;
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
-      {/* Content */}
-      <View style={styles.content}>
-        <View style={styles.iconContainer}>
-          <Ionicons name="person-add" size={48} color={"#7c7c7c"} />
+      <View style={styles.header}>
+        <Text style={styles.title}>Add a friend</Text>
+
+        <View style={styles.searchWrapper}>
+          <Ionicons name="search" size={20} color={colors.softInk} />
+          <TextInput
+            style={styles.input}
+            placeholder="Search people"
+            placeholderTextColor={colors.softInk}
+            value={term}
+            onChangeText={setTerm}
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoFocus
+          />
+          {searching && (
+            <ActivityIndicator size="small" color={colors.primary} />
+          )}
         </View>
-
-        <Text style={styles.title}>Add a Friend</Text>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Search by username</Text>
-          <View style={styles.inputWrapper}>
-            <Text style={styles.atSymbol}>@</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="username"
-              placeholderTextColor="#999"
-              value={username}
-              onChangeText={setUsername}
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!isLoading}
-            />
-          </View>
-        </View>
-
-        <Pressable
-          style={[styles.button, isLoading && styles.buttonDisabled]}
-          onPress={handleAddUser}
-          disabled={isLoading}
-        >
-          <Text style={styles.buttonText}>
-            {isLoading ? "Adding..." : "Add Friend"}
-          </Text>
-        </Pressable>
-
-        <Pressable style={styles.cancelButton} onPress={() => router.back()}>
-          <Text style={styles.cancelButtonText}>Cancel</Text>
-        </Pressable>
       </View>
+
+      <FlatList
+        data={results}
+        keyExtractor={(item) => item.uid}
+        contentContainerStyle={styles.listContent}
+        keyboardShouldPersistTaps="handled"
+        renderItem={({ item }) => {
+          const state = sent[item.uid] ?? "idle";
+          return (
+            <View style={styles.row}>
+              <Avatar size={48} />
+              <Text style={styles.rowName} numberOfLines={1}>
+                {item.displayName}
+              </Text>
+              <Pressable
+                style={[styles.addBtn, state === "sent" && styles.addBtnSent]}
+                onPress={() => handleAdd(item)}
+                disabled={state !== "idle"}
+              >
+                {state === "sending" ? (
+                  <ActivityIndicator size="small" color={colors.surface} />
+                ) : (
+                  <Text
+                    style={[
+                      styles.addBtnText,
+                      state === "sent" && styles.addBtnTextSent,
+                    ]}
+                  >
+                    {state === "sent" ? "sent" : "add"}
+                  </Text>
+                )}
+              </Pressable>
+            </View>
+          );
+        }}
+        ListEmptyComponent={
+          showEmpty ? (
+            <View style={styles.empty}>
+              <Text style={styles.emptyText}>No user found</Text>
+            </View>
+          ) : null
+        }
+      />
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FAFAFA",
+  container: { flex: 1, backgroundColor: colors.mistBg, paddingBottom: 40 },
+
+  header: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    gap: spacing.lg,
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: 32,
-    paddingTop: 20,
-  },
-  iconContainer: {
-    alignItems: "center",
-    padding: 20,
-  },
-  icon: {
-    fontSize: 64,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#1A1A1A",
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#666",
-    textAlign: "center",
-    marginBottom: 40,
-  },
-  inputContainer: {
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1A1A1A",
-    marginBottom: 8,
-  },
-  inputWrapper: {
+  title: { fontSize: 26, fontFamily: font.displayBold, color: colors.plumInk },
+
+  searchWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFF",
-    borderWidth: 2,
-    borderColor: "#E0E0E0",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-  },
-  atSymbol: {
-    fontSize: 18,
-    color: "#999",
-    marginRight: 4,
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    ...shadow,
   },
   input: {
     flex: 1,
-    padding: 16,
     fontSize: 16,
-    color: "#1A1A1A",
+    fontFamily: font.ui,
+    color: colors.plumInk,
+    padding: 0,
   },
-  button: {
-    backgroundColor: "#FF6B6B",
-    borderRadius: 12,
-    padding: 16,
+
+  listContent: { padding: spacing.xl, gap: spacing.md },
+
+  row: {
+    flexDirection: "row",
     alignItems: "center",
-    shadowColor: "#FF6B6B",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    gap: spacing.lg,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    ...shadow,
   },
-  buttonDisabled: {
-    backgroundColor: "#FFB3B3",
-    shadowOpacity: 0.1,
-  },
-  buttonText: {
-    color: "#FFF",
+  rowName: {
+    flex: 1,
     fontSize: 18,
-    fontWeight: "bold",
+    fontFamily: font.uiBold,
+    color: colors.plumInk,
   },
-  cancelButton: {
-    marginTop: 8,
-    padding: 12,
+
+  addBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    minWidth: 76,
     alignItems: "center",
+    justifyContent: "center",
   },
-  cancelButtonText: {
-    color: "#999",
-    fontSize: 16,
-  },
+  addBtnSent: { backgroundColor: colors.soft },
+  addBtnText: { fontSize: 15, fontFamily: font.uiBold, color: colors.surface },
+  addBtnTextSent: { color: colors.primary },
+
+  empty: { alignItems: "center", paddingTop: spacing.xl * 2 },
+  emptyText: { fontSize: 16, fontFamily: font.ui, color: colors.softInk },
 });

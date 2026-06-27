@@ -104,8 +104,9 @@ export default function RootLayout() {
         <Stack.Screen
           name="add-user"
           options={{
-            presentation: "formSheet",
+            presentation: "modal",
             sheetAllowedDetents: "fitToContents",
+            sheetGrabberVisible: true,
             headerTransparent: false,
             headerShadowVisible: true,
             headerLargeTitleShadowVisible: true,

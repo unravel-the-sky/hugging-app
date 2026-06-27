@@ -1,18 +1,16 @@
-import { use, useEffect, useRef, useState, type RefObject } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useFrame } from "@react-three/fiber";
+import { LinearGradient } from "expo-linear-gradient";
+import { use, useEffect, useRef, type RefObject } from "react";
+import { StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import * as THREE from "three";
 
-import { FiberCanvas } from "../three/FiberCanvas";
-import { TiltRef, useTilt } from "@/hooks/useTilt";
-import { HeartsGrid } from "./HeartsGrid";
-import { PlushButton } from "../ui/squish/PlushButton";
 import { TabBarContext } from "@/app/context/TabBarContext";
+import { TiltRef, useTilt } from "@/hooks/useTilt";
 import { useFocusEffect } from "expo-router";
-import TiltDebug from "./TiltDebug";
-import TiltRefDebug from "./TiltRefDebug";
+import { FiberCanvas } from "../three/FiberCanvas";
+import { PlushButton } from "../ui/squish/PlushButton";
+import { HeartsGrid } from "./HeartsGrid";
 
 // Soft lavender -> soft pink, matching the reveal screens in the design.
 // Swap for your theme gradient tokens if you have them.
@@ -162,8 +160,6 @@ export default function HugReveal({
           )}
         </FiberCanvas>
       </GestureDetector>
-
-      <TiltRefDebug tiltRef={tilt} />
 
       {/* text-only hug → message box */}
       {!hasImage && (
