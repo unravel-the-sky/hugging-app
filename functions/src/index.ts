@@ -250,6 +250,11 @@ export const onFriendshipRequestCreated = onDocumentCreated(
     const req = event.data?.data();
     if (!req || req.status !== "pending") return;
 
+    if (req.to === BOT_UID && req.from !== BOT_UID) {
+      await linkFriends(req.to, req.from);
+      return;
+    }
+
     const toSnap = await db.doc(`users/${req.to}`).get();
     const token = toSnap.get("pushToken");
 
