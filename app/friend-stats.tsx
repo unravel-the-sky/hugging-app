@@ -145,7 +145,7 @@ export default function FriendStatsModal() {
           <View style={styles.infoIcon}>
             <Ionicons name="time-outline" size={18} color={colors.primary} />
           </View>
-          <Text style={styles.infoLabel}>Last hug you sent</Text>
+          <Text style={styles.infoLabel}>last hug you sent</Text>
           <Text style={styles.infoValue}>
             {friend.lastSentHug
               ? formatTimestamp(friend.lastSentHug.toDate())
@@ -159,7 +159,7 @@ export default function FriendStatsModal() {
           <View style={styles.infoIcon}>
             <Ionicons name="people-outline" size={18} color={colors.primary} />
           </View>
-          <Text style={styles.infoLabel}>Friends since</Text>
+          <Text style={styles.infoLabel}>huggers since</Text>
           <Text style={styles.infoValue}>
             {friend.friendedAt
               ? formatTimestamp(friend.friendedAt.toDate())

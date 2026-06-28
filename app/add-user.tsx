@@ -18,6 +18,9 @@ import {
 } from "react-native";
 import { colors, font, radius, shadow, spacing } from "@/components/ui/squish";
 import Avatar from "@/components/ui/squish/Avatar";
+import { useFriends } from "@/hooks/useFriends";
+import { auth } from "@/lib/firebaseConfig";
+import { PlushButton } from "@/components/ui/squish/PlushButton";
 
 type SentState = Record<string, "idle" | "sending" | "sent">;
 
@@ -27,6 +30,7 @@ export default function AddUserScreen() {
   const [searching, setSearching] = useState(false);
   const [sent, setSent] = useState<SentState>({});
   const [loading, setLoading] = useState(false);
+  const { friends } = useFriends(auth.currentUser?.uid);
 
   // tracks the latest query so out-of-order responses get discarded
   const latestTerm = useRef("");
@@ -47,6 +51,10 @@ export default function AddUserScreen() {
         const found = await searchUsersByPrefix(trimmed);
         // discard if the user kept typing while this was in flight
         if (latestTerm.current !== trimmed) return;
+
+        // const alreadyFriends = found.map((item) =>
+        //   friends.find((friend) => friend.id === item.uid),
+        // );
         setResults(found);
       } catch (e) {
         if (latestTerm.current === trimmed) setResults([]);
@@ -106,30 +114,35 @@ export default function AddUserScreen() {
         keyboardShouldPersistTaps="handled"
         renderItem={({ item }) => {
           const state = sent[item.uid] ?? "idle";
+          const alreadyFriend = friends.find((f) => f.id === item.uid);
           return (
             <View style={styles.row}>
               <Avatar size={48} />
               <Text style={styles.rowName} numberOfLines={1}>
                 {item.displayName}
               </Text>
-              <Pressable
-                style={[styles.addBtn, state === "sent" && styles.addBtnSent]}
-                onPress={() => handleAdd(item)}
-                disabled={state !== "idle"}
-              >
-                {state === "sending" ? (
-                  <ActivityIndicator size="small" color={colors.surface} />
-                ) : (
-                  <Text
-                    style={[
-                      styles.addBtnText,
-                      state === "sent" && styles.addBtnTextSent,
-                    ]}
-                  >
-                    {state === "sent" ? "sent" : "add"}
-                  </Text>
-                )}
-              </Pressable>
+              {alreadyFriend ? (
+                <PlushButton disabled label={"added"} variant="soft" />
+              ) : (
+                <Pressable
+                  style={[styles.addBtn, state === "sent" && styles.addBtnSent]}
+                  onPress={() => handleAdd(item)}
+                  disabled={state !== "idle"}
+                >
+                  {state === "sending" ? (
+                    <ActivityIndicator size="small" color={colors.surface} />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.addBtnText,
+                        state === "sent" && styles.addBtnTextSent,
+                      ]}
+                    >
+                      {state === "sent" ? "sent" : "add"}
+                    </Text>
+                  )}
+                </Pressable>
+              )}
             </View>
           );
         }}
