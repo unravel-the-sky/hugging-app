@@ -75,7 +75,7 @@ function Card({
   });
 
   return (
-    <mesh ref={ref} position={[0, 0.5, 0]}>
+    <mesh ref={ref} position={[0, 1, 0]}>
       <planeGeometry args={[width, height]} />
       <meshPhysicalMaterial
         color="#000000" // no diffuse → lights can't darken/tint the photo
@@ -149,7 +149,7 @@ export default function HugReveal({
           <HeartsGrid tilt={tilt} />
           <ambientLight intensity={1} />
           {hasImage && <ShineLight tilt={tilt} />}
-          {/* <directionalLight position={[2, 3, 14]} intensity={0.4} /> */}
+          {/* <directionalLight position={[2, 3, 14]} intensity={0.9} /> */}
           {hasImage && loaded && (
             <Card
               texture={loaded.texture}
@@ -162,7 +162,7 @@ export default function HugReveal({
       </GestureDetector>
 
       {/* text-only hug → message box */}
-      {!hasImage && (
+      {message && (
         <View style={styles.messageWrap} pointerEvents="none">
           <View style={styles.messageCard}>
             <Text style={styles.messageText}>
@@ -186,11 +186,11 @@ function ShineLight({ tilt }: { tilt: TiltRef }) {
   useFrame(() => {
     const l = ref.current;
     if (!l) return;
-    const R = 2; // how far the highlight travels — tune to taste
-    l.position.set(tilt.current.y * R, -tilt.current.x * R, 15);
+    const R = 5; // how far the highlight travels — tune to taste
+    l.position.set(tilt.current.y * R, -tilt.current.x * R + 1, 15);
   });
 
-  return <directionalLight ref={ref} intensity={0.2} color="#fff" />;
+  return <directionalLight ref={ref} intensity={0.1} color="#fff" />;
 }
 
 const styles = StyleSheet.create({
@@ -198,10 +198,9 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   messageWrap: {
     position: "absolute",
-    top: 0,
     left: 0,
     right: 0,
-    bottom: 140, // sits above the buttons
+    bottom: 160, // sits above the buttons
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 36,
@@ -209,8 +208,8 @@ const styles = StyleSheet.create({
   messageCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 24,
-    paddingVertical: 32,
-    paddingHorizontal: 28,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     maxWidth: 340,
     transform: [{ rotate: "-1.5deg" }], // gentle scrapbook tilt
     shadowColor: "#5A3FA0",

@@ -91,8 +91,7 @@ export default function RootLayout() {
         <Stack.Screen
           name="hug-note"
           options={{
-            presentation: "formSheet",
-            sheetAllowedDetents: "fitToContents",
+            presentation: "modal",
             sheetGrabberVisible: true,
             headerTransparent: false,
             headerShadowVisible: true,

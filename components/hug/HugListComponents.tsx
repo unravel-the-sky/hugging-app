@@ -150,6 +150,15 @@ export const SeenHugRow = ({
         </Text>
         <View style={styles.subLine}>
           <MetaIcons hug={hug} />
+          {isOutgoing && (
+            <View>
+              {hug.seenAt ? (
+                <Ionicons name="checkmark-done-outline" color={colors.deep} />
+              ) : (
+                <Ionicons name="checkmark-outline" color={colors.softInk} />
+              )}
+            </View>
+          )}
         </View>
       </View>
 

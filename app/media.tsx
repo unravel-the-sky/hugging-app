@@ -1,7 +1,7 @@
 import { useImage } from "@shopify/react-native-skia";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View, Image } from "react-native";
 
 import * as MediaLibrary from "expo-media-library";
 import { captureRef } from "react-native-view-shot";
@@ -18,16 +18,22 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { TextInput } from "react-native-gesture-handler";
 
-import { File, Paths } from "expo-file-system";
+import { useHugDraft } from "@/hooks/useHugDraft";
 
-export default function Media() {
-  const { toUid, toName, media, note } = useLocalSearchParams<{
-    toUid: string;
-    toName: string;
-    media: string;
-    note: string;
-  }>();
+import * as ImageManipulator from "expo-image-manipulator";
 
+const getPixelSize = (uri: string) =>
+  new Promise<{ width: number; height: number }>((resolve, reject) =>
+    Image.getSize(uri, (width, height) => resolve({ width, height }), reject),
+  );
+
+export default function Media({
+  media,
+  onBack,
+}: {
+  media: string;
+  onBack: () => void;
+}) {
   const image = useImage(media);
 
   const imageRef = useRef(null);
@@ -41,25 +47,17 @@ export default function Media() {
   const [activeText, setActiveText] = useState("");
   const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
 
-  const handleSaveIamge = async () => {
+  const setPhoto = useHugDraft((s) => s.setPhotoUri);
+
+  // keep this, thinking of adding an option to 'save image' before sending it instead of saving all the time
+  const handleSaveIamge = async (captureUri: string) => {
     try {
       setSaving(true);
-
       // permissions bit
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== "granted") {
         Alert.alert("permission needed", "allow photo lib access pls");
         return;
-      }
-
-      const captureUri = await captureRef(imageRef, {
-        format: "jpg",
-        quality: 0.6,
-        result: "tmpfile",
-      });
-
-      if (!captureUri) {
-        alert("Oupsie..");
       }
       await MediaLibrary.saveToLibraryAsync(captureUri);
     } catch (err) {
@@ -82,23 +80,45 @@ export default function Media() {
 
       const captureUri = await captureRef(imageRef, {
         format: "jpg",
-        quality: 0.6,
+        quality: 0.4,
         result: "tmpfile",
       });
 
-      if (!captureUri) {
-        alert("Capture failed!");
-      }
+      if (!captureUri) throw new Error("Capture failed!");
 
-      const captureFile = new File(captureUri);
-      const base64 = await captureFile.base64();
+      const { width: capW, height: capH } = await getPixelSize(captureUri);
+      const scaleX = capW / canvasWidth;
+      const scaleY = capH / canvasHeight;
+
+      const originX = Math.round(canvasPadding * scaleX);
+      const originY = Math.round(canvasPadding * scaleY);
+      const cropW = Math.min(Math.round(frameWidth * scaleX), capW - originX);
+      const cropH = Math.min(Math.round(frameHeight * scaleY), capH - originY);
+
+      const context = ImageManipulator.ImageManipulator.manipulate(
+        captureUri,
+      ).crop({
+        originX,
+        originY,
+        width: cropW,
+        height: cropH,
+      });
+
+      // const captureFile = new File(captureUri);
+      // const base64 = await captureFile.base64();
 
       // // saving
-      const filename = `polaroid-hug-${Date.now()}.png`;
-      const file = new File(Paths.cache, filename);
-      file.create();
-      file.write(base64, { encoding: "base64" });
-      const response = await fetch(file.uri);
+      // const filename = `polaroid-hug-${Date.now()}.png`;
+      // const file = new File(Paths.cache, filename);
+      // file.create();
+      // file.write(base64, { encoding: "base64" });
+
+      const rendered = await context.renderAsync();
+      const cropped = await rendered.saveAsync({
+        format: ImageManipulator.SaveFormat.JPEG,
+      });
+
+      const response = await fetch(cropped.uri);
       const blob = await response.blob();
 
       // create reference
@@ -121,6 +141,8 @@ export default function Media() {
       const t2 = Date.now();
       console.log("getDownloadURL took (ms):", t2 - t1);
 
+      handleSaveIamge(cropped.uri);
+
       // save and exit
       setCloudStorageUrl(downloadUrl);
       handleSendNoteWithPicture(downloadUrl);
@@ -131,20 +153,12 @@ export default function Media() {
     }
   };
 
-  const handleSendNoteWithPicture = (storagePath: string) => {
-    router.replace({
-      pathname: "/(tabs)",
-      params: {
-        toUid,
-        toName,
-        note: note.trim(),
-        imagePath: storagePath,
-      },
-    });
+  const handleSendNoteWithPicture = (imagePath: string) => {
+    setPhoto(imagePath);
+    router.back();
   };
 
   useEffect(() => {
-    // setTextArray([]);
     setActiveIndex(0);
   }, []);
 
@@ -181,7 +195,8 @@ export default function Media() {
     setModalVisible(false);
   };
 
-  const { canvasWidth, canvasHeight } = usePolaroidFrameCalc();
+  const { canvasWidth, canvasHeight, canvasPadding, frameWidth, frameHeight } =
+    usePolaroidFrameCalc();
 
   const [imgColor, setImgColor] = useState<string | undefined>(undefined);
 
@@ -197,19 +212,15 @@ export default function Media() {
     <View
       style={[styles.container, { backgroundColor: imgColor || "#D7C2B2" }]}
     >
-      <View style={{ position: "fixed", top: 100, left: 18 }}>
-        <Pressable
-          onPress={() => {
-            router.back();
-          }}
-        >
+      <View style={{ position: "fixed", top: 60, left: 18 }}>
+        <Pressable onPress={onBack}>
           <Ionicons name="arrow-back" size={40} color={"#7c7c7c"} />
         </Pressable>
       </View>
       <View
         style={{
           flex: 1,
-          top: 120,
+          top: 80,
           alignItems: "center",
         }}
       >
@@ -274,9 +285,7 @@ export default function Media() {
                 bottom: 0,
                 backgroundColor: "green",
               }}
-            >
-              {/* <Text>Lol</Text> */}
-            </View>
+            ></View>
             <TextInput
               autoFocus
               multiline
