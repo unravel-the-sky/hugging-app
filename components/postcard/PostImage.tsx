@@ -14,7 +14,7 @@ import {
   useCanvasRef,
   useImage,
 } from "@shopify/react-native-skia";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import {
   Easing,
   useDerivedValue,
@@ -32,10 +32,6 @@ export default function PostImage({
 }) {
   const image = useImage(media);
 
-  const imageRef = useRef(null);
-
-  // const { width: screenWidth, height: screenHeight } = useWindowDimensions();
-
   // 0 = mid-drop (scaled up, tilted), 1 = landed
   const dropProgress = useSharedValue(0);
   // 0 = pure white, 1 = fully developed
@@ -52,9 +48,9 @@ export default function PostImage({
       );
       // Start developing slightly before the drop fully settles
       developProgress.value = withDelay(
-        300,
+        30,
         withTiming(1, {
-          duration: 2500,
+          duration: 200,
           easing: Easing.out(Easing.cubic),
         }),
       );

@@ -1,9 +1,20 @@
-import { PlushButton } from "@/components/ui/squish/PlushButton";
-import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
 import {
+  colors,
+  font,
+  radius,
+  shadow,
+  spacing,
+  tint,
+} from "../components/ui/squish";
+import { useHugDraft } from "../hooks/useHugDraft";
+import { router, useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+  Image,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -11,7 +22,11 @@ import {
   View,
 } from "react-native";
 
-const maxLength = 256;
+const NOTE_MAX_LENGTH = 40;
+
+const inkFaint = tint(colors.softInk, 0.25);
+const pinkSoft = tint(colors.blush, 0.82);
+const dashedBorder = tint(colors.lilac, 0.4);
 
 export default function HugNoteModal() {
   const { friendName, friendUid } = useLocalSearchParams<{
@@ -19,33 +34,61 @@ export default function HugNoteModal() {
     friendUid: string;
   }>();
 
-  const [note, setNote] = useState("");
+  const note = useHugDraft((s) => s.note);
+  const photoUri = useHugDraft((s) => s.photoUri);
+  const setNote = useHugDraft((s) => s.setNote);
+  const reset = useHugDraft((s) => s.reset);
 
-  const handleContinue = () => {
+  // Local-only editing state for the note card.
+  const [isEditingNote, setIsEditingNote] = useState(false);
+  const [draftNote, setDraftNote] = useState("");
+
+  useEffect(() => {
+    reset();
+  }, [reset]);
+
+  const hasNote = note.trim().length > 0;
+  const hasPhoto = !!photoUri;
+  const hasExtras = hasNote || hasPhoto;
+
+  const openNoteEditor = () => {
+    setDraftNote(note);
+    setIsEditingNote(true);
+  };
+
+  const saveNote = () => {
+    setNote(draftNote.trim());
+    setIsEditingNote(false);
+  };
+
+  const cancelNoteEdit = () => {
+    setDraftNote(note);
+    setIsEditingNote(false);
+  };
+
+  const handleAddPostcard = () => {
+    router.push({
+      pathname: "/take-pic",
+      params: { toUid: friendUid, toName: friendName },
+    });
+  };
+
+  const handleSend = () => {
     router.replace({
       pathname: "/(tabs)",
       params: {
         toUid: friendUid,
         toName: friendName,
         note: note.trim(),
+        imagePath: photoUri ?? "",
       },
     });
+    reset();
   };
 
-  const handleCancel = () => {
+  const handleClose = () => {
+    reset();
     router.back();
-  };
-
-  const handleAddPicture = () => {
-    console.log("yay");
-    router.replace({
-      pathname: "/take-pic",
-      params: {
-        toUid: friendUid,
-        toName: friendName,
-        note: note.trim() || "",
-      },
-    });
   };
 
   return (
@@ -53,52 +96,141 @@ export default function HugNoteModal() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={styles.container}
     >
-      <View style={styles.header}>
-        <Text style={styles.emoji}>💌</Text>
-        <Text style={styles.title}>Send a Hug</Text>
-        <Text style={styles.subtitle}>to @{friendName}</Text>
-      </View>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <Pressable style={styles.backButton} onPress={handleClose} hitSlop={12}>
+          <Text style={styles.backArrow}>←</Text>
+        </Pressable>
 
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Add a note (optional)</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="Write something nice..."
-          placeholderTextColor="#999"
-          value={note}
-          onChangeText={setNote}
-          multiline
-          maxLength={maxLength}
-          textAlignVertical="top"
-        />
-        <Text style={styles.characterCountText}>
-          {note.length} / {maxLength}
-        </Text>
-      </View>
+        <View style={styles.header}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {friendName?.charAt(0)?.toUpperCase() ?? "?"}
+            </Text>
+          </View>
+          <Text style={styles.title}>New hug</Text>
+          <Text style={styles.subtitle}>to {friendName}</Text>
+        </View>
 
-      <View>
-        <TouchableOpacity
-          style={[styles.button, styles.cancelButton]}
-          onPress={handleAddPicture}
-        >
-          <Text style={styles.cancelButtonText}>Send a postcard 📷 </Text>
-        </TouchableOpacity>
-      </View>
+        <Text style={styles.sectionLabel}>MAKE IT EXTRA</Text>
 
-      <View style={styles.actionsContainer}>
-        <PlushButton
-          label="cancel"
-          variant="soft"
-          onPress={handleCancel}
-          style={{ width: "48%" }}
-        />
-        <PlushButton
-          label="continue"
-          variant="blush"
-          onPress={handleContinue}
-          style={{ width: "48%" }}
-        />
-      </View>
+        {isEditingNote ? (
+          <View style={styles.editorCard}>
+            <TextInput
+              style={styles.textInput}
+              placeholder="a few words for the hug"
+              placeholderTextColor={inkFaint}
+              value={draftNote}
+              onChangeText={setDraftNote}
+              multiline
+              autoFocus
+              maxLength={NOTE_MAX_LENGTH}
+              textAlignVertical="top"
+            />
+            <View style={styles.editorFooter}>
+              <Text style={styles.charCount}>
+                {draftNote.length} / {NOTE_MAX_LENGTH}
+              </Text>
+              <View style={styles.editorActions}>
+                <TouchableOpacity
+                  style={[styles.pill, styles.pillGhost]}
+                  onPress={cancelNoteEdit}
+                >
+                  <Text style={styles.pillGhostText}>cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.pill, styles.pillSolid]}
+                  onPress={saveNote}
+                >
+                  <Text style={styles.pillSolidText}>add text</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        ) : hasNote ? (
+          <Pressable
+            style={[styles.card, styles.cardFilledNote]}
+            onPress={openNoteEditor}
+          >
+            <View style={styles.cardRow}>
+              <View style={[styles.iconBox, styles.iconBoxNote]}>
+                <Text style={styles.iconGlyph}>✏️</Text>
+              </View>
+              <View style={styles.cardTextWrap}>
+                <Text style={styles.cardTitle}>Note added</Text>
+                <Text style={styles.cardHint}>tap to edit</Text>
+              </View>
+              <View style={styles.check}>
+                <Text style={styles.checkGlyph}>✓</Text>
+              </View>
+            </View>
+            <Text style={styles.notePreview} numberOfLines={3}>
+              “{note.trim()}”
+            </Text>
+          </Pressable>
+        ) : (
+          <Pressable
+            style={[styles.card, styles.cardEmpty]}
+            onPress={openNoteEditor}
+          >
+            <View style={styles.cardRow}>
+              <View style={[styles.iconBox, styles.iconBoxNoteSoft]}>
+                <Text style={styles.iconGlyph}>✏️</Text>
+              </View>
+              <View style={styles.cardTextWrap}>
+                <Text style={styles.cardTitle}>Add a note</Text>
+                <Text style={styles.cardHint}>add a few words</Text>
+              </View>
+              <Text style={styles.plus}>＋</Text>
+            </View>
+          </Pressable>
+        )}
+
+        {hasPhoto ? (
+          <Pressable
+            style={[styles.card, styles.cardFilledPostcard]}
+            onPress={handleAddPostcard}
+          >
+            <View style={styles.cardRow}>
+              <Image source={{ uri: photoUri! }} style={styles.thumb} />
+              <View style={styles.cardTextWrap}>
+                <Text style={styles.cardTitle}>Postcard added</Text>
+                <Text style={styles.cardHint}>one photo · tap to change</Text>
+              </View>
+              <View style={styles.check}>
+                <Text style={styles.checkGlyph}>✓</Text>
+              </View>
+            </View>
+          </Pressable>
+        ) : (
+          <Pressable
+            style={[styles.card, styles.cardEmpty]}
+            onPress={handleAddPostcard}
+          >
+            <View style={styles.cardRow}>
+              <View style={[styles.iconBox, styles.iconBoxPostcardSoft]}>
+                <Text style={styles.iconGlyph}>🖼️</Text>
+              </View>
+              <View style={styles.cardTextWrap}>
+                <Text style={styles.cardTitle}>Add a postcard</Text>
+                <Text style={styles.cardHint}>a photo card to unwrap</Text>
+              </View>
+              <Text style={styles.plus}>＋</Text>
+            </View>
+          </Pressable>
+        )}
+      </ScrollView>
+
+      {!isEditingNote && (
+        <View style={styles.footer}>
+          <Pressable style={styles.sendButton} onPress={handleSend}>
+            <Text style={styles.sendButtonText}>Send hug</Text>
+          </Pressable>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -106,86 +238,223 @@ export default function HugNoteModal() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: Platform.OS === "ios" ? 40 : 24,
-    gap: 16,
+    backgroundColor: colors.mistBg,
   },
-  currentAvatar: {
-    alignSelf: "center",
-    marginBottom: 16,
-    width: 100,
-    height: 100,
+  scroll: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
+    gap: spacing.sm,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadow,
+    shadowOpacity: 0.12,
+    elevation: 2,
+  },
+  backArrow: {
+    fontSize: 22,
+    color: colors.plumInk,
+    marginTop: -2,
   },
   header: {
     alignItems: "center",
+    gap: spacing.sm,
   },
-  emoji: {
-    fontSize: 56,
-    marginBottom: 12,
+  avatar: {
+    width: 84,
+    height: 84,
+    borderRadius: radius.pill,
+    backgroundColor: colors.blush,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 4,
+    borderColor: pinkSoft,
+  },
+  avatarText: {
+    fontSize: 34,
+    fontFamily: font.displayBold,
+    color: colors.surface,
   },
   title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#1A1A1A",
-    marginBottom: 4,
+    fontSize: 24,
+    fontFamily: font.displayBold,
+    color: colors.plumInk,
   },
   subtitle: {
     fontSize: 16,
-    color: "#666",
+    fontFamily: font.ui,
+    color: colors.softInk,
   },
-  inputContainer: {
-    // marginBottom: 24,
+  sectionLabel: {
+    fontSize: 12,
+    fontFamily: font.uiBold,
+    letterSpacing: 1,
+    color: inkFaint,
+    marginTop: spacing.xs,
   },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1A1A1A",
-    marginBottom: 8,
+
+  // Cards (shared)
+  card: {
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+  },
+  cardEmpty: {
+    borderWidth: 2,
+    borderStyle: "dashed",
+    borderColor: dashedBorder,
+    backgroundColor: colors.surface,
+  },
+  cardFilledNote: {
+    borderWidth: 2,
+    borderColor: colors.primary,
+    backgroundColor: colors.soft,
+    gap: spacing.md,
+  },
+  cardFilledPostcard: {
+    borderWidth: 2,
+    borderColor: colors.blush,
+    backgroundColor: pinkSoft,
+  },
+  cardRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md + 2,
+  },
+  cardTextWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontFamily: font.uiBold,
+    color: colors.plumInk,
+  },
+  cardHint: {
+    fontSize: 13,
+    fontFamily: font.ui,
+    color: colors.softInk,
+  },
+  iconBox: {
+    width: 46,
+    height: 46,
+    borderRadius: radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconBoxNote: { backgroundColor: colors.primary },
+  iconBoxNoteSoft: { backgroundColor: colors.soft },
+  iconBoxPostcardSoft: { backgroundColor: pinkSoft },
+  iconGlyph: { fontSize: 22 },
+  thumb: {
+    width: 46,
+    height: 46,
+    borderRadius: radius.md,
+    backgroundColor: colors.soft,
+  },
+  plus: {
+    fontSize: 22,
+    color: inkFaint,
+    fontFamily: font.uiBold,
+  },
+  check: {
+    width: 26,
+    height: 26,
+    borderRadius: radius.pill,
+    backgroundColor: colors.mint,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkGlyph: {
+    color: colors.surface,
+    fontSize: 15,
+    fontFamily: font.uiBold,
+  },
+  notePreview: {
+    fontSize: 16,
+    color: colors.plumInk,
+  },
+
+  // Note editor
+  editorCard: {
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: colors.soft,
+    gap: spacing.md,
   },
   textInput: {
-    backgroundColor: "#FFF",
-    borderWidth: 2,
-    borderColor: "#FFE8E8",
-    borderRadius: 16,
-    padding: 16,
     fontSize: 16,
-    color: "#1A1A1A",
-    minHeight: 80,
-    maxHeight: 200,
+    fontFamily: font.ui,
+    color: colors.plumInk,
+    minHeight: 58,
+    maxHeight: 180,
   },
-  characterCountText: {
-    fontSize: 12,
-    color: "#999",
-    alignSelf: "flex-end",
-    marginTop: 8,
-  },
-  actionsContainer: {
-    flex: 1,
+  editorFooter: {
     flexDirection: "row",
-    width: "100%",
-    gap: 12,
-  },
-  button: {
-    flex: 1,
-    borderRadius: 14,
-    paddingVertical: 16,
     alignItems: "center",
+    justifyContent: "space-between",
   },
-  cancelButton: {
-    backgroundColor: "#F0F0F0",
+  charCount: {
+    fontSize: 12,
+    fontFamily: font.ui,
+    color: inkFaint,
   },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#666",
+  editorActions: {
+    flexDirection: "row",
+    gap: spacing.sm + 2,
   },
-  continueButton: {
-    backgroundColor: "#FF6B6B",
+  pill: {
+    paddingHorizontal: spacing.lg + 2,
+    paddingVertical: 9,
+    borderRadius: radius.pill,
   },
-  continueButtonText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#FFF",
+  pillGhost: {
+    backgroundColor: colors.soft,
+  },
+  pillGhostText: {
+    color: colors.primary,
+    fontFamily: font.uiBold,
+    fontSize: 14,
+  },
+  pillSolid: {
+    backgroundColor: colors.primary,
+  },
+  pillSolidText: {
+    color: colors.surface,
+    fontFamily: font.uiBold,
+    fontSize: 14,
+  },
+
+  // Footer
+  footer: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: Platform.OS === "ios" ? 36 : spacing.xl,
+    gap: spacing.md,
+  },
+  footerCaption: {
+    textAlign: "center",
+    fontSize: 18,
+    fontFamily: font.hand,
+    color: colors.softInk,
+  },
+  sendButton: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.pill,
+    paddingVertical: 18,
+    alignItems: "center",
+    ...shadow,
+  },
+  sendButtonText: {
+    color: colors.surface,
+    fontSize: 17,
+    fontFamily: font.displayBold,
   },
 });

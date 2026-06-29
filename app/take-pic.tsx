@@ -6,7 +6,6 @@ import {
   CameraView,
   useCameraPermissions,
 } from "expo-camera";
-import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
 import { Button, Pressable, StyleSheet, Text, View } from "react-native";
@@ -15,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 
 import * as ImagePicker from "expo-image-picker";
+import Media from "./media";
 
 export default function TakePicture() {
   const [facing, setFacing] = useState<CameraType>("back");
@@ -23,8 +23,6 @@ export default function TakePicture() {
   const ref = useRef<CameraView>(null);
   const [uri, setUri] = useState<string | null>(null);
   const [mode, setMode] = useState<CameraMode>("picture");
-
-  const [selectedImgUri, setSelectedImgUri] = useState<string | null>(null);
 
   const { toUid, toName, note } = useLocalSearchParams<{
     toUid: string;
@@ -38,17 +36,7 @@ export default function TakePicture() {
 
   const takePic = async () => {
     const photo = await ref.current?.takePictureAsync();
-    if (photo?.uri) {
-      router.push({
-        pathname: "/media",
-        params: {
-          toUid,
-          toName,
-          media: photo.uri,
-          note,
-        },
-      });
-    }
+    if (photo?.uri) setUri(photo.uri);
   };
 
   const doubleTap = Gesture.Tap()
@@ -102,16 +90,7 @@ export default function TakePicture() {
   const renderPicture = (uri: string) => {
     return (
       <SafeAreaView style={styles.cameraContainer} edges={["top"]}>
-        <Image
-          source={{ uri }}
-          contentFit="contain"
-          style={{
-            width: "100%",
-            height: "80%",
-            resizeMode: "contain",
-          }}
-        />
-        <Button onPress={() => setUri(null)} title="Take another pic" />
+        <Media media={uri} onBack={() => setUri(null)} />
       </SafeAreaView>
     );
   };
@@ -205,12 +184,6 @@ export default function TakePicture() {
   return (
     <View style={styles.container}>
       {uri ? renderPicture(uri) : renderCamera()}
-      {/* <CameraView style={styles.camera} facing={facing} />
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
-          <Text style={styles.text}>Flip Camera</Text>
-        </TouchableOpacity>
-      </View> */}
     </View>
   );
 }
