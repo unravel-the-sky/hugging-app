@@ -2,7 +2,7 @@ import {
   searchUsersByPrefix,
   type UserSearchResult,
 } from "@/lib/searchUsersByPrefix"; // adjust path
-import { sendFriendRequest } from "@/lib/handleFriends";
+import { getPendingOutgoingUids, sendFriendRequest } from "@/lib/handleFriends";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -29,7 +29,6 @@ export default function AddUserScreen() {
   const [results, setResults] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [sent, setSent] = useState<SentState>({});
-  const [loading, setLoading] = useState(false);
   const { friends } = useFriends(auth.currentUser?.uid);
 
   // tracks the latest query so out-of-order responses get discarded
@@ -52,10 +51,17 @@ export default function AddUserScreen() {
         // discard if the user kept typing while this was in flight
         if (latestTerm.current !== trimmed) return;
 
-        // const alreadyFriends = found.map((item) =>
-        //   friends.find((friend) => friend.id === item.uid),
-        // );
+        const pending = await getPendingOutgoingUids();
+        if (latestTerm.current !== trimmed) return;
+
         setResults(found);
+        setSent((prev) => {
+          const next = { ...prev };
+          for (const u of found) {
+            if (pending.has(u.uid)) next[u.uid] = "sent";
+          }
+          return next;
+        });
       } catch (e) {
         if (latestTerm.current === trimmed) setResults([]);
         console.error("search failed", e);

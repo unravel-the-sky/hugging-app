@@ -329,7 +329,7 @@ export default function Media({
 
       <View style={styles.buttonContainer}>
         <PlushButton
-          label="send it!"
+          label="add it!"
           disabled={saving}
           onPress={handleSaveAndAddImageToHug}
         />

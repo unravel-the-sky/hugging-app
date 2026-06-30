@@ -1,13 +1,23 @@
 import AvatarImage from "@/components/avatar/AvatarImage";
-import { AppButton } from "@/components/ui/AppButton";
+import { PlushButton } from "@/components/ui/squish/PlushButton"; // adjust if path differs
 import Loader from "@/components/ui/Loader";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { updateUserAvatar } from "@/lib/createUser";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { auth } from "@/lib/firebaseConfig";
+import {
+  colors,
+  font,
+  radius,
+  shadow,
+  spacing,
+  tint,
+} from "@/components/ui/squish";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { router } from "expo-router";
+import { signOut } from "firebase/auth";
 import React, { useEffect, useState } from "react";
 import {
-  Alert,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -19,20 +29,24 @@ type AvatarType = "male" | "female";
 
 interface AvatarOption {
   type: AvatarType;
-  emoji: string;
   label: string;
 }
 
 const avatarOptions: AvatarOption[] = [
-  { type: "male", emoji: "👨", label: "zhis" },
-  { type: "female", emoji: "👩", label: "zhat" },
+  { type: "male", label: "zhis" },
+  { type: "female", label: "zhat" },
 ];
 
 export default function ProfileScreen() {
   const [selectedAvatar, setSelectedAvatar] = useState<AvatarType>("male");
   const [isSaving, setIsSaving] = useState(false);
+  const [showLogout, setShowLogout] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const { user, loading } = useCurrentUser();
+
+  // anonymous users have no recovery path — logging out is destructive
+  const isAnonymous = auth.currentUser?.isAnonymous ?? false;
 
   useEffect(() => {
     if (user) {
@@ -40,47 +54,39 @@ export default function ProfileScreen() {
     }
   }, [user]);
 
+  const dirty = !!user && selectedAvatar !== (user.avatar || "male");
+
   const handleSaveAvatar = async () => {
     setIsSaving(true);
     try {
-      // await AsyncStorage.setItem("avatar", selectedAvatar);
-      // // TODO: Update avatar in Firebase user object
       await updateUserAvatar(selectedAvatar);
-
-      // Alert.alert("Success! ✨", "Your avatar has been updated!", [
-      //   {
-      //     text: "OK",
-      //     // onPress: () => router.back(),
-      //   },
-      // ]);
     } catch (error) {
       console.error("Error saving avatar:", error);
-      Alert.alert("Error", "Failed to save avatar. Please try again.");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleLogout = () => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await AsyncStorage.removeItem("username");
-            await AsyncStorage.removeItem("avatar");
-            router.replace("/setup");
-          } catch (error) {
-            console.error("Error logging out:", error);
-          }
-        },
-      },
-    ]);
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      // end the Google session too, so next sign-in shows the account picker
+      try {
+        if (GoogleSignin.hasPreviousSignIn()) {
+          await GoogleSignin.signOut();
+        }
+      } catch {
+        // not a Google user / module unavailable — fine to ignore
+      }
+
+      // the real logout: ends the Firebase session, fires onAuthStateChanged,
+      // which useCurrentUser listens to -> routing updates automatically
+      await signOut(auth);
+      router.replace("/");
+    } catch (error) {
+      console.error("Error logging out:", error);
+      setLoggingOut(false);
+    }
   };
 
   if (loading) {
@@ -88,218 +94,221 @@ export default function ProfileScreen() {
   }
 
   return (
-    <View style={styles.overlay}>
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Profile</Text>
-          <View style={styles.headerSpacer} />
+    <View style={styles.screen}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Profile</Text>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* identity */}
+        <View style={styles.profileSection}>
+          <AvatarImage avatar={user?.avatar} size="l" />
+          <Text style={styles.username}>{user?.displayName}</Text>
         </View>
 
-        <ScrollView contentContainerStyle={styles.content}>
-          {/* Profile Info */}
-          <View style={styles.profileSection}>
-            <View style={styles.currentAvatar}>
-              <AvatarImage avatar={user?.avatar} />
-            </View>
-            <Text style={styles.username}>@{user?.displayName}</Text>
-          </View>
-
-          {/* Avatar Selection */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Choose Your Avatar</Text>
-            <View style={styles.avatarGrid}>
-              {avatarOptions.map((avatar) => (
+        {/* avatar picker */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Choose your avatar</Text>
+          <View style={styles.avatarGrid}>
+            {avatarOptions.map((avatar) => {
+              const active = selectedAvatar === avatar.type;
+              return (
                 <Pressable
                   key={avatar.type}
                   style={[
                     styles.avatarOption,
-                    selectedAvatar === avatar.type &&
-                      styles.avatarOptionSelected,
+                    active && styles.avatarOptionSelected,
                   ]}
                   onPress={() => setSelectedAvatar(avatar.type)}
                 >
-                  <AvatarImage avatar={avatar.type} />
-                  <Text style={styles.avatarLabel}>{avatar.label}</Text>
-                  {selectedAvatar === avatar.type && (
+                  <AvatarImage avatar={avatar.type} size="m" />
+                  <Text
+                    style={[
+                      styles.avatarLabel,
+                      active && styles.avatarLabelSelected,
+                    ]}
+                  >
+                    {avatar.label}
+                  </Text>
+                  {active && (
                     <View style={styles.selectedBadge}>
                       <Text style={styles.selectedBadgeText}>✓</Text>
                     </View>
                   )}
                 </Pressable>
-              ))}
+              );
+            })}
+          </View>
+        </View>
+
+        {/* save */}
+        <PlushButton
+          label={isSaving ? "saving…" : "save avatar"}
+          variant="primary"
+          fullWidth
+          disabled={isSaving || !dirty}
+          onPress={handleSaveAvatar}
+        />
+
+        {/* logout lives apart from the primary actions */}
+        <View style={styles.logoutWrap}>
+          <PlushButton
+            label="Log out"
+            variant="blush"
+            fullWidth
+            onPress={() => setShowLogout(true)}
+          />
+        </View>
+      </ScrollView>
+
+      {/* logout confirm */}
+      <Modal
+        visible={showLogout}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !loggingOut && setShowLogout(false)}
+      >
+        <View style={styles.backdrop}>
+          <View style={styles.sheet}>
+            <Text style={styles.sheetTitle}>Log out?</Text>
+
+            {isAnonymous ? (
+              <Text style={styles.sheetBody}>
+                You are using a guest account. Logging out erases it for good —
+                your hugs and friends cannot be recovered. Connect Google first
+                if you want to keep them.
+              </Text>
+            ) : (
+              <Text style={styles.sheetBody}>
+                You will need to sign in again to get back to your hugs.
+              </Text>
+            )}
+
+            <View style={styles.actions}>
+              <PlushButton
+                label="Stay"
+                variant="soft"
+                onPress={() => setShowLogout(false)}
+                disabled={loggingOut}
+                style={styles.actionBtn}
+              />
+              <PlushButton
+                label={loggingOut ? "Logging out…" : "Log out"}
+                variant="blush"
+                onPress={handleLogout}
+                disabled={loggingOut}
+                style={styles.actionBtn}
+              />
             </View>
           </View>
-
-          {/* Save Button */}
-          <AppButton
-            onPress={handleSaveAvatar}
-            disabled={isSaving}
-            buttonText={isSaving ? "Saving..." : "Save Avatar"}
-          />
-        </ScrollView>
-      </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#FAFAFA",
-  },
-  container: {
-    backgroundColor: "#FAFAFA",
-    borderRadius: 24,
-    padding: 32,
-    width: "100%",
-    height: "100%",
-    display: "flex",
-    justifyContent: "space-between",
-    fontSize: 26,
-    fontFamily: "CuteFont",
-  },
+  screen: { flex: 1, backgroundColor: colors.mistBg },
+
   header: {
-    flexDirection: "row",
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
-  },
-  backButton: {
-    padding: 8,
-  },
-  backButtonText: {
-    fontSize: 28,
-    color: "#1A1A1A",
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#1A1A1A",
+    fontSize: 20,
+    fontFamily: font.displayBold,
+    color: colors.plumInk,
   },
-  headerSpacer: {
-    width: 44,
-  },
-  content: {
-    padding: 24,
-  },
+
+  content: { padding: spacing.xl, gap: spacing.xl },
+
   profileSection: {
     alignItems: "center",
-    marginBottom: 40,
-  },
-  currentAvatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    // backgroundColor: "#ffaeae",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  currentAvatarEmoji: {
-    fontSize: 60,
+    gap: spacing.md,
+    paddingVertical: spacing.lg,
   },
   username: {
     fontSize: 24,
-    fontWeight: "bold",
-    color: "#1A1A1A",
+    fontFamily: font.displayBold,
+    color: colors.plumInk,
   },
-  section: {
-    marginBottom: 32,
-  },
+
+  section: { gap: spacing.lg },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#1A1A1A",
-    marginBottom: 16,
+    fontFamily: font.uiBold,
+    color: colors.plumInk,
   },
-  avatarGrid: {
-    flexDirection: "row",
-    gap: 16,
-  },
+
+  avatarGrid: { flexDirection: "row", gap: spacing.lg },
   avatarOption: {
     flex: 1,
     aspectRatio: 1,
-    backgroundColor: "#FFF",
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     borderWidth: 3,
-    borderColor: "#E0E0E0",
+    borderColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    padding: 16,
-    position: "relative",
+    gap: spacing.sm,
+    ...shadow,
   },
   avatarOptionSelected: {
-    borderColor: "#FF6B6B",
-    backgroundColor: "#FFE8E8",
-  },
-  avatarEmoji: {
-    fontSize: 48,
-    marginBottom: 8,
+    borderColor: colors.primary,
+    backgroundColor: tint(colors.primary, 0.88),
   },
   avatarLabel: {
     fontSize: 14,
-    fontWeight: "600",
-    color: "#666",
+    fontFamily: font.uiBold,
+    color: colors.softInk,
   },
+  avatarLabelSelected: { color: colors.primary },
   selectedBadge: {
     position: "absolute",
-    top: 8,
-    right: 8,
+    top: spacing.sm,
+    right: spacing.sm,
     width: 24,
     height: 24,
-    borderRadius: 12,
-    backgroundColor: "#FF6B6B",
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary,
     justifyContent: "center",
     alignItems: "center",
   },
   selectedBadgeText: {
-    color: "#FFF",
+    color: colors.surface,
     fontSize: 14,
-    fontWeight: "bold",
+    fontFamily: font.uiBold,
   },
-  saveButton: {
-    backgroundColor: "#FF6B6B",
-    borderRadius: 12,
-    padding: 16,
-    alignItems: "center",
-    marginBottom: 32,
-    shadowColor: "#FF6B6B",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+
+  logoutWrap: { marginTop: spacing.sm },
+
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(74, 66, 104, 0.45)",
+    justifyContent: "center",
+    paddingHorizontal: spacing.xl,
   },
-  saveButtonDisabled: {
-    backgroundColor: "#FFB3B3",
-    shadowOpacity: 0.1,
+  sheet: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    gap: spacing.lg,
+    ...shadow,
   },
-  saveButtonText: {
-    color: "#FFF",
-    fontSize: 18,
-    fontWeight: "bold",
+  sheetTitle: {
+    fontSize: 22,
+    fontFamily: font.displayBold,
+    color: colors.plumInk,
+    textAlign: "center",
   },
-  actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#FFF",
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-  },
-  actionButtonText: {
+  sheetBody: {
     fontSize: 16,
-    color: "#1A1A1A",
+    fontFamily: font.ui,
+    color: colors.softInk,
+    textAlign: "center",
+    lineHeight: 22,
   },
-  actionButtonIcon: {
-    fontSize: 20,
-    color: "#999",
-  },
+  actions: { flexDirection: "row", gap: spacing.md },
+  actionBtn: { flex: 1 },
 });
