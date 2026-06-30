@@ -193,6 +193,7 @@ export default function HugsListScreen() {
         <HugViewOverlay3d
           hug={seeHug}
           onHugBack={() => handleHugBack(seeHug)}
+          onOpen={() => handleValidateHug(seeHug.id)}
           onClose={() => {
             handleValidateHug(seeHug.id);
             setSeeHug(undefined);
@@ -200,14 +201,6 @@ export default function HugsListScreen() {
           onIgnore={() => setSeeHug(undefined)}
         />
       )}
-
-      {/* old component to show hug here */}
-      {/* <HugViewOverlay
-        visible={!!seeHug?.id}
-        hug={seeHug}
-        onHugBack={handleHugBack}
-        onIgnore={handleIgnore}
-      /> */}
     </View>
   );
 }

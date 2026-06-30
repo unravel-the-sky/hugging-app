@@ -4,8 +4,8 @@
  */
 
 export const avatarColors = {
-  primary: "#7A67D9",
-  deep: "#5A48B0",
+  primary: "#8C7BDE",
+  deep: "#7163C4",
   plumInk: "#382F52",
   softInk: "#8B82A6",
 
@@ -17,21 +17,21 @@ export const avatarColors = {
 
 export const colors = {
   // Core palette
-  primary: "#7A67D9",
-  deep: "#5A48B0",
-  lilac: "#B5A7EC",
-  soft: "#E7E1FA",
-  mistBg: "#F3EFFA",
+  primary: "#8C7BDE",
+  deep: "#7163C4",
+  lilac: "#C2B5F0",
+  soft: "#ECE7FB",
+  mistBg: "#F6F3FB",
   surface: "#FFFFFF",
-  plumInk: "#382F52",
-  softInk: "#8B82A6",
+  plumInk: "#4A4268",
+  softInk: "#998FB5",
 
   // Accents — hug types & stickers
-  blush: "#EE83AE",
-  peach: "#F2A06A",
-  mint: "#6FC9A6",
-  butter: "#EDC25C",
-  sky: "#7FA9E8",
+  blush: "#F2A4C4",
+  peach: "#F5B488",
+  mint: "#8CD4B8",
+  butter: "#EFD083",
+  sky: "#9DBEEF",
 } as const;
 
 /** Darken a hex color toward black. amount: 0..1 */

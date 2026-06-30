@@ -102,9 +102,17 @@ export default function TabsLayout() {
 
         {/* Tab Content */}
         <TabBarContext value={{ setIsTabBarHidden }}>
-          <NativeTabs blurEffect="light" hidden={isTabBarHidden}>
+          <NativeTabs
+            blurEffect="light"
+            hidden={isTabBarHidden}
+            iconColor={colors.primary}
+          >
             <NativeTabs.Trigger name="index">
               <Label>Home</Label>
+              <NativeTabs.Trigger.Icon sf="house.fill" md="settings" />
+            </NativeTabs.Trigger>
+            <NativeTabs.Trigger name="homepage" hidden>
+              <Label>Homepage</Label>
               <NativeTabs.Trigger.Icon sf="house.fill" md="settings" />
             </NativeTabs.Trigger>
             <NativeTabs.Trigger name="friends">

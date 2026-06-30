@@ -13,6 +13,7 @@ const SEALED_BG = ["#B9A5EC", "#9A7BD9"] as const;
 interface Props {
   hug?: Hug | undefined;
   onHugBack: (hug: Hug) => void;
+  onOpen: () => void;
   onClose: () => void;
   onIgnore: () => void;
 }
@@ -34,6 +35,7 @@ function Envelope() {
 export default function HugViewOverlay({
   hug,
   onHugBack,
+  onOpen,
   onClose,
   onIgnore,
 }: Props) {
@@ -73,7 +75,10 @@ export default function HugViewOverlay({
         <PlushButton
           variant="blush"
           label="open it"
-          onPress={() => setOpened(true)}
+          onPress={() => {
+            setOpened(true);
+            onOpen();
+          }}
         />
       </View>
 

@@ -53,17 +53,7 @@ export default function TakePicture() {
         quality: 1,
       });
 
-      if (!res.canceled && res.assets[0].uri) {
-        router.replace({
-          pathname: "/media",
-          params: {
-            toUid,
-            toName,
-            media: res.assets[0].uri,
-            note,
-          },
-        });
-      }
+      if (!res.canceled && res.assets[0].uri) setUri(res.assets[0].uri);
     } catch (err) {
       console.error(
         "Erro happened while getting pictures from library, error ",
