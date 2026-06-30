@@ -23,21 +23,21 @@ export function useCurrentUser() {
     undefined,
   );
   const [user, setUser] = useState<User | null | undefined>(undefined);
-  const [loading, setLoading] = useState(true);
-  const [isInitializing, setIsInitializing] = useState(true);
+  // const [loading, setLoading] = useState(true);
+  // const [isInitializing, setIsInitializing] = useState(true);
+  const [isHydrating, setIsHydrating] = useState(true); // gates the loader
+  const [isSyncing, setIsSyncing] = useState(true); // background only
 
   useEffect(() => {
     // step 1: instantly check custom local cache
     const checkCache = async () => {
       try {
-        const cachedUser = await AsyncStorage.getItem("cached_user");
-        if (cachedUser) {
-          setUser(JSON.parse(cachedUser));
-          setIsInitializing(false);
-          // setLoading(false); FIX THIS LATER, use zustand or something for caching the user uid
-        }
+        const cached = await AsyncStorage.getItem("cached_user");
+        if (cached) setUser(JSON.parse(cached));
       } catch (err) {
-        console.error("Cache read failed for the auth user, error: ", err);
+        console.error("Cache read failed:", err);
+      } finally {
+        setIsHydrating(false); // we can render now — cached or not
       }
     };
     checkCache();
@@ -45,36 +45,31 @@ export function useCurrentUser() {
     // step 2: get firebase user
     let unsubscribeUserDoc: (() => void) | undefined;
 
-    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       setAuthUser(firebaseUser);
-
-      // Clean up any previous profile listener
       unsubscribeUserDoc?.();
       unsubscribeUserDoc = undefined;
 
       if (!firebaseUser) {
         setUser(null);
-        setLoading(false);
-        // Clear cache on logout
-        await AsyncStorage.removeItem("cached_user");
+        setIsSyncing(false);
+        AsyncStorage.removeItem("cached_user");
         return;
       }
 
       const userRef = doc(db, "users", firebaseUser.uid);
-      unsubscribeUserDoc = onSnapshot(userRef, async (snap) => {
-        const userData = snap.exists() ? (snap.data() as User) : null;
+      unsubscribeUserDoc = onSnapshot(userRef, (snap) => {
+        const userData = snap.exists()
+          ? ({ ...snap.data(), uid: snap.id } as User)
+          : null;
         setUser(userData);
-        setLoading(false);
-        setIsInitializing(false);
-
+        setIsSyncing(false);
         if (userData) {
-          try {
-            await AsyncStorage.setItem("cached_user", JSON.stringify(userData));
-          } catch (err) {
-            console.error("Failed to save user data to cache:", err);
-          }
+          AsyncStorage.setItem("cached_user", JSON.stringify(userData)).catch(
+            () => {},
+          );
         } else {
-          await AsyncStorage.removeItem("cached_user");
+          AsyncStorage.removeItem("cached_user");
         }
       });
     });
@@ -85,5 +80,5 @@ export function useCurrentUser() {
     };
   }, []);
 
-  return { user, loading, authUser, isInitializing };
+  return { user, authUser, isHydrating, isSyncing };
 }

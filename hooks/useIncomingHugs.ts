@@ -8,18 +8,21 @@ import {
   where,
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
+import { useCurrentUser } from "./useCurrentUser";
 
 export type HugDirection = "incoming" | "outgoing";
 
-export function useHugs(
-  uid: string | undefined,
-  direction: HugDirection = "incoming",
-) {
+export function useHugs(direction: HugDirection = "incoming") {
   const [hugs, setHugs] = useState<Hug[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const { authUser, user } = useCurrentUser();
+  const uid = authUser?.uid ?? user?.uid; // cached user has the uid too
+
   useEffect(() => {
     if (!uid) return;
+
+    console.log("hugging uid is: ", uid);
 
     const fieldName = direction === "incoming" ? "to" : "from";
 

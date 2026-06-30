@@ -198,7 +198,13 @@ function ShineLight({ tilt }: { tilt: TiltRef }) {
 
 const styles = StyleSheet.create({
   root: { ...StyleSheet.absoluteFill },
-  fill: { flex: 1 },
+  fill: {
+    flex: 1,
+    shadowColor: "#5A3FA0",
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
+  },
   messageWrap: {
     position: "absolute",
     left: 0,

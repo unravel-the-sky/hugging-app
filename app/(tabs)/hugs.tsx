@@ -36,14 +36,10 @@ export default function HugsListScreen() {
   const [seeHug, setSeeHug] = useState<Hug | undefined>(undefined);
   const [tab, setTab] = useState<Tab>("received");
 
-  const { isLoading: incomingLoading, hugs: incomingHugs } = useHugs(
-    uid,
-    "incoming",
-  );
-  const { isLoading: outgoingLoading, hugs: outgoingHugs } = useHugs(
-    uid,
-    "outgoing",
-  );
+  const { isLoading: incomingLoading, hugs: incomingHugs } =
+    useHugs("incoming");
+  const { isLoading: outgoingLoading, hugs: outgoingHugs } =
+    useHugs("outgoing");
 
   const { hugId } = useLocalSearchParams();
   const { startHugWithNote } = useCreateHugWithNote();
