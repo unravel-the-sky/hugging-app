@@ -22,6 +22,8 @@ export function useHugs(direction: HugDirection = "incoming") {
   useEffect(() => {
     if (!uid) return;
 
+    console.log("hugging uid is: ", uid);
+
     const fieldName = direction === "incoming" ? "to" : "from";
 
     const q = query(
