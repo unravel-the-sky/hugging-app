@@ -8,22 +8,28 @@ import {
   tint,
 } from "@/components/ui/squish";
 import Avatar from "@/components/ui/squish/Avatar";
+import { PlushButton } from "@/components/ui/squish/PlushButton";
 import { auth, db } from "@/lib/firebaseConfig";
-import { UserFriend } from "@/lib/handleFriends";
+import { onRemoveFriend, UserFriend } from "@/lib/handleFriends";
 import { formatTimestamp } from "@/lib/util";
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Modal,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from "react-native";
 
 const showStreak = false;
+const showDeleteHistory = false;
+
+type RemoveState = "idle" | "confirming" | "removing" | "done" | "error";
 
 export default function FriendStatsModal() {
   const { friendId } = useLocalSearchParams<{
@@ -33,6 +39,9 @@ export default function FriendStatsModal() {
   const [friend, setFriend] = useState<UserFriend | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+
+  const [removeState, setRemoveState] = useState<RemoveState>("idle");
+  const [deleteHistory, setDeleteHistory] = useState(false);
 
   useEffect(() => {
     const me = auth.currentUser;
@@ -52,6 +61,17 @@ export default function FriendStatsModal() {
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
   }, [friendId]);
+
+  const handleRemoveFriend = async () => {
+    if (!friend) return;
+    setRemoveState("removing");
+    try {
+      await onRemoveFriend(friendId, deleteHistory);
+      setRemoveState("done");
+    } catch {
+      setRemoveState("error");
+    }
+  };
 
   if (loading) {
     return (
@@ -75,99 +95,203 @@ export default function FriendStatsModal() {
   const streak = friend.numStreakDays ?? 0;
 
   return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* identity */}
-      <View style={styles.identity}>
-        <Avatar size={108} />
-        <Text style={styles.name}>{friend.displayName}</Text>
-      </View>
-
-      {/* relationship total */}
-      <View style={styles.totalCard}>
-        <View style={styles.totalIcon}>
-          <Ionicons name="heart" size={24} color={colors.blush} />
-        </View>
-        <View style={styles.totalTextWrap}>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalNumber}>{together}</Text>
-            <Text style={styles.totalLabel}>hugs together</Text>
-          </View>
-          <Text style={styles.totalSub}>since you became friends</Text>
-        </View>
-      </View>
-
-      {/* directional split */}
-      <View style={styles.splitRow}>
-        <View style={styles.splitCard}>
-          <View style={[styles.splitIcon, { backgroundColor: colors.soft }]}>
-            <Ionicons name="paper-plane" size={20} color={colors.primary} />
-          </View>
-          <Text style={styles.splitNumber}>{sent}</Text>
-          <Text style={styles.splitLabel}>Hugs you sent</Text>
+    <>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* identity */}
+        <View style={styles.identity}>
+          <Avatar size={108} />
+          <Text style={styles.name}>{friend.displayName}</Text>
         </View>
 
-        <View style={styles.splitCard}>
-          <View
-            style={[
-              styles.splitIcon,
-              { backgroundColor: tint(colors.blush, 0.85) },
-            ]}
-          >
-            <Ionicons name="gift" size={20} color={colors.blush} />
+        {/* relationship total */}
+        <View style={styles.totalCard}>
+          <View style={styles.totalIcon}>
+            <Ionicons name="heart" size={24} color={colors.blush} />
           </View>
-          <Text style={styles.splitNumber}>{received}</Text>
-          <Text style={styles.splitLabel}>Hugs you got back</Text>
+          <View style={styles.totalTextWrap}>
+            <View style={styles.totalRow}>
+              <Text style={styles.totalNumber}>{together}</Text>
+              <Text style={styles.totalLabel}>hugs together</Text>
+            </View>
+            <Text style={styles.totalSub}>since you became friends</Text>
+          </View>
         </View>
-      </View>
 
-      {/* streak */}
-      {showStreak && (
-        <View style={styles.streakCard}>
-          <View style={styles.streakIcon}>
-            <Ionicons name="sparkles" size={20} color={colors.butter} />
+        {/* directional split */}
+        <View style={styles.splitRow}>
+          <View style={styles.splitCard}>
+            <View style={[styles.splitIcon, { backgroundColor: colors.soft }]}>
+              <Ionicons name="paper-plane" size={20} color={colors.primary} />
+            </View>
+            <Text style={styles.splitNumber}>{sent}</Text>
+            <Text style={styles.splitLabel}>Hugs you sent</Text>
           </View>
-          <View>
-            <Text style={styles.streakNumber}>{streak}-day streak</Text>
-            <Text style={styles.streakSub}>
-              {streak > 0 ? "hugged every day" : "no streak yet"}
+
+          <View style={styles.splitCard}>
+            <View
+              style={[
+                styles.splitIcon,
+                { backgroundColor: tint(colors.blush, 0.85) },
+              ]}
+            >
+              <Ionicons name="gift" size={20} color={colors.blush} />
+            </View>
+            <Text style={styles.splitNumber}>{received}</Text>
+            <Text style={styles.splitLabel}>Hugs you got back</Text>
+          </View>
+        </View>
+
+        {/* streak */}
+        {showStreak && (
+          <View style={styles.streakCard}>
+            <View style={styles.streakIcon}>
+              <Ionicons name="sparkles" size={20} color={colors.butter} />
+            </View>
+            <View>
+              <Text style={styles.streakNumber}>{streak}-day streak</Text>
+              <Text style={styles.streakSub}>
+                {streak > 0 ? "hugged every day" : "no streak yet"}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* timestamp rows */}
+        <View style={styles.infoCard}>
+          <View style={styles.infoRow}>
+            <View style={styles.infoIcon}>
+              <Ionicons name="time-outline" size={18} color={colors.primary} />
+            </View>
+            <Text style={styles.infoLabel}>last hug you sent</Text>
+            <Text style={styles.infoValue}>
+              {friend.lastSentHug
+                ? formatTimestamp(friend.lastSentHug.toDate())
+                : "—"}
+            </Text>
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.infoRow}>
+            <View style={styles.infoIcon}>
+              <Ionicons
+                name="people-outline"
+                size={18}
+                color={colors.primary}
+              />
+            </View>
+            <Text style={styles.infoLabel}>huggers since</Text>
+            <Text style={styles.infoValue}>
+              {friend.friendedAt
+                ? formatTimestamp(friend.friendedAt.toDate())
+                : "—"}
             </Text>
           </View>
         </View>
-      )}
-
-      {/* timestamp rows */}
-      <View style={styles.infoCard}>
-        <View style={styles.infoRow}>
-          <View style={styles.infoIcon}>
-            <Ionicons name="time-outline" size={18} color={colors.primary} />
-          </View>
-          <Text style={styles.infoLabel}>last hug you sent</Text>
-          <Text style={styles.infoValue}>
-            {friend.lastSentHug
-              ? formatTimestamp(friend.lastSentHug.toDate())
-              : "—"}
-          </Text>
+        {/* remove friend */}
+        <View style={styles.removeWrap}>
+          <PlushButton
+            label="remove friend"
+            variant={"blush"}
+            onPress={() => setRemoveState("confirming")}
+          />
         </View>
+      </ScrollView>
 
-        <View style={styles.divider} />
+      {/* confirm / progress / success modal */}
+      <Modal
+        visible={removeState !== "idle"}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (removeState === "confirming") setRemoveState("idle");
+        }}
+      >
+        <View style={styles.backdrop}>
+          <View style={styles.sheet}>
+            {removeState === "done" ? (
+              <>
+                <View style={styles.doneIcon}>
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={48}
+                    color={colors.mint}
+                  />
+                </View>
+                <Text style={styles.sheetTitle}>Removed</Text>
+                <Text style={styles.sheetBody}>
+                  {friend.displayName} is no longer in your huggers.
+                </Text>
+                <PlushButton
+                  label="Done"
+                  variant="primary"
+                  fullWidth
+                  onPress={() => router.back()}
+                />
+              </>
+            ) : (
+              <>
+                <Text style={styles.sheetTitle}>Remove friend?</Text>
+                <Text style={styles.sheetBody}>
+                  Are you sure you want to remove {friend.displayName} from your
+                  huggers?
+                </Text>
 
-        <View style={styles.infoRow}>
-          <View style={styles.infoIcon}>
-            <Ionicons name="people-outline" size={18} color={colors.primary} />
+                {showDeleteHistory && (
+                  <View style={styles.toggleRow}>
+                    <View style={styles.toggleText}>
+                      <Text style={styles.toggleLabel}>
+                        Also delete history
+                      </Text>
+                      <Text style={styles.toggleSub}>
+                        Permanently removes the hugs you exchanged
+                      </Text>
+                    </View>
+                    <Switch
+                      value={deleteHistory}
+                      onValueChange={setDeleteHistory}
+                      disabled={removeState === "removing"}
+                      trackColor={{ false: colors.soft, true: colors.blush }}
+                      thumbColor={colors.surface}
+                    />
+                  </View>
+                )}
+
+                {removeState === "error" && (
+                  <Text style={styles.errorText}>
+                    Something went wrong. Please try again.
+                  </Text>
+                )}
+
+                <View style={styles.actions}>
+                  <PlushButton
+                    label="cancel"
+                    variant="soft"
+                    onPress={() => {
+                      setRemoveState("idle");
+                      setDeleteHistory(false);
+                    }}
+                    disabled={removeState === "removing"}
+                    style={styles.actionBtn}
+                  />
+                  <PlushButton
+                    label={removeState === "removing" ? "removing…" : "remove"}
+                    variant="blush"
+                    onPress={handleRemoveFriend}
+                    disabled={removeState === "removing"}
+                    style={styles.actionBtn}
+                  />
+                </View>
+              </>
+            )}
           </View>
-          <Text style={styles.infoLabel}>huggers since</Text>
-          <Text style={styles.infoValue}>
-            {friend.friendedAt
-              ? formatTimestamp(friend.friendedAt.toDate())
-              : "—"}
-          </Text>
         </View>
-      </View>
-    </ScrollView>
+      </Modal>
+    </>
   );
 }
 
@@ -296,6 +420,53 @@ const styles = StyleSheet.create({
     fontFamily: font.ui,
     color: colors.plumInk,
   },
+  removeWrap: { marginTop: spacing.sm },
   infoValue: { fontSize: 15, fontFamily: font.uiBold, color: colors.plumInk },
   divider: { height: 1, backgroundColor: colors.mistBg },
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(74, 66, 104, 0.45)",
+    justifyContent: "center",
+    paddingHorizontal: spacing.xl,
+  },
+  sheet: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    gap: spacing.lg,
+    ...shadow,
+  },
+  sheetTitle: {
+    fontSize: 22,
+    fontFamily: font.displayBold,
+    color: colors.plumInk,
+    textAlign: "center",
+  },
+  sheetBody: {
+    fontSize: 16,
+    fontFamily: font.ui,
+    color: colors.softInk,
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.lg,
+    backgroundColor: colors.mistBg,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+  },
+  toggleText: { flex: 1, gap: 2 },
+  toggleLabel: { fontSize: 15, fontFamily: font.uiBold, color: colors.plumInk },
+  toggleSub: { fontSize: 13, fontFamily: font.ui, color: colors.softInk },
+  errorText: {
+    fontSize: 14,
+    fontFamily: font.ui,
+    color: colors.blush,
+    textAlign: "center",
+  },
+  actions: { flexDirection: "row", gap: spacing.md },
+  actionBtn: { flex: 1 },
+  doneIcon: { alignItems: "center" },
 });

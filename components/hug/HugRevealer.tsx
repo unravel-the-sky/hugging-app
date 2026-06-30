@@ -163,7 +163,10 @@ export default function HugReveal({
 
       {/* text-only hug → message box */}
       {message && (
-        <View style={styles.messageWrap} pointerEvents="none">
+        <View
+          style={[styles.messageWrap, { bottom: hasImage ? 140 : "50%" }]}
+          pointerEvents="none"
+        >
           <View style={styles.messageCard}>
             <Text style={styles.messageText}>
               {message !== "" ? `${message}` : "Sending you a hug 💜"}
@@ -200,7 +203,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
-    bottom: 160, // sits above the buttons
+    // bottom: 160, // sits above the buttons
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 36,

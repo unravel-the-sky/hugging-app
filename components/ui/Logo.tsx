@@ -13,7 +13,9 @@ const AnimatedG = Animated.createAnimatedComponent(G);
 
 const HUG_VALUE = 40;
 
-export function Logo() {
+type LogoSize = "s" | "m" | "l";
+
+export function Logo({ size = "m" }: { size?: LogoSize }) {
   const lowerArmTranslateX = useSharedValue(0);
   const upperArmTranslateX = useSharedValue(5);
   const lowerArmRotate = useSharedValue(0);
@@ -72,7 +74,12 @@ export function Logo() {
   });
 
   return (
-    <Svg width={160} height={180} viewBox="0 0 1504 1664" fill="none">
+    <Svg
+      width={size === "m" ? 160 : 120}
+      height={size === "m" ? 180 : 140}
+      viewBox="0 0 1504 1664"
+      fill="none"
+    >
       <Path
         d="M1188.95 831.561L1308.99 1199.04L1309.09 1199.36L1309.22 1199.69L1448.82 1560.92L816.281 1650.31L163.566 1513.43L431.237 831.866L822.704 698.777L1188.95 831.561Z"
         fill="#FFA87E"

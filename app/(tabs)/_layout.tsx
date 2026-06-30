@@ -23,6 +23,7 @@ import SetupScreen from "../setup";
 import SignInScreen from "../sign-in";
 import { colors } from "../../components/ui/squish/theme";
 import { TabBarContext } from "../context/TabBarContext";
+import { useFriends } from "@/hooks/useFriends";
 
 const getGreetingMessage = (): string => {
   const currentHour = new Date().getHours();
@@ -48,6 +49,7 @@ export default function TabsLayout() {
   const currentUser = auth.currentUser;
   const uid = currentUser?.uid;
   const { hugs, isLoading: isLoadingHugs } = useHugs(uid);
+  const { friendRequests } = useFriends(auth.currentUser?.uid);
 
   const segments = useSegments();
   const isOnSetup = segments[0] === "setup";
@@ -118,6 +120,13 @@ export default function TabsLayout() {
             <NativeTabs.Trigger name="friends">
               <Label>Friends</Label>
               <NativeTabs.Trigger.Icon sf="person.2.fill" md="settings" />
+              {friendRequests.length > 0 && (
+                <NativeTabs.Trigger.Badge>
+                  {friendRequests.length > 9
+                    ? "9+"
+                    : friendRequests.length.toString()}
+                </NativeTabs.Trigger.Badge>
+              )}
             </NativeTabs.Trigger>
             <NativeTabs.Trigger name="hugs">
               <Label>Hugs</Label>

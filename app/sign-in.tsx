@@ -1,3 +1,5 @@
+import { Logo } from "@/components/ui/Logo";
+import { PlushButton } from "@/components/ui/squish/PlushButton";
 import { auth } from "@/lib/firebaseConfig";
 import {
   GoogleSignin,
@@ -15,6 +17,7 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -140,7 +143,8 @@ export default function SignInScreen() {
   return (
     <View style={styles.content}>
       <View style={styles.header}>
-        <Text style={styles.emoji}>🤗</Text>
+        {/* <Text style={styles.emoji}>🤗</Text> */}
+        <Logo size="s" />
         <Text style={styles.title}>
           {isExistingUser ? "Welcome back" : "Hello there!"}
         </Text>
@@ -152,17 +156,11 @@ export default function SignInScreen() {
       </View>
 
       <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[styles.button, isLoading && styles.buttonDisabled]}
+        <PlushButton
+          label={"continue with google"}
           onPress={handleGoogleSignIn}
           disabled={isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="#FFF" />
-          ) : (
-            <Text style={styles.buttonText}>Continue with Google</Text>
-          )}
-        </TouchableOpacity>
+        />
 
         {/* Apple Sign-In button slot — we'll add this in the next phase */}
         {/* commenting out for now since we don't have apple auth configured yet, it seems to need GCIP which i don't want to bother right now */}
@@ -181,12 +179,12 @@ export default function SignInScreen() {
         )} */}
 
         {__DEV__ && (
-          <TouchableOpacity
-            style={[styles.devButton, isLoading && styles.buttonDisabled]}
+          <PlushButton
+            label={"dev: Skip Sign-In"}
             onPress={() => signInAnonymously(auth)}
-          >
-            <Text>Dev: Skip Sign-In</Text>
-          </TouchableOpacity>
+            disabled={isLoading}
+            variant="soft"
+          />
         )}
       </View>
     </View>

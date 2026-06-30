@@ -180,6 +180,7 @@ const functions = getFunctions(); // or getFunctions(app, "your-region") if not 
 // one callable per function
 const acceptFriendRequestFn = httpsCallable(functions, "acceptFriendRequest");
 const declineFriendRequestFn = httpsCallable(functions, "declineFriendRequest");
+const removeFriendFn = httpsCallable(functions, "removeFriend");
 
 export const onAccept = async (requestId: string) => {
   try {
@@ -198,4 +199,30 @@ export const onDecline = async (requestId: string) => {
   } catch (e: any) {
     console.log(e.code, e.message);
   }
+};
+
+export const onRemoveFriend = async (
+  friendId: string,
+  deleteHistory: boolean,
+): Promise<boolean> => {
+  try {
+    const result = await removeFriendFn({ friendId, deleteHistory });
+    return (result.data as { ok: boolean }).ok;
+  } catch (e: any) {
+    console.log("removeFriend failed:", e.code, e.message);
+    throw e; // let the UI show an error state
+  }
+};
+
+export const getPendingOutgoingUids = async (): Promise<Set<string>> => {
+  const me = auth.currentUser;
+  if (!me) return new Set();
+
+  const q = query(
+    collection(db, "friendshipRequests"),
+    where("from", "==", me.uid),
+    where("status", "==", "pending"),
+  );
+  const snap = await getDocs(q);
+  return new Set(snap.docs.map((d) => d.get("to") as string));
 };
