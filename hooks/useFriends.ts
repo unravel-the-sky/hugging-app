@@ -9,6 +9,7 @@ import {
   where,
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
+import { useCurrentUser } from "./useCurrentUser";
 
 export type Friend = {
   uid: string;
@@ -19,11 +20,14 @@ export type Friend = {
   online?: boolean;
 };
 
-export function useFriends(uid: string | undefined) {
+export function useFriends() {
   const [friends, setFriends] = useState<UserFriend[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendshipRequest[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
+
+  const { authUser, user } = useCurrentUser();
+  const uid = authUser?.uid ?? user?.uid; // cached user has the uid too
 
   useEffect(() => {
     console.log("im here now and uid is: ", uid);

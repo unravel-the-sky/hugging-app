@@ -41,15 +41,13 @@ const getGreetingMessage = (): string => {
 };
 
 export default function TabsLayout() {
-  const { authUser, user, loading, isInitializing } = useCurrentUser();
+  const { authUser, user, isHydrating, isSyncing } = useCurrentUser();
   const [unreadHugsCount, setUnreadHugsCount] = useState<number>(0);
 
   const [isTabBarHidden, setIsTabBarHidden] = useState(false);
 
-  const currentUser = auth.currentUser;
-  const uid = currentUser?.uid;
-  const { hugs, isLoading: isLoadingHugs } = useHugs(uid);
-  const { friendRequests } = useFriends(auth.currentUser?.uid);
+  const { hugs, isLoading: isLoadingHugs } = useHugs();
+  const { friendRequests } = useFriends();
 
   const segments = useSegments();
   const isOnSetup = segments[0] === "setup";
@@ -57,7 +55,7 @@ export default function TabsLayout() {
   const colorScheme = useColorScheme();
 
   console.log(
-    `TabsLayout is called, ${loading} and ${user} and userId: ${uid}`,
+    `TabsLayout is called, isHydaring: ${isHydrating} and userId: ${user?.uid}`,
   );
 
   useEffect(() => {
@@ -67,9 +65,7 @@ export default function TabsLayout() {
     }
   }, [hugs, isLoadingHugs]);
 
-  // console.log("user from firebase is: ", user);
-
-  if (loading) {
+  if (isHydrating) {
     return <Loader />;
   }
 

@@ -146,9 +146,8 @@ const FriendRequestRow = ({
 export default function FriendsListScreen() {
   const [search, setSearch] = useState("");
   const { startHugWithNote } = useCreateHugWithNote();
-  const { friends, friendRequests, isLoading } = useFriends(
-    auth.currentUser?.uid,
-  );
+
+  const { friends, friendRequests, isLoading } = useFriends();
 
   const filtered = useMemo(() => {
     const q = search.trim().toLocaleLowerCase();

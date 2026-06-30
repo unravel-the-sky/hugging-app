@@ -13,7 +13,7 @@ import { normalizeUsername } from "./util";
 
 type AvatarType = "male" | "female";
 
-export type User = {
+export type UserDoc = {
   displayName: string;
   friends: string[];
   avatar?: AvatarType;
@@ -25,6 +25,8 @@ export type User = {
     lastHugAt?: FieldValue;
   };
 };
+
+export type User = UserDoc & { uid: string };
 
 export async function createUserIfNeeded(displayName: string): Promise<string> {
   // check auth
@@ -39,7 +41,7 @@ export async function createUserIfNeeded(displayName: string): Promise<string> {
   const snapshop = await getDoc(userRef);
 
   if (!snapshop.exists()) {
-    const newUser: User = {
+    const newUser: UserDoc = {
       displayName,
       createdAt: serverTimestamp(),
       friends: [],
@@ -78,7 +80,7 @@ export async function createUserWithUsername(
       throw new Error("USERNAME_TAKEN");
     }
 
-    const newUser: User = {
+    const newUser: UserDoc = {
       displayName,
       createdAt: serverTimestamp(),
       friends: [],
@@ -113,12 +115,12 @@ export async function updateUserAvatar(avatar: AvatarType) {
   return true;
 }
 
-export async function getUserFromCollection(uid: string) {
+export async function getUserFromCollection(uid: string): Promise<User | null> {
   const userRef = doc(db, "users", uid);
   const snap = await getDoc(userRef);
 
   if (snap.exists()) {
-    const userData = snap.data() as User;
+    const userData = { ...snap.data(), uid: snap.id } as User;
     console.log("userdata is: ", userData);
 
     return userData;
