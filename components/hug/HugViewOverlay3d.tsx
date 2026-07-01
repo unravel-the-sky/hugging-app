@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import HugRevealer from "./HugRevealer";
+import HugRevealer from "./HugRevealerNEW";
 import { PlushButton } from "../ui/squish/PlushButton";
 import { fixFirebaseUrl } from "./HugImage";
 import { useHugTexture } from "@/hooks/useHugTexture";
