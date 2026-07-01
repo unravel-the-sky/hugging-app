@@ -6,6 +6,7 @@ import {
   statusCodes,
 } from "@react-native-google-signin/google-signin";
 import * as AppleAuthentication from "expo-apple-authentication";
+import * as Crypto from "expo-crypto";
 import {
   GoogleAuthProvider,
   linkWithCredential,
@@ -14,15 +15,7 @@ import {
   signInWithCredential,
 } from "firebase/auth";
 import React, { useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Alert, Platform, StyleSheet, Text, View } from "react-native";
 
 export default function SignInScreen() {
   const [isLoading, setIsLoading] = useState(false);
@@ -82,40 +75,41 @@ export default function SignInScreen() {
   };
 
   const handleAppleSignIn = async () => {
-    // handle apple signin flow
     setIsLoading(true);
-
     try {
-      // request signin from apple
+      // 1. make a raw nonce, hash it for Apple
+      const rawNonce = Crypto.randomUUID();
+      const hashedNonce = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        rawNonce,
+      );
+
+      // 2. Apple gets the HASHED nonce
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
+        nonce: hashedNonce,
       });
 
-      // then get identity token from the response and create a firebase credential
-      const { identityToken, email, fullName } = credential;
-      if (!identityToken) {
+      const { identityToken } = credential;
+      if (!identityToken)
         throw new Error("No identity token returned from Apple");
-      }
 
-      // build firebase credential with the token
+      // 3. Firebase gets the RAW nonce
       const provider = new OAuthProvider("apple.com");
       const firebaseCredential = provider.credential({
         idToken: identityToken,
+        rawNonce,
       });
 
-      // link and signin
       const currentUser = auth.currentUser;
-
       if (currentUser?.isAnonymous) {
         await linkWithCredential(currentUser, firebaseCredential);
       } else {
         await signInWithCredential(auth, firebaseCredential);
       }
-
-      // onAuthStateChanged will fire from useCurrentUser; routing updates automatically
     } catch (error) {
       handleAppleSignInError(error);
     } finally {

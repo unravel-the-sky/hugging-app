@@ -9,7 +9,9 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.huggingapp",
+      "bundleIdentifier": "com.sevgiyle.huggingapp",
+      "usesAppleSignIn": true,
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSPhotoLibraryAddUsageDescription": "Save your polaroids to your photo library.",
@@ -36,7 +38,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/splash-icon-mine.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
@@ -52,7 +54,7 @@
       [
         "@react-native-google-signin/google-signin",
         {
-          "iosUrlScheme": "com.googleusercontent.apps.811741030521-i1d275g4v5rdmmsm8ehjvnj4djh34eur"
+          "iosUrlScheme": "com.googleusercontent.apps.811741030521-hu2npg8747euc3pucn18kcbkni6kp2f3"
         }
       ],
       "expo-apple-authentication",

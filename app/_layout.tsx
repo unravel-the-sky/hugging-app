@@ -28,18 +28,17 @@ export default function RootLayout() {
     Caveat_600SemiBold,
   });
 
-  const { user, loading, isInitializing } = useCurrentUser();
+  const { user, isHydrating } = useCurrentUser();
   const tokenRegisteredRef = useRef(false);
 
   useEffect(() => {
     GoogleSignin.configure({
       webClientId: GOOGLE_WEB_CLIENT_ID,
-      iosClientId: GOOGLE_IOS_CLIENT_ID,
     });
   }, []);
 
   useEffect(() => {
-    if (loading) return;
+    if (isHydrating) return;
     if (!user) return;
     if (tokenRegisteredRef.current) return;
 
@@ -48,7 +47,7 @@ export default function RootLayout() {
     const currentUser = auth.currentUser;
 
     if (currentUser) savePushTokenOnUser(currentUser.uid);
-  }, [loading, user]);
+  }, [isHydrating, user]);
 
   useEffect(() => {
     console.log("HALLOOOO im registering the listener here");
