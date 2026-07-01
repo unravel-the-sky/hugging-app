@@ -50,11 +50,10 @@ export function useFriends() {
 
     console.log("fetching friends..");
 
-    const unsub2 = onSnapshot(friendsRef, (snap) =>
-      setFriends(snap.docs.map((d) => d.data() as UserFriend)),
-    );
-
-    setIsLoading(false);
+    const unsub2 = onSnapshot(friendsRef, (snap) => {
+      setFriends(snap.docs.map((d) => d.data() as UserFriend));
+      setIsLoading(false);
+    });
 
     return () => {
       unsub1();
