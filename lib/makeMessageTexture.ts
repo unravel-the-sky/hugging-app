@@ -38,7 +38,7 @@ export const makeMessageTexture = (
 
   const para = Skia.ParagraphBuilder.Make(
     { textAlign: TextAlign.Center },
-    // opts.fontMgr, // undefined → system font; pass a provider for Caveat
+    opts.fontMgr, // undefined → system font; pass a provider for Caveat
   )
     .pushStyle({
       color: Skia.Color(opts.ink ?? "#4A3A6B"),

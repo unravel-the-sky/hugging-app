@@ -7,12 +7,13 @@ import * as THREE from "three";
 
 import { TabBarContext } from "@/app/context/TabBarContext";
 import { TiltRef, useTilt } from "@/hooks/useTilt";
+import { makeMessageTexture } from "@/lib/makeMessageTexture";
+import { Fredoka_700Bold } from "@expo-google-fonts/fredoka";
+import { useFonts as useSkiaFonts } from "@shopify/react-native-skia";
 import { useFocusEffect } from "expo-router";
 import { FiberCanvas } from "../three/FiberCanvas";
 import { PlushButton } from "../ui/squish/PlushButton";
 import { HeartsGrid } from "./HeartsGrid";
-import { makeMessageTexture } from "@/lib/makeMessageTexture";
-import { useFonts } from "expo-font";
 
 const REVEAL_BG = ["#EFE0F6", "#F7C9DC"] as const;
 const MAX_DRAG = (10 * Math.PI) / 180; // ~10° free tilt
@@ -138,8 +139,8 @@ export default function HugReveal({
 
   const { setIsTabBarHidden } = use(TabBarContext);
 
-  const customFontMgr = useFonts({
-    CuteFont: require("@/assets/fonts/JustMeAgainDownHere-Regular.ttf"),
+  const fontMgr = useSkiaFonts({
+    Fredoka: [Fredoka_700Bold],
   });
 
   useFocusEffect(() => {
@@ -153,9 +154,12 @@ export default function HugReveal({
     if (!canFlip || !loaded) return null;
     return makeMessageTexture(message!.trim(), loaded.aspect, {
       bg: "#FFFFFF",
-      ink: "#4A3A6B",
+      ink: "#270865",
+      fontMgr: fontMgr ?? undefined, // the SkTypefaceFontProvider
+      fontFamilies: ["Fredoka"],
+      fontSize: 96,
     });
-  }, [canFlip, message, loaded]);
+  }, [canFlip, loaded, message, fontMgr]);
 
   useEffect(() => () => messageTexture?.dispose(), [messageTexture]);
 
