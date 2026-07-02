@@ -23,6 +23,10 @@ export const makeMessageTexture = (
   aspect: number,
   opts: Opts = {},
 ): THREE.DataTexture | null => {
+  if (!opts.fontMgr) {
+    console.warn("makeMessageTexture: fontMgr not ready, skipping");
+    return null;
+  }
   const texH = opts.baseHeight ?? 1024;
   const texW = Math.max(8, Math.round(texH * aspect));
   const pad = opts.pad ?? Math.round(texW * 0.1);

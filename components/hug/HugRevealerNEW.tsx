@@ -11,9 +11,18 @@ import { makeMessageTexture } from "@/lib/makeMessageTexture";
 import { Fredoka_700Bold } from "@expo-google-fonts/fredoka";
 import { useFonts as useSkiaFonts } from "@shopify/react-native-skia";
 import { useFocusEffect } from "expo-router";
+import {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
 import { FiberCanvas } from "../three/FiberCanvas";
 import { PlushButton } from "../ui/squish/PlushButton";
 import { HeartsGrid } from "./HeartsGrid";
+import { font } from "../ui/squish";
 
 const REVEAL_BG = ["#EFE0F6", "#F7C9DC"] as const;
 const MAX_DRAG = (10 * Math.PI) / 180; // ~10° free tilt
@@ -21,6 +30,17 @@ const DRAG_SENS = 0.004; // gentle tilt (non-flip case)
 const FLIP_SENS = 0.0075; // horizontal flip sensitivity — tune to taste
 const FACE_INSET = 1; // photo/message inset → cream postcard border
 const DEPTH = 0.03; // card thickness (world units)
+const HINT_PERIOD = 2.8; // seconds between peeks
+const HINT_DUR = 1.15; // length of one peek
+const HINT_PEEK = -Math.PI * 0.06; // ~18°, 10% of the flip, toward the flip direction
+
+// 0 → 1 → 0 smooth bump, shared by peek + glow so they stay in sync
+const hintPhase = (t: number) => {
+  const tt = t % HINT_PERIOD;
+  if (tt >= HINT_DUR) return 0;
+  const p = tt / HINT_DUR;
+  return Math.sin(p * Math.PI);
+};
 
 const clamp = (v: number, lo: number, hi: number) =>
   Math.max(lo, Math.min(hi, v));
@@ -30,6 +50,7 @@ type LoadedTexture = { texture: THREE.Texture; aspect: number };
 
 interface HugRevealProps {
   loaded: LoadedTexture | null;
+  loading: boolean;
   hasImage: boolean;
   message?: string;
   onHugBack: () => void;
@@ -42,18 +63,63 @@ const easeOutBack = (t: number) => {
   return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
 };
 
+function HintGlow({
+  canFlip,
+  dragging,
+  hasFlipped,
+  cardWidth,
+}: {
+  canFlip: boolean;
+  dragging: RefObject<boolean>;
+  hasFlipped: RefObject<boolean>;
+  cardWidth: number;
+}) {
+  const ref = useRef<THREE.PointLight>(null);
+  useFrame((state, delta) => {
+    const l = ref.current;
+    if (!l) return;
+    const hintOn = canFlip && !hasFlipped.current && !dragging.current;
+    const target = hintOn ? 1.6 * hintPhase(state.clock.elapsedTime) : 0;
+    l.intensity += (target - l.intensity) * Math.min(1, delta * 8);
+  });
+  return (
+    <pointLight
+      ref={ref}
+      position={[cardWidth / 2 + 0.55, 1, 1.1]}
+      color="#FFB8E0"
+      distance={5}
+      decay={2}
+      intensity={0}
+    />
+  );
+}
+
+function LoadingHug() {
+  return (
+    <View style={styles.loadingWrap} pointerEvents="none">
+      <Text style={styles.loadingText}>unwrapping your hug..</Text>
+    </View>
+  );
+}
+
 function Postcard({
   texture,
   aspect,
   messageTexture,
   rotTarget,
   rotCurrent,
+  canFlip,
+  dragging,
+  hasFlipped,
 }: {
   texture: THREE.Texture;
   aspect: number;
   messageTexture: THREE.Texture | null;
   rotTarget: Vec2Ref;
   rotCurrent: Vec2Ref;
+  canFlip: boolean;
+  dragging: RefObject<boolean>;
+  hasFlipped: RefObject<boolean>;
 }) {
   const ref = useRef<THREE.Group>(null);
   const enter = useRef(0);
@@ -62,7 +128,9 @@ function Postcard({
   const faceW = width * FACE_INSET;
   const faceH = height * FACE_INSET;
 
-  useFrame((_, delta) => {
+  const hintOffset = useRef(0);
+
+  useFrame((state, delta) => {
     const g = ref.current;
     if (!g) return;
     enter.current = Math.min(1, enter.current + delta * 2.2);
@@ -71,8 +139,15 @@ function Postcard({
     const k = Math.min(1, delta * 12);
     rotCurrent.current.x += (rotTarget.current.x - rotCurrent.current.x) * k;
     rotCurrent.current.y += (rotTarget.current.y - rotCurrent.current.y) * k;
+
+    // idle peek hint — additive, never touches rotTarget/rotCurrent
+    const hintOn = canFlip && !hasFlipped.current && !dragging.current;
+    const target = hintOn ? HINT_PEEK * hintPhase(state.clock.elapsedTime) : 0;
+    hintOffset.current +=
+      (target - hintOffset.current) * Math.min(1, delta * 10);
+
     g.rotation.x = rotCurrent.current.x;
-    g.rotation.y = rotCurrent.current.y;
+    g.rotation.y = rotCurrent.current.y + hintOffset.current;
   });
 
   return (
@@ -127,6 +202,7 @@ function Postcard({
 
 export default function HugReveal({
   loaded,
+  loading,
   hasImage,
   message,
   onHugBack,
@@ -136,6 +212,8 @@ export default function HugReveal({
   const rotCurrent = useRef({ x: 0, y: 0 });
   const rotStart = useRef({ x: 0, y: 0 });
   const tilt = useTilt();
+  const dragging = useRef(false);
+  const hasFlipped = useRef(false);
 
   const { setIsTabBarHidden } = use(TabBarContext);
 
@@ -151,11 +229,11 @@ export default function HugReveal({
   const canFlip = hasImage && !!loaded && !!message && message.trim() !== "";
 
   const messageTexture = useMemo(() => {
-    if (!canFlip || !loaded) return null;
+    if (!canFlip || !loaded || !fontMgr) return null;
     return makeMessageTexture(message!.trim(), loaded.aspect, {
       bg: "#FFFFFF",
       ink: "#270865",
-      fontMgr: fontMgr ?? undefined, // the SkTypefaceFontProvider
+      fontMgr,
       fontFamilies: ["Fredoka"],
       fontSize: 96,
     });
@@ -166,6 +244,7 @@ export default function HugReveal({
   const pan = Gesture.Pan()
     .runOnJS(true)
     .onBegin(() => {
+      dragging.current = true;
       rotStart.current = { x: rotCurrent.current.x, y: rotCurrent.current.y };
     })
     .onUpdate((e) => {
@@ -192,16 +271,18 @@ export default function HugReveal({
       }
     })
     .onEnd(() => {
+      dragging.current = false;
       rotTarget.current.x = 0;
       if (canFlip) {
-        // settle on the nearer face: front (0) or back (-π)
-        rotTarget.current.y = rotTarget.current.y < -Math.PI / 2 ? -Math.PI : 0;
+        const flipped = rotTarget.current.y < -Math.PI / 2;
+        rotTarget.current.y = flipped ? -Math.PI : 0;
+        if (flipped) hasFlipped.current = true; // hint retires forever
       } else {
         rotTarget.current.y = 0;
       }
     });
 
-  const showOverlay = !canFlip; // message lives on the back when flippable
+  const showOverlay = !hasImage && !canFlip; // message lives on the back when flippable
 
   return (
     <View style={styles.root}>
@@ -212,17 +293,29 @@ export default function HugReveal({
           <HeartsGrid tilt={tilt} />
           <ambientLight intensity={1} />
           {hasImage && <ShineLight tilt={tilt} />}
-          {hasImage && loaded && (
-            <Postcard
-              texture={loaded.texture}
-              aspect={loaded.aspect}
-              messageTexture={messageTexture}
-              rotTarget={rotTarget}
-              rotCurrent={rotCurrent}
-            />
+          {hasImage && loaded && !loading && (
+            <>
+              <HintGlow
+                canFlip={canFlip}
+                dragging={dragging}
+                hasFlipped={hasFlipped}
+                cardWidth={4 * loaded.aspect}
+              />
+              <Postcard
+                texture={loaded.texture}
+                aspect={loaded.aspect}
+                messageTexture={messageTexture}
+                rotTarget={rotTarget}
+                rotCurrent={rotCurrent}
+                canFlip={canFlip}
+                dragging={dragging}
+                hasFlipped={hasFlipped}
+              />
+            </>
           )}
         </FiberCanvas>
       </GestureDetector>
+      {loading && <LoadingHug />}
 
       {showOverlay && (
         <View
@@ -301,5 +394,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     bottom: 60,
     gap: 12,
+  },
+
+  // loading stuff
+  loadingWrap: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingHeart: { fontSize: 44 },
+  loadingText: {
+    fontFamily: font.displayBold,
+    fontSize: 24,
+    color: "#4A3A6B",
   },
 });

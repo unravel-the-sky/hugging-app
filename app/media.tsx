@@ -104,18 +104,10 @@ export default function Media({
         height: cropH,
       });
 
-      // const captureFile = new File(captureUri);
-      // const base64 = await captureFile.base64();
-
-      // // saving
-      // const filename = `polaroid-hug-${Date.now()}.png`;
-      // const file = new File(Paths.cache, filename);
-      // file.create();
-      // file.write(base64, { encoding: "base64" });
-
       const rendered = await context.renderAsync();
       const cropped = await rendered.saveAsync({
         format: ImageManipulator.SaveFormat.JPEG,
+        compress: 0.6,
       });
 
       const response = await fetch(cropped.uri);

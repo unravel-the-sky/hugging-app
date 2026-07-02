@@ -13,8 +13,12 @@ export type LoadedTexture = { texture: THREE.Texture; aspect: number };
  * set — call it from the sealed screen so the texture is ready (or nearly)
  * by the time the user taps "Open it".
  */
-export function useHugTexture(photoUri?: string): LoadedTexture | null {
+export function useHugTexture(photoUri?: string): {
+  loaded: LoadedTexture | null;
+  loading: boolean;
+} {
   const [loaded, setLoaded] = useState<LoadedTexture | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!photoUri) {
@@ -26,6 +30,7 @@ export function useHugTexture(photoUri?: string): LoadedTexture | null {
 
     (async () => {
       try {
+        setLoading(true);
         const res = await fetch(photoUri);
         const blob = await res.blob();
         const bitmap = await createImageBitmap(blob);
@@ -36,6 +41,8 @@ export function useHugTexture(photoUri?: string): LoadedTexture | null {
         setLoaded({ texture: tex, aspect: bitmap.width / bitmap.height });
       } catch (err) {
         console.warn("[useHugTexture] load failed", err);
+      } finally {
+        setLoading(false);
       }
     })();
 
@@ -45,5 +52,5 @@ export function useHugTexture(photoUri?: string): LoadedTexture | null {
     };
   }, [photoUri]);
 
-  return loaded;
+  return { loading, loaded };
 }
