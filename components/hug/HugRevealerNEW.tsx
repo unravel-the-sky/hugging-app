@@ -11,18 +11,10 @@ import { makeMessageTexture } from "@/lib/makeMessageTexture";
 import { Fredoka_700Bold } from "@expo-google-fonts/fredoka";
 import { useFonts as useSkiaFonts } from "@shopify/react-native-skia";
 import { useFocusEffect } from "expo-router";
-import {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from "react-native-reanimated";
 import { FiberCanvas } from "../three/FiberCanvas";
+import { font } from "../ui/squish";
 import { PlushButton } from "../ui/squish/PlushButton";
 import { HeartsGrid } from "./HeartsGrid";
-import { font } from "../ui/squish";
 
 const REVEAL_BG = ["#EFE0F6", "#F7C9DC"] as const;
 const MAX_DRAG = (10 * Math.PI) / 180; // ~10° free tilt
