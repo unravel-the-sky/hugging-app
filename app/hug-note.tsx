@@ -1,3 +1,4 @@
+import { PlushButton } from "@/components/ui/squish/PlushButton";
 import {
   colors,
   font,
@@ -226,9 +227,7 @@ export default function HugNoteModal() {
 
       {!isEditingNote && (
         <View style={styles.footer}>
-          <Pressable style={styles.sendButton} onPress={handleSend}>
-            <Text style={styles.sendButtonText}>Send hug</Text>
-          </Pressable>
+          <PlushButton label="send hug" onPress={handleSend} />
         </View>
       )}
     </KeyboardAvoidingView>

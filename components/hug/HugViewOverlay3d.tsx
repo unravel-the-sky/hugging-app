@@ -40,7 +40,9 @@ export default function HugViewOverlay({
   onIgnore,
 }: Props) {
   const [opened, setOpened] = useState(false);
-  const loaded = useHugTexture(fixFirebaseUrl(hug?.imagePath || ""));
+  const { loaded, loading } = useHugTexture(
+    fixFirebaseUrl(hug?.imagePath || ""),
+  );
 
   // Reset to sealed whenever a different hug is opened.
   useEffect(() => {
@@ -57,6 +59,7 @@ export default function HugViewOverlay({
         message={hug.note}
         onHugBack={() => onHugBack(hug)}
         onClose={onClose}
+        loading={loading}
       />
     );
   }
