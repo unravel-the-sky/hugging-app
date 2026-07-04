@@ -1,14 +1,5 @@
 import { PlushButton } from "@/components/ui/squish/PlushButton";
-import {
-  colors,
-  font,
-  radius,
-  shadow,
-  spacing,
-  tint,
-} from "../components/ui/squish";
-import { useHugDraft } from "../hooks/useHugDraft";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Image,
@@ -22,6 +13,15 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import {
+  colors,
+  font,
+  radius,
+  shadow,
+  spacing,
+  tint,
+} from "../components/ui/squish";
+import { useHugDraft } from "../hooks/useHugDraft";
 
 const NOTE_MAX_LENGTH = 40;
 
@@ -30,14 +30,13 @@ const pinkSoft = tint(colors.blush, 0.82);
 const dashedBorder = tint(colors.lilac, 0.4);
 
 export default function HugNoteModal() {
-  const { friendName, friendUid } = useLocalSearchParams<{
-    friendName: string;
-    friendUid: string;
-  }>();
-
   const note = useHugDraft((s) => s.note);
   const photoUri = useHugDraft((s) => s.photoUri);
+  const friendUid = useHugDraft((s) => s.to);
+  const friendName = useHugDraft((s) => s.toName);
   const setNote = useHugDraft((s) => s.setNote);
+  const setTo = useHugDraft((s) => s.setTo);
+  const setToName = useHugDraft((s) => s.setToName);
   const reset = useHugDraft((s) => s.reset);
 
   // Local-only editing state for the note card.
@@ -70,21 +69,16 @@ export default function HugNoteModal() {
   const handleAddPostcard = () => {
     router.push({
       pathname: "/take-pic",
-      params: { toUid: friendUid, toName: friendName },
     });
   };
 
   const handleSend = () => {
+    setTo(friendUid);
+    setToName(friendName);
+    setNote(note.trim());
     router.replace({
       pathname: "/(tabs)",
-      params: {
-        toUid: friendUid,
-        toName: friendName,
-        note: note.trim(),
-        imagePath: photoUri ?? "",
-      },
     });
-    reset();
   };
 
   const handleClose = () => {

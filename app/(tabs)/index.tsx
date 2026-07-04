@@ -1,24 +1,23 @@
 import HugController from "@/components/hug/HugController";
-import { AppButton } from "@/components/ui/AppButton";
 import { AppText } from "@/components/ui/AppText";
 import { Logo } from "@/components/ui/Logo";
-import { colors } from "../../components/ui/squish/theme";
+import { PlushButton } from "@/components/ui/squish/PlushButton";
+import { useHugDraft } from "@/hooks/useHugDraft";
 import { SendableHug } from "@/lib/handleHugs";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { PlushButton } from "@/components/ui/squish/PlushButton";
+import { colors } from "../../components/ui/squish/theme";
 
 export default function HomeScreen() {
-  const { toUid, toName, note, imagePath } = useLocalSearchParams<{
-    toUid: string;
-    toName: string;
-    note?: string;
-    imagePath?: string;
-  }>();
+  const toUid = useHugDraft((s) => s.to);
+  const toName = useHugDraft((s) => s.toName);
+  const note = useHugDraft((s) => s.note);
+  const imagePath = useHugDraft((s) => s.photoUri);
+  const reset = useHugDraft((s) => s.reset);
 
-  console.log({ toUid, toName });
+  console.log("hello: ", { toUid, toName, note, imagePath });
   const [sendableHug, setSendableHug] = useState<SendableHug | undefined>(
     undefined,
   );
@@ -31,15 +30,6 @@ export default function HomeScreen() {
     }
   }, [imagePath, note, toName, toUid]);
 
-  useEffect(() => {
-    if (!toUid) {
-      // Alert.alert("Oh nou", "Pls select a friend to send hug to, tenks");
-      // router.push({
-      //   pathname: "/(tabs)/friends",
-      // });
-    }
-  }, [toUid]);
-
   const handleInitiateHug = () => {
     console.log("send to friends here");
     router.push({
@@ -50,6 +40,7 @@ export default function HomeScreen() {
   const handleCompleteHug = () => {
     console.log("i am called and resetting it");
     setHugIsSent(true);
+    reset();
   };
 
   const handleResetHug = () => {
