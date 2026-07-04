@@ -6,7 +6,6 @@ import {
   CameraView,
   useCameraPermissions,
 } from "expo-camera";
-import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
 import { Button, Pressable, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -23,12 +22,6 @@ export default function TakePicture() {
   const ref = useRef<CameraView>(null);
   const [uri, setUri] = useState<string | null>(null);
   const [mode, setMode] = useState<CameraMode>("picture");
-
-  const { toUid, toName, note } = useLocalSearchParams<{
-    toUid: string;
-    toName: string;
-    note: string;
-  }>();
 
   const toggleCameraFacing = useCallback(() => {
     setFacing((current) => (current === "back" ? "front" : "back"));
