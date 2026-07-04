@@ -35,7 +35,7 @@ export const FILTERS = {
       0, 0, 0, 0, 0, 1, 0,
     ],
   },
-} as const;
+};
 
 export type FilterKey = keyof typeof FILTERS;
 

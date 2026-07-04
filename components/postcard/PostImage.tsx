@@ -4,6 +4,7 @@ import {
   lerpMatrix,
   WHITE,
 } from "@/constants/postcardConstants";
+import { tunedMatrix } from "@/lib/colorMatrix";
 import usePolaroidFrameCalc from "@/hooks/usePolaroidFrameCalc";
 import {
   Canvas,
@@ -17,6 +18,7 @@ import {
 import React, { useEffect } from "react";
 import {
   Easing,
+  SharedValue,
   useDerivedValue,
   useSharedValue,
   withDelay,
@@ -26,33 +28,30 @@ import {
 export default function PostImage({
   media,
   selected,
+  hue,
+  light,
 }: {
   media: string;
   selected: FilterKey;
+  /** live tuning for the *currently selected* filter (degrees) */
+  hue: SharedValue<number>;
+  /** live tuning for the *currently selected* filter (~[-0.4, 0.4]) */
+  light: SharedValue<number>;
 }) {
   const image = useImage(media);
 
-  // 0 = mid-drop (scaled up, tilted), 1 = landed
   const dropProgress = useSharedValue(0);
-  // 0 = pure white, 1 = fully developed
   const developProgress = useSharedValue(0);
 
   useEffect(() => {
     if (image) {
       dropProgress.value = withDelay(
         40,
-        withTiming(1, {
-          duration: 900,
-          easing: Easing.out(Easing.back(1.5)),
-        }),
+        withTiming(1, { duration: 900, easing: Easing.out(Easing.back(1.5)) }),
       );
-      // Start developing slightly before the drop fully settles
       developProgress.value = withDelay(
         30,
-        withTiming(1, {
-          duration: 200,
-          easing: Easing.out(Easing.cubic),
-        }),
+        withTiming(1, { duration: 200, easing: Easing.out(Easing.cubic) }),
       );
     }
   }, [dropProgress, developProgress, image, selected]);
@@ -79,40 +78,29 @@ export default function PostImage({
   const centerXLocal = canvasWidth / 2;
   const centerYLocal = canvasHeight / 2;
 
-  const scaleVal = 1.55;
-  const rotateVal = -10;
-  const translateYVal = -10;
+  // Inert for now — kept so the drop can be re-enabled later.
   const polaroidTransform = useDerivedValue(() => {
-    const t = dropProgress.value;
-    const scale = scaleVal + (1 - scaleVal) * t; // scaleVal -> 1
-    const rotate = ((rotateVal * Math.PI) / 180) * (1 - t); // 10deg -> 0
     return [];
   });
 
-  const opacityVal = 0;
-  const polaroidOpacity = useDerivedValue(() => {
-    const t = dropProgress.value;
-    const opacity = opacityVal + (1 - opacityVal) * t; // scaleVal -> 1
-    return opacity;
-  });
+  const polaroidOpacity = useDerivedValue(() => dropProgress.value);
 
-  // Shadow follows the drop: larger offset and softer when "in air"
   const shadowOffsetX = useDerivedValue(
     () => 2 + (1 - dropProgress.value) * 14,
   );
   const shadowOffsetY = useDerivedValue(
     () => 6 + (1 - dropProgress.value) * 22,
   );
-  const shadowOpacity = useDerivedValue(
+  const shadowColor = useDerivedValue(
     () => `rgba(0,0,0,${0.25 + (1 - dropProgress.value) * 0.15})`,
   );
-
-  // Shadow rect position needs to be a SharedValue too since it depends on dropProgress
   const shadowX = useDerivedValue(() => frameXLocal + shadowOffsetX.value);
   const shadowY = useDerivedValue(() => frameYLocal + shadowOffsetY.value);
 
+  // preset ∘ hue ∘ luminance, then lerped from white for the develop reveal.
   const animatedMatrix = useDerivedValue(() => {
-    const target = FILTERS[selected].matrix;
+    const preset = FILTERS[selected].matrix;
+    const target = tunedMatrix(preset, hue.value, light.value);
     return lerpMatrix(WHITE, target, developProgress.value);
   }, [selected]);
 
@@ -132,7 +120,7 @@ export default function PostImage({
           y={shadowY}
           width={frameWidth}
           height={frameHeight}
-          color={shadowOpacity}
+          color={shadowColor}
         />
         {/* White card */}
         <Rect
