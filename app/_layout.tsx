@@ -100,6 +100,17 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen
+          name="hug-back"
+          options={{
+            presentation: "formSheet",
+            sheetAllowedDetents: "fitToContents",
+            sheetGrabberVisible: true,
+            sheetCornerRadius: 28,
+            headerShown: false,
+            contentStyle: { backgroundColor: "#FFFFFF" }, // match the card so any residual gap isn't grey
+          }}
+        />
+        <Stack.Screen
           name="add-user"
           options={{
             presentation: "modal",
