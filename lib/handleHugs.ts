@@ -1,11 +1,13 @@
 import {
   addDoc,
   collection,
+  doc,
   FieldValue,
   getDocs,
   query,
   serverTimestamp,
   Timestamp,
+  updateDoc,
   where,
 } from "firebase/firestore";
 import { auth, db } from "./firebaseConfig";
@@ -21,6 +23,8 @@ type HugBase<TTimestamp> = {
   note?: string;
   createdAt?: TTimestamp;
   seenAt?: TTimestamp;
+  hugBackNote?: string;
+  hugBackAt?: TTimestamp;
 };
 
 export type HugCreate = HugBase<FieldValue>;
@@ -30,6 +34,12 @@ export type SendableHug = Pick<
   HugBase<FieldValue>,
   "to" | "toName" | "note" | "imagePath"
 >;
+
+export type HugBackUpdate = Required<
+  Pick<HugBase<FieldValue>, "hugBackNote" | "hugBackAt">
+>;
+
+const MAX_LEN = 140;
 
 export async function sendHug(hug: HugCreate) {
   try {
@@ -48,6 +58,19 @@ export async function sendHug(hug: HugCreate) {
   } catch (err) {
     console.error("error when saving hug ", err);
   }
+}
+
+export async function sendHugBack(hugId: string, note: string): Promise<void> {
+  const trimmed = note.trim();
+  if (!trimmed) throw new Error("empty hug-back note");
+
+  const update: HugBackUpdate = {
+    hugBackNote: trimmed.slice(0, MAX_LEN),
+    hugBackAt: serverTimestamp(),
+  };
+
+  // adjust the collection path to match yours (top-level `hugs` vs a subcollection)
+  await updateDoc(doc(db, "hugs", hugId), update);
 }
 
 export async function getHugs() {

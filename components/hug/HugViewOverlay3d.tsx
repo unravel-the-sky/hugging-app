@@ -1,17 +1,24 @@
+import { useHugTexture } from "@/hooks/useHugTexture";
+import { db } from "@/lib/firebaseConfig";
+import { Hug } from "@/lib/handleHugs";
+import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
+import { doc, onSnapshot } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import HugRevealer from "./HugRevealerNEW";
+import { colors, font, radius, shadow } from "../ui/squish";
 import { PlushButton } from "../ui/squish/PlushButton";
+import Toast from "../ui/squish/Toast";
 import { fixFirebaseUrl } from "./HugImage";
-import { useHugTexture } from "@/hooks/useHugTexture";
-import { Hug } from "@/lib/handleHugs";
+import HugRevealer from "./HugRevealerNEW";
+import AvatarImage from "../avatar/AvatarImage";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 // Lavender gradient from the "Sealed (before)" screen.
 const SEALED_BG = ["#B9A5EC", "#9A7BD9"] as const;
 
 interface Props {
-  hug?: Hug | undefined;
+  hug: Hug;
   onHugBack: (hug: Hug) => void;
   onOpen: () => void;
   onClose: () => void;
@@ -44,23 +51,78 @@ export default function HugViewOverlay({
     fixFirebaseUrl(hug?.imagePath || ""),
   );
 
+  const [hugBackNote, setHugBackNote] = useState<string | null>(
+    hug.hugBackNote ?? null,
+  );
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [alreadyHugged, setAlreadyHugged] = useState(false);
+
+  const { user } = useCurrentUser();
+
   // Reset to sealed whenever a different hug is opened.
   useEffect(() => {
     setOpened(false);
   }, [hug?.id]);
 
+  useEffect(() => {
+    return onSnapshot(doc(db, "hugs", hug.id), (snap) => {
+      const next = snap.data()?.hugBackNote as string | undefined;
+      if (next && next !== hugBackNote) {
+        setHugBackNote(next);
+        setConfirmVisible(true);
+        setTimeout(() => setConfirmVisible(false), 25000);
+      }
+    });
+  }, [hug.id, hugBackNote]);
+
+  const handleHugBack = () => {
+    if (hugBackNote) {
+      setAlreadyHugged(true);
+      return;
+    }
+    router.push({
+      pathname: "/hug-back",
+      params: { hugId: hug.id, toName: hug.fromName },
+    });
+  };
+
   if (!hug) return null;
+
+  console.log("HUGVIEWOVERLAY fromName: ", hug.fromName);
 
   if (opened) {
     return (
-      <HugRevealer
-        loaded={loaded}
-        hasImage={!!hug.imagePath}
-        message={hug.note}
-        onHugBack={() => onHugBack(hug)}
-        onClose={onClose}
-        loading={loading}
-      />
+      <>
+        <HugRevealer
+          loaded={loaded}
+          hasImage={!!hug.imagePath}
+          message={hug.note}
+          onHugBack={handleHugBack}
+          huggedBack={!!hugBackNote}
+          onClose={onClose}
+          loading={loading}
+        />
+
+        {hugBackNote && (
+          <View style={styles.hugBackMessage}>
+            <Text style={styles.hugBackMessageText}>{hugBackNote}</Text>
+            <AvatarImage avatar={user?.avatar || "male"} size="s" />
+          </View>
+        )}
+
+        <Toast
+          visible={confirmVisible}
+          message={`you hugged ${hug.fromName} back`}
+          onHide={() => console.log("ha deeet")}
+          icon="heart-circle-outline"
+        />
+
+        <Toast
+          visible={alreadyHugged}
+          message={`you already hugged ${hug.fromName} back`!}
+          onHide={() => setAlreadyHugged(false)}
+        />
+      </>
     );
   }
 
@@ -94,6 +156,27 @@ export default function HugViewOverlay({
 
 const styles = StyleSheet.create({
   fill: { ...StyleSheet.absoluteFill },
+  hugBackMessage: {
+    position: "absolute",
+    bottom: 200,
+    alignSelf: "flex-end",
+    marginRight: 35,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: radius.md,
+    backgroundColor: colors.mistBg,
+    zIndex: 30,
+    ...shadow,
+  },
+  hugBackMessageText: {
+    fontFamily: font.uiBold,
+    fontSize: 15,
+    color: colors.plumInk,
+  },
+
   center: {
     flex: 1,
     alignItems: "center",

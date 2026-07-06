@@ -43,7 +43,7 @@ export default function ProfileScreen() {
   const [showLogout, setShowLogout] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
-  const { user, loading } = useCurrentUser();
+  const { user, isHydrating } = useCurrentUser();
 
   // anonymous users have no recovery path — logging out is destructive
   const isAnonymous = auth.currentUser?.isAnonymous ?? false;
@@ -89,7 +89,7 @@ export default function ProfileScreen() {
     }
   };
 
-  if (loading) {
+  if (isHydrating) {
     return <Loader />;
   }
 

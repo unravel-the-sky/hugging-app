@@ -44,6 +44,7 @@ interface HugRevealProps {
   loaded: LoadedTexture | null;
   loading: boolean;
   hasImage: boolean;
+  huggedBack: boolean;
   message?: string;
   onHugBack: () => void;
   onClose: () => void;
@@ -197,6 +198,7 @@ export default function HugReveal({
   loading,
   hasImage,
   message,
+  huggedBack = false,
   onHugBack,
   onClose,
 }: HugRevealProps) {
@@ -207,11 +209,11 @@ export default function HugReveal({
   const dragging = useRef(false);
   const hasFlipped = useRef(false);
 
-  const { setIsTabBarHidden } = use(TabBarContext);
-
   const fontMgr = useSkiaFonts({
     Fredoka: [Fredoka_700Bold],
   });
+
+  const { setIsTabBarHidden } = use(TabBarContext);
 
   useFocusEffect(() => {
     setIsTabBarHidden(true);
@@ -324,7 +326,9 @@ export default function HugReveal({
 
       <View style={styles.buttonRow} pointerEvents="box-none">
         <PlushButton variant="primary" label="close" onPress={onClose} />
-        <PlushButton variant="blush" label="hug back" onPress={onHugBack} />
+        {!huggedBack && (
+          <PlushButton variant="blush" label="hug back" onPress={onHugBack} />
+        )}
       </View>
     </View>
   );

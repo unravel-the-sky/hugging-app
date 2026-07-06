@@ -1,26 +1,32 @@
-import { useImage } from "@shopify/react-native-skia";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
-import { useEffect, useRef, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View, Image } from "react-native";
+import { useRef, useState } from "react";
+import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
 
+import * as ImageManipulator from "expo-image-manipulator";
 import * as MediaLibrary from "expo-media-library";
 import { captureRef } from "react-native-view-shot";
 
 import FilterPreview from "@/components/postcard/FilterPreview";
 import PostImage from "@/components/postcard/PostImage";
-import DraggableText from "@/components/ui/DraggableText";
+import DraggableOverlay from "@/components/postcard/DraggableOverlay";
+import TextEditorOverlay, {
+  TextDraft,
+} from "@/components/postcard/TexteditorOverlay";
 import { PlushButton } from "@/components/ui/squish/PlushButton";
+import Toast from "@/components/ui/squish/Toast";
+import { colors, font } from "@/components/ui/squish/theme";
+
 import { FilterKey, filterKeys, FILTERS } from "@/constants/postcardConstants";
+import { newOverlayId, Overlay } from "@/constants/postcardEditorConstants";
+
 import { useImageColors } from "@/hooks/useImageColors";
-import usePolaroidFrameCalc from "@/hooks/usePolaroidFrameCalc";
-import { auth, storage } from "@/lib/firebaseConfig";
-import Ionicons from "@expo/vector-icons/Ionicons";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { TextInput } from "react-native-gesture-handler";
-
 import { useHugDraft } from "@/hooks/useHugDraft";
+import usePolaroidFrameCalc from "@/hooks/usePolaroidFrameCalc";
 
-import * as ImageManipulator from "expo-image-manipulator";
+import { auth, storage } from "@/lib/firebaseConfig";
+import { useImage } from "@shopify/react-native-skia";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
 const getPixelSize = (uri: string) =>
   new Promise<{ width: number; height: number }>((resolve, reject) =>
@@ -35,361 +41,368 @@ export default function Media({
   onBack: () => void;
 }) {
   const image = useImage(media);
-
   const imageRef = useRef(null);
-
-  const [selected, setSelected] = useState<FilterKey>("normal");
-  const [saving, setSaving] = useState(false);
-  const [cloudStorageUrl, setCloudStorageUrl] = useState("");
-  const [modalVisible, setModalVisible] = useState(false);
-
-  const [textArray, setTextArray] = useState<string[]>([]);
-  const [activeText, setActiveText] = useState("");
-  const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
-
   const setPhoto = useHugDraft((s) => s.setPhotoUri);
 
-  // keep this, thinking of adding an option to 'save image' before sending it instead of saving all the time
-  const handleSaveIamge = async (captureUri: string) => {
+  const { canvasWidth, canvasHeight, canvasPadding, frameWidth, frameHeight } =
+    usePolaroidFrameCalc();
+
+  // ---- filters ---------------------------------------------------------
+  const [selected, setSelected] = useState<FilterKey>("normal");
+
+  // ---- overlays --------------------------------------------------------
+  const [overlays, setOverlays] = useState<Overlay[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<TextDraft | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<{ visible: boolean; message: string }>({
+    visible: false,
+    message: "",
+  });
+
+  // ---- text ------------------------------------------------------------
+  const addText = () => {
+    setSelectedId(null);
+    setEditing({
+      text: "",
+      fontKey: "fredoka",
+      size: 40,
+      color: colors.plumInk,
+    });
+  };
+
+  const editorDone = (draft: TextDraft) => {
+    if (draft.id) {
+      setOverlays((list) =>
+        list.map((o) =>
+          o.id === draft.id
+            ? {
+                ...o,
+                text: draft.text,
+                fontKey: draft.fontKey,
+                size: draft.size,
+                color: draft.color,
+              }
+            : o,
+        ),
+      );
+    } else {
+      setOverlays((list) => [
+        ...list,
+        {
+          id: newOverlayId(),
+          kind: "text",
+          text: draft.text,
+          fontKey: draft.fontKey,
+          size: draft.size,
+          color: draft.color,
+          x: 0,
+          y: 0,
+          scale: 1,
+          rotation: 0,
+        },
+      ]);
+    }
+    setEditing(null);
+  };
+
+  const onOverlayTap = (o: Overlay) => {
+    setSelectedId(o.id);
+    setEditing({
+      id: o.id,
+      text: o.text,
+      fontKey: o.fontKey,
+      size: o.size,
+      color: o.color,
+    });
+  };
+
+  const updateOverlay = (
+    id: string,
+    next: { x: number; y: number; scale: number; rotation: number },
+  ) =>
+    setOverlays((list) =>
+      list.map((o) => (o.id === id ? { ...o, ...next } : o)),
+    );
+
+  const deleteOverlay = (id: string) => {
+    setOverlays((list) => list.filter((o) => o.id !== id));
+    setSelectedId((cur) => (cur === id ? null : cur));
+  };
+
+  // ---- capture ---------------------------------------------------------
+  const captureCropped = async () => {
+    // Drop selection chrome so the dashed box / × aren't baked in.
+    setSelectedId(null);
+    await new Promise((r) => setTimeout(r, 60));
+
+    const captureUri = await captureRef(imageRef, {
+      format: "jpg",
+      quality: 0.9,
+      result: "tmpfile",
+    });
+    if (!captureUri) throw new Error("Capture failed");
+
+    const { width: capW, height: capH } = await getPixelSize(captureUri);
+    const scaleX = capW / canvasWidth;
+    const scaleY = capH / canvasHeight;
+
+    const originX = Math.round(canvasPadding * scaleX);
+    const originY = Math.round(canvasPadding * scaleY);
+    const cropW = Math.min(Math.round(frameWidth * scaleX), capW - originX);
+    const cropH = Math.min(Math.round(frameHeight * scaleY), capH - originY);
+
+    const context = ImageManipulator.ImageManipulator.manipulate(
+      captureUri,
+    ).crop({ originX, originY, width: cropW, height: cropH });
+
+    const rendered = await context.renderAsync();
+    const cropped = await rendered.saveAsync({
+      format: ImageManipulator.SaveFormat.JPEG,
+      compress: 0.7,
+    });
+    return cropped.uri;
+  };
+
+  // Top-right: save to device only.
+  const handleSaveToDevice = async () => {
     try {
       setSaving(true);
-      // permissions bit
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("permission needed", "allow photo lib access pls");
+        Alert.alert("Permission needed", "Allow photo library access to save.");
         return;
       }
-      await MediaLibrary.saveToLibraryAsync(captureUri);
+      const uri = await captureCropped();
+      await MediaLibrary.saveToLibraryAsync(uri);
+      setToast({ visible: true, message: "Saved to your photos" });
     } catch (err) {
-      console.error("Error happened while saving: ", err);
+      console.error("Error saving image:", err);
+      setToast({ visible: true, message: "Couldn't save — try again" });
     } finally {
       setSaving(false);
     }
   };
 
-  const handleSaveAndAddImageToHug = async () => {
+  // "add it!": upload and attach to the hug (no auto device-save).
+  const handleAddToHug = async () => {
     try {
       setSaving(true);
+      const uri = await captureCropped();
 
-      // permissions bit
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("permission needed", "allow photo lib access pls");
-        return;
-      }
-
-      const captureUri = await captureRef(imageRef, {
-        format: "jpg",
-        quality: 0.4,
-        result: "tmpfile",
-      });
-
-      if (!captureUri) throw new Error("Capture failed!");
-
-      const { width: capW, height: capH } = await getPixelSize(captureUri);
-      const scaleX = capW / canvasWidth;
-      const scaleY = capH / canvasHeight;
-
-      const originX = Math.round(canvasPadding * scaleX);
-      const originY = Math.round(canvasPadding * scaleY);
-      const cropW = Math.min(Math.round(frameWidth * scaleX), capW - originX);
-      const cropH = Math.min(Math.round(frameHeight * scaleY), capH - originY);
-
-      const context = ImageManipulator.ImageManipulator.manipulate(
-        captureUri,
-      ).crop({
-        originX,
-        originY,
-        width: cropW,
-        height: cropH,
-      });
-
-      const rendered = await context.renderAsync();
-      const cropped = await rendered.saveAsync({
-        format: ImageManipulator.SaveFormat.JPEG,
-        compress: 0.6,
-      });
-
-      const response = await fetch(cropped.uri);
+      const response = await fetch(uri);
       const blob = await response.blob();
 
-      // create reference
       const uid = auth.currentUser?.uid;
       if (!uid) throw new Error("not signed in");
 
       const imgName = `polaroid-hug-${Date.now()}`;
       const storageRef = ref(storage, `images/${uid}/${imgName}`);
 
-      console.log("upload size (KB):", Math.round(blob.size / 1024));
-
-      const t0 = Date.now();
-      const storageSnapshot = await uploadBytes(storageRef, blob, {
-        contentType: "image/webp",
+      const snapshot = await uploadBytes(storageRef, blob, {
+        contentType: "image/jpeg",
       });
-      const t1 = Date.now();
-      console.log("uploadBytes took (ms):", t1 - t0);
+      const downloadUrl = await getDownloadURL(snapshot.ref);
 
-      const downloadUrl = await getDownloadURL(storageSnapshot.ref);
-      const t2 = Date.now();
-      console.log("getDownloadURL took (ms):", t2 - t1);
-
-      handleSaveIamge(cropped.uri);
-
-      // save and exit
-      setCloudStorageUrl(downloadUrl);
-      handleSendNoteWithPicture(downloadUrl);
+      setPhoto(downloadUrl);
+      router.back();
     } catch (err) {
-      console.error("Error happened while saving: ", err);
+      console.error("Error adding image to hug:", err);
+      setToast({ visible: true, message: "Couldn't add — try again" });
     } finally {
       setSaving(false);
     }
   };
 
-  const handleSendNoteWithPicture = (imagePath: string) => {
-    setPhoto(imagePath);
-    router.back();
-  };
-
-  useEffect(() => {
-    setActiveIndex(0);
-  }, []);
-
-  const handleAddNewText = () => {
-    console.log("adding new text!");
-    setModalVisible(true);
-    setActiveText("");
-    setActiveIndex(undefined);
-  };
-  const editText = (index: number) => {
-    console.log("editing text with index: ", index);
-    setActiveIndex(index);
-    setActiveText(textArray[index]);
-    setModalVisible(true);
-  };
-  const saveActiveText = () => {
-    if (activeText === "") {
-      setModalVisible(false);
-      return;
-    }
-
-    if (activeIndex !== undefined) {
-      const temp = textArray.map((text, index) => {
-        if (index === activeIndex) {
-          return activeText;
-        } else {
-          return text;
-        }
-      });
-      setTextArray(temp);
-    } else {
-      setTextArray([...textArray, activeText]);
-    }
-    setModalVisible(false);
-  };
-
-  const { canvasWidth, canvasHeight, canvasPadding, frameWidth, frameHeight } =
-    usePolaroidFrameCalc();
-
-  const [imgColor, setImgColor] = useState<string | undefined>(undefined);
-
+  // ---- colours ---------------------------------------------------------
   const { colors: imageColors } = useImageColors(media);
-
-  useEffect(() => {
-    setImgColor(imageColors?.colorOne.value);
-  }, [imageColors?.colorOne.value]);
+  const bg = imageColors?.colorOne?.value ?? "#D7C2B2";
 
   if (!image) return null;
 
   return (
-    <View
-      style={[styles.container, { backgroundColor: imgColor || "#D7C2B2" }]}
-    >
-      <View style={{ position: "fixed", top: 60, left: 18 }}>
-        <Pressable onPress={onBack}>
-          <Ionicons name="arrow-back" size={40} color={"#7c7c7c"} />
+    <View style={[styles.container, { backgroundColor: bg }]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Pressable onPress={onBack} style={styles.headerBtn} hitSlop={8}>
+          <Ionicons name="arrow-back" size={24} color={colors.plumInk} />
         </Pressable>
-      </View>
-      <View
-        style={{
-          flex: 1,
-          top: 80,
-          alignItems: "center",
-        }}
-      >
-        <Pressable onPress={handleAddNewText}>
-          <View
-            ref={imageRef}
-            collapsable={false}
-            style={{
-              width: canvasWidth,
-              height: canvasHeight,
-            }}
-          >
-            <PostImage media={media} selected={selected} />
-
-            {textArray.length > 0 &&
-              textArray.map((text, index) => (
-                <View
-                  key={index}
-                  style={{
-                    position: "absolute",
-                    left: 0,
-                    right: 0,
-                    bottom: 20,
-                    justifyContent: "center",
-                    alignItems: "center",
-                  }}
-                >
-                  <DraggableText
-                    item={text}
-                    onPressed={() => editText(index)}
-                  />
-                </View>
-              ))}
-          </View>
-        </Pressable>
-      </View>
-
-      {modalVisible && (
-        <Pressable
-          onPress={saveActiveText}
-          style={{
-            ...StyleSheet.absoluteFill,
-            backgroundColor: "rgba(0,0,0,0.8)",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
+        <Text
+          style={[
+            styles.headerTitle,
+            { color: imageColors?.colorFour.value || colors.blush },
+          ]}
         >
-          <View
-            style={{
-              top: 0,
-              left: 0,
-              bottom: 0,
-              right: 0,
-              width: "100%",
-              position: "relative",
-            }}
-          >
-            <View
-              style={{
-                position: "absolute",
-                left: 20,
-                bottom: 0,
-                backgroundColor: "green",
-              }}
-            ></View>
-            <TextInput
-              autoFocus
-              multiline
-              value={activeText}
-              onChangeText={setActiveText}
-              maxLength={60}
-              style={{
-                color: "white",
-                fontSize: 30,
-                textAlign: "center",
-                minWidth: 100,
-                fontFamily: "CuteFont",
-              }}
+          Edit
+        </Text>
+        <Pressable
+          onPress={handleSaveToDevice}
+          style={styles.headerBtn}
+          hitSlop={8}
+          disabled={saving}
+        >
+          <Ionicons name="download-outline" size={22} color={colors.plumInk} />
+        </Pressable>
+      </View>
+
+      {/* Postcard + overlays */}
+      <View style={styles.stage}>
+        <View
+          ref={imageRef}
+          collapsable={false}
+          style={{ width: canvasWidth, height: canvasHeight }}
+        >
+          <PostImage media={media} selected={selected} />
+
+          {/* tap empty area to deselect */}
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setSelectedId(null)}
+          />
+
+          {overlays.map((o) => (
+            <DraggableOverlay
+              key={o.id}
+              overlay={o}
+              selected={selectedId === o.id}
+              onTap={onOverlayTap}
+              onChange={updateOverlay}
+              onDelete={deleteOverlay}
+            />
+          ))}
+        </View>
+      </View>
+
+      {/* Bottom UI — hidden while the editor is up */}
+      {!editing && (
+        <View style={styles.bottom}>
+          <View style={styles.toolRow}>
+            <PlushButton
+              label="Text"
+              variant="soft"
+              height={44}
+              onPress={addText}
+              icon={<Ionicons name="text" size={16} color={colors.primary} />}
             />
           </View>
-        </Pressable>
+
+          <View style={styles.addRow}>
+            <PlushButton
+              label="add it!"
+              height={56}
+              disabled={saving}
+              onPress={handleAddToHug}
+              style={{ minWidth: 180 }}
+            />
+          </View>
+
+          <View style={styles.filterRow}>
+            {filterKeys.map((key) => {
+              const isSelected = key === selected;
+              return (
+                <Pressable
+                  key={key}
+                  onPress={() => setSelected(key)}
+                  style={[
+                    styles.filterBox,
+                    isSelected && styles.filterBoxSelected,
+                  ]}
+                >
+                  <FilterPreview image={image} matrix={FILTERS[key].matrix} />
+                  <Text
+                    style={[
+                      styles.filterText,
+                      isSelected && styles.filterTextSelected,
+                    ]}
+                  >
+                    {FILTERS[key].name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
       )}
 
-      <View style={styles.filterRow}>
-        {filterKeys.map((key) => {
-          const isSelected = key === selected;
-          return (
-            <Pressable
-              key={key}
-              onPress={() => setSelected(key)}
-              style={[styles.filterBox, isSelected && styles.filterBoxSelected]}
-            >
-              <FilterPreview image={image} matrix={FILTERS[key].matrix} />
-              <Text
-                style={[
-                  styles.filterText,
-                  isSelected && styles.filterTextSelected,
-                ]}
-              >
-                {FILTERS[key].name}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      <View style={styles.buttonContainer}>
-        <PlushButton
-          label="add it!"
-          disabled={saving}
-          onPress={handleSaveAndAddImageToHug}
+      {/* Text editor (full screen) */}
+      {editing && (
+        <TextEditorOverlay
+          draft={editing}
+          onCancel={() => setEditing(null)}
+          onDone={editorDone}
         />
-      </View>
+      )}
+
+      {/* Save toast */}
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        onHide={() => setToast((t) => ({ ...t, visible: false }))}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  buttonContainer: {
+  container: { flex: 1 },
+  header: {
     position: "absolute",
-    bottom: 150,
-    flex: 1,
-    gap: 12,
-    alignSelf: "center",
-    flexDirection: "row",
-  },
-  saveButton: {
-    padding: 8,
-    borderRadius: 16,
-    backgroundColor: "white",
-    width: 120,
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  saveButtonDisabled: {
-    opacity: 0.5,
-  },
-  saveButtonText: {
-    color: "#1a1a1a",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  filterRow: {
-    position: "absolute",
-    bottom: 36,
+    top: 26,
     left: 0,
     right: 0,
-    width: "100%",
+    zIndex: 5,
+    paddingHorizontal: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  headerBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.7)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTitle: {
+    fontFamily: font.display,
+    fontSize: 18,
+    color: colors.plumInk,
+  },
+  stage: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 75,
+  },
+  bottom: {
+    paddingBottom: 20,
+    paddingTop: 12,
+    gap: 16,
+    alignItems: "center",
+  },
+  toolRow: { flexDirection: "row", gap: 12 },
+  addRow: { alignItems: "center" },
+  filterRow: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 12,
+    gap: 10,
+    paddingHorizontal: 12,
   },
   filterBox: {
-    display: "flex",
-    gap: 6,
-    padding: 8,
-    borderRadius: 6,
-    backgroundColor: "rgba(255, 255, 255, 0.24)",
-    borderColor: "rgba(255,255,255,0.2)",
-    minWidth: 60,
+    padding: 6,
+    borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.35)",
     alignItems: "center",
+    gap: 4,
   },
   filterBoxSelected: {
     backgroundColor: "white",
-    borderColor: "white",
   },
   filterText: {
-    color: "white",
-    fontSize: 14,
-    fontWeight: "500",
+    color: colors.plumInk,
+    fontFamily: font.uiBold,
+    fontSize: 13,
   },
-  filterTextSelected: {
-    color: "#1a1a1a",
-    fontWeight: "600",
-  },
+  filterTextSelected: { color: colors.plumInk },
 });
