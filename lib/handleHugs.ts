@@ -96,3 +96,29 @@ export async function getHugs() {
 
   // actually subscribe to this and show real time updates
 }
+
+export async function getHugsWith(friendId: string): Promise<Hug[]> {
+  const me = auth.currentUser;
+  if (!me) return [];
+
+  const hugsRef = collection(db, "hugs");
+  const [sentSnap, recvSnap] = await Promise.all([
+    getDocs(
+      query(hugsRef, where("from", "==", me.uid), where("to", "==", friendId)),
+    ),
+    getDocs(
+      query(hugsRef, where("from", "==", friendId), where("to", "==", me.uid)),
+    ),
+  ]);
+
+  const toHug = (d: (typeof sentSnap.docs)[number]): Hug => ({
+    id: d.id,
+    ...(d.data() as Omit<Hug, "id">),
+  });
+
+  return [...sentSnap.docs, ...recvSnap.docs]
+    .map(toHug)
+    .sort(
+      (a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0),
+    );
+}

@@ -1,0 +1,538 @@
+import AvatarImage from "@/components/avatar/AvatarImage";
+import { colors, font, radius, shadow, spacing } from "@/components/ui/squish";
+import Avatar from "@/components/ui/squish/Avatar";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { auth, db } from "@/lib/firebaseConfig";
+import { UserFriend } from "@/lib/handleFriends";
+import { getHugsWith, Hug } from "@/lib/handleHugs";
+import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import { router, useLocalSearchParams } from "expo-router";
+import { doc, getDoc } from "firebase/firestore";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+
+/**
+ * Memories — a messenger-style timeline of every hug exchanged with one
+ * friend, newest first. Each hug renders as the original (photo/note) aligned
+ * to whoever sent it, with the hug-back (if any) as a reply bubble opposite it.
+ * Scroll to the bottom to reach the very first hug.
+ */
+
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+/** "21 July 2026, 14:12" — matches the design's divider label. */
+function formatMemoryDate(d: Date): string {
+  const hh = d.getHours().toString().padStart(2, "0");
+  const mm = d.getMinutes().toString().padStart(2, "0");
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}, ${hh}:${mm}`;
+}
+
+export default function FriendMemoryLane() {
+  const { friendId } = useLocalSearchParams<{ friendId: string }>();
+  const { user, isHydrating } = useCurrentUser();
+
+  const [friend, setFriend] = useState<UserFriend | null>(null);
+  const [hugs, setHugs] = useState<Hug[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    const me = auth.currentUser;
+    if (!me || !friendId) {
+      setError(true);
+      setLoading(false);
+      return;
+    }
+
+    const friendRef = doc(db, "users", me.uid, "friends", friendId);
+
+    Promise.all([getDoc(friendRef), getHugsWith(friendId)])
+      .then(([snap, sharedHugs]) => {
+        if (snap.exists()) setFriend(snap.data() as UserFriend);
+        setHugs(sharedHugs);
+      })
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, [friendId]);
+
+  if (loading || isHydrating) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.emptyText}>Could not load your memories..</Text>
+      </View>
+    );
+  }
+
+  const name = friend?.displayName ?? "your friend";
+
+  return (
+    <View style={styles.screen}>
+      {/* header */}
+      <View style={styles.header}>
+        <RoundIconButton icon="chevron-back" onPress={() => router.back()} />
+        <View style={styles.headerText}>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            Memories
+          </Text>
+          <Text style={styles.headerSub} numberOfLines={1}>
+            with {name} · {hugs.length} hug{hugs.length === 1 ? "" : "s"}{" "}
+            together
+          </Text>
+        </View>
+        <Avatar size={36} />
+      </View>
+
+      {hugs.length === 0 ? (
+        <View style={styles.emptyLane}>
+          <Ionicons name="heart-outline" size={40} color={colors.lilac} />
+          <Text style={styles.emptyText}>
+            No hugs yet — send the first one 🫂
+          </Text>
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.lane}
+          contentContainerStyle={styles.laneContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {hugs.map((h) => {
+            const senderIsMe = h.from === user?.uid;
+            const recipientIsMe = h.to === user?.uid;
+            const hasBack = !!h.hugBackNote;
+
+            const backAuthorName = recipientIsMe ? "You" : h.toName;
+            const createdAt = h.createdAt?.toDate();
+
+            return (
+              <View key={h.id}>
+                <MemDivider
+                  label={createdAt ? formatMemoryDate(createdAt) : "—"}
+                />
+
+                {/* the hug (left) */}
+                <MemRow
+                  side={h.from === user?.uid ? "left" : "right"}
+                  avatar={
+                    <AvatarImage avatar={h.fromAvatar || "male"} size="s" />
+                  }
+                >
+                  {h.imagePath ? (
+                    <MemImage imagePath={h.imagePath} caption={h.note} />
+                  ) : null}
+                  {h.note && !h.imagePath ? (
+                    <MemNote text={h.note} side="left" mine={senderIsMe} />
+                  ) : null}
+                  {!h.imagePath && !h.note ? (
+                    <MemPill label="🫂 a hug" />
+                  ) : null}
+                </MemRow>
+
+                {/* the hug-back (right) */}
+                {hasBack ? (
+                  <MemRow
+                    side="right"
+                    avatar={
+                      <AvatarImage avatar={user?.avatar || "male"} size="s" />
+                    }
+                    caption={`${backAuthorName} hugged back 🫂`}
+                  >
+                    <MemNote
+                      text={h.hugBackNote!}
+                      side="right"
+                      mine={recipientIsMe}
+                    />
+                  </MemRow>
+                ) : null}
+              </View>
+            );
+          })}
+
+          {/* first hug end cap */}
+          <View style={styles.endCap}>
+            <View style={styles.firstHugPill}>
+              <Ionicons name="heart" size={16} color={colors.blush} />
+              <Text style={styles.firstHugText}>first hug</Text>
+            </View>
+            <Text style={styles.endCapCaption}>where it all began</Text>
+          </View>
+        </ScrollView>
+      )}
+    </View>
+  );
+}
+
+/* ── pieces ──────────────────────────────────────────────────────────── */
+
+function RoundIconButton({
+  icon,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={8}
+      style={({ pressed }) => [styles.roundBtn, pressed && { opacity: 0.7 }]}
+      accessibilityRole="button"
+      accessibilityLabel="Back"
+    >
+      <Ionicons name={icon} size={22} color={colors.plumInk} />
+    </Pressable>
+  );
+}
+
+function MemDivider({ label }: { label: string }) {
+  return (
+    <View style={styles.divider}>
+      <View style={styles.dividerLine} />
+      <Text style={styles.dividerLabel}>{label}</Text>
+      <View style={styles.dividerLine} />
+    </View>
+  );
+}
+
+function MemRow({
+  side,
+  avatar,
+  caption,
+  children,
+}: {
+  side: "left" | "right";
+  avatar: React.ReactNode;
+  caption?: string;
+  children: React.ReactNode;
+}) {
+  const right = side === "right";
+  return (
+    <View style={[styles.row, right && styles.rowRight]}>
+      <View style={styles.rowAvatar}>{avatar}</View>
+      <View style={[styles.rowBody, right && styles.rowBodyRight]}>
+        {children}
+        {caption ? <Text style={styles.rowCaption}>{caption}</Text> : null}
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Soft placeholder polaroid. When you're ready to show real images, resolve
+ * the download URL from the hug's imagePath (getDownloadURL(ref(storage, path)))
+ * and swap the placeholder body for an <Image source={{ uri }} />.
+ */
+const fixFirebaseUrl = (url: string): string => {
+  // Match the path between /o/ and ? and re-encode any unencoded slashes
+  return url.replace(/\/o\/([^?]+)/, (_, path) => {
+    // Decode first (in case it's partially encoded), then re-encode
+    const decoded = decodeURIComponent(path);
+    return `/o/${encodeURIComponent(decoded)}`;
+  });
+};
+function MemImage({
+  imagePath,
+  caption,
+}: {
+  imagePath: string;
+  caption?: string;
+}) {
+  console.log("imagePath: ", imagePath);
+
+  const imgUrl =
+    "https://fastly.picsum.photos/id/0/5000/3333.jpg?hmac=_j6ghY5fCfSD6tvtcV74zXivkJSPIfR9B8w34XeQmvU";
+  return (
+    <View style={styles.photoCard}>
+      <View style={{ width: "100%", aspectRatio: 4 / 5, marginVertical: 16 }}>
+        <Image
+          source={fixFirebaseUrl(imagePath)}
+          style={styles.photoImage}
+          contentFit="cover"
+          transition={200}
+          cachePolicy="memory-disk"
+          placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }}
+        />
+      </View>
+      {/* <View style={styles.photoPlaceholder}>
+        <Ionicons name="image-outline" size={26} color={colors.lilac} />
+        {caption ? (
+          <Text style={styles.photoCaption} numberOfLines={2}>
+            {caption}
+          </Text>
+        ) : null}
+      </View> */}
+    </View>
+  );
+}
+
+function MemNote({
+  text,
+  side,
+  mine,
+}: {
+  text: string;
+  side: "left" | "right";
+  mine: boolean;
+}) {
+  const right = side === "right";
+  return (
+    <View
+      style={[
+        styles.note,
+        mine ? styles.noteMine : styles.noteTheirs,
+        right ? styles.noteTailRight : styles.noteTailLeft,
+      ]}
+    >
+      <Text style={styles.noteText}>{text}</Text>
+    </View>
+  );
+}
+
+function MemPill({ label }: { label: string }) {
+  return (
+    <View style={styles.memPill}>
+      <Text style={styles.memPillText}>{label}</Text>
+    </View>
+  );
+}
+
+/* ── styles ──────────────────────────────────────────────────────────── */
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.mistBg },
+  centered: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.mistBg,
+    padding: spacing.xl,
+  },
+  emptyText: {
+    color: colors.softInk,
+    fontSize: 16,
+    fontFamily: font.ui,
+    textAlign: "center",
+  },
+  emptyLane: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.md,
+    padding: spacing.xl,
+  },
+
+  /* header */
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
+  },
+  roundBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: colors.deep,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  headerText: { flex: 1, minWidth: 0 },
+  headerTitle: {
+    fontFamily: font.display,
+    fontSize: 19,
+    color: colors.plumInk,
+  },
+  headerSub: {
+    fontFamily: font.uiBold,
+    fontSize: 12,
+    color: colors.softInk,
+    marginTop: 1,
+  },
+
+  /* lane */
+  lane: { flex: 1 },
+  laneContent: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+
+  /* divider */
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.sm,
+  },
+  dividerLine: { flex: 1, height: 1.5, backgroundColor: "#E7E0F4" },
+  dividerLabel: {
+    fontFamily: font.uiBold,
+    fontSize: 11.5,
+    letterSpacing: 0.2,
+    color: colors.softInk,
+  },
+
+  /* row */
+  row: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  rowRight: { flexDirection: "row-reverse" },
+  rowAvatar: { flexShrink: 0 },
+  rowBody: {
+    maxWidth: "72%",
+    alignItems: "flex-start",
+    gap: spacing.xs,
+  },
+  rowBodyRight: { alignItems: "flex-end" },
+  rowCaption: {
+    fontFamily: font.uiBold,
+    fontSize: 10,
+    letterSpacing: 0.2,
+    color: colors.softInk,
+    paddingHorizontal: spacing.xs,
+  },
+
+  /* photo card */
+  photoCard: {
+    // backgroundColor: colors.surface,
+    // borderWidth: 3,
+    // borderColor: colors.surface,
+    overflow: "hidden",
+    ...shadow,
+    shadowOpacity: 0.05,
+  },
+  photoImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: radius.sm,
+  },
+  photoPlaceholder: {
+    width: 210,
+    height: 140,
+    borderRadius: 17,
+    backgroundColor: colors.soft,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  photoCaption: {
+    fontFamily: font.hand,
+    fontSize: 18,
+    color: colors.plumInk,
+    textAlign: "center",
+  },
+
+  /* note bubble */
+  note: {
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    shadowColor: colors.deep,
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 1,
+  },
+  noteMine: { backgroundColor: colors.soft },
+  noteTheirs: {
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: "#F0EAFB",
+  },
+  noteTailLeft: {
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    borderBottomRightRadius: 18,
+    borderBottomLeftRadius: 6,
+  },
+  noteTailRight: {
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    borderBottomRightRadius: 6,
+    borderBottomLeftRadius: 18,
+  },
+  noteText: {
+    fontFamily: font.hand,
+    fontSize: 21,
+    lineHeight: 23,
+    color: colors.plumInk,
+  },
+
+  /* note-less hug pill */
+  memPill: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: radius.pill,
+    backgroundColor: colors.soft,
+  },
+  memPillText: {
+    fontFamily: font.uiBold,
+    fontSize: 14,
+    color: colors.primary,
+  },
+
+  /* end cap */
+  endCap: {
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.md,
+  },
+  firstHugPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: 9,
+    paddingHorizontal: 18,
+    borderRadius: radius.pill,
+    backgroundColor: colors.soft,
+  },
+  firstHugText: {
+    fontFamily: font.display,
+    fontSize: 14.5,
+    color: colors.deep,
+  },
+  endCapCaption: {
+    fontFamily: font.hand,
+    fontSize: 19,
+    color: colors.softInk,
+  },
+});

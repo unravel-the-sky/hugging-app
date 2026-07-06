@@ -121,6 +121,19 @@ export default function FriendStatsModal() {
           </View>
         </View>
 
+        {/* memory laneee */}
+        <PlushButton
+          icon={<Ionicons name="star-sharp" size={20} color={colors.blush} />}
+          label="memories"
+          variant="soft"
+          onPress={() =>
+            router.push({
+              pathname: "/friend-memory-lane",
+              params: { friendId },
+            })
+          }
+        />
+
         {/* directional split */}
         <View style={styles.splitRow}>
           <View style={styles.splitCard}>
@@ -192,6 +205,7 @@ export default function FriendStatsModal() {
             </Text>
           </View>
         </View>
+
         {/* remove friend */}
         <View style={styles.removeWrap}>
           <PlushButton
@@ -300,7 +314,7 @@ const styles = StyleSheet.create({
   container: {
     padding: spacing.xl,
     paddingBottom: spacing.xl * 1.6,
-    gap: spacing.lg,
+    gap: spacing.md,
   },
   centered: {
     flex: 1,
@@ -420,7 +434,7 @@ const styles = StyleSheet.create({
     fontFamily: font.ui,
     color: colors.plumInk,
   },
-  removeWrap: { marginTop: spacing.sm },
+  removeWrap: {},
   infoValue: { fontSize: 15, fontFamily: font.uiBold, color: colors.plumInk },
   divider: { height: 1, backgroundColor: colors.mistBg },
   backdrop: {
