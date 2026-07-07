@@ -198,6 +198,12 @@ export default function Media({
 
       const imgName = `polaroid-hug-${Date.now()}`;
       const imgPath = `images/${uid}/${imgName}`;
+      const storageRef = ref(storage, imgPath);
+
+      await uploadBytes(storageRef, blob, {
+        contentType: "image/jpeg",
+      });
+      // const downloadUrl = await getDownloadURL(snapshot.ref);
 
       setPhoto(imgPath);
       router.back();
