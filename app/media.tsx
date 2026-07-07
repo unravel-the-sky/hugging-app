@@ -197,14 +197,9 @@ export default function Media({
       if (!uid) throw new Error("not signed in");
 
       const imgName = `polaroid-hug-${Date.now()}`;
-      const storageRef = ref(storage, `images/${uid}/${imgName}`);
+      const imgPath = `images/${uid}/${imgName}`;
 
-      const snapshot = await uploadBytes(storageRef, blob, {
-        contentType: "image/jpeg",
-      });
-      const downloadUrl = await getDownloadURL(snapshot.ref);
-
-      setPhoto(downloadUrl);
+      setPhoto(imgPath);
       router.back();
     } catch (err) {
       console.error("Error adding image to hug:", err);

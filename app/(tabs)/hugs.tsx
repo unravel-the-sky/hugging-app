@@ -96,7 +96,7 @@ const PersonRow = ({
       duration: 220,
       easing: Easing.out(Easing.cubic),
     });
-  }, [expanded]);
+  }, [expanded, progress]);
 
   const bodyStyle = useAnimatedStyle(() => ({
     height: progress.value * contentHeight,
@@ -126,10 +126,12 @@ const PersonRow = ({
           </Text>
         </View>
 
-        <View style={styles.countPill}>
-          <Text style={styles.countPillNum}>{group.count}</Text>
-          <Text style={styles.countPillLabel}>HUGS</Text>
-        </View>
+        {!expanded && (
+          <View style={styles.countPill}>
+            <Text style={styles.countPillNum}>{group.count}</Text>
+            <Text style={styles.countPillLabel}>HUGS</Text>
+          </View>
+        )}
 
         <Animated.View style={[styles.chevron, chevronStyle]}>
           <Ionicons name="chevron-forward" size={18} color={colors.primary} />

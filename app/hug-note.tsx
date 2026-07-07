@@ -22,6 +22,7 @@ import {
   tint,
 } from "../components/ui/squish";
 import { useHugDraft } from "../hooks/useHugDraft";
+import { useGetDownloadUrl } from "@/hooks/useGetDownloadUrl";
 
 const NOTE_MAX_LENGTH = 40;
 
@@ -50,6 +51,8 @@ export default function HugNoteModal() {
   const hasNote = note.trim().length > 0;
   const hasPhoto = !!photoUri;
   const hasExtras = hasNote || hasPhoto;
+
+  const { downloadUrl } = useGetDownloadUrl(photoUri);
 
   const openNoteEditor = () => {
     setDraftNote(note);
@@ -184,13 +187,13 @@ export default function HugNoteModal() {
           </Pressable>
         )}
 
-        {hasPhoto ? (
+        {hasPhoto && downloadUrl ? (
           <Pressable
             style={[styles.card, styles.cardFilledPostcard]}
             onPress={handleAddPostcard}
           >
             <View style={styles.cardRow}>
-              <Image source={{ uri: photoUri! }} style={styles.thumb} />
+              <Image source={{ uri: downloadUrl }} style={styles.thumb} />
               <View style={styles.cardTextWrap}>
                 <Text style={styles.cardTitle}>Postcard added</Text>
                 <Text style={styles.cardHint}>one photo · tap to change</Text>

@@ -1,4 +1,5 @@
 import { Text, TextProps, StyleSheet } from "react-native";
+import { colors, font } from "./squish";
 
 export type TextVariant = "title" | "body" | "small";
 
@@ -12,11 +13,12 @@ export function AppText({
 
 const styles = StyleSheet.create({
   base: {
-    fontFamily: "SpaceMono",
-    color: "#111",
+    fontFamily: font.displayBold,
+    fontSize: 34,
+    color: colors.plumInk,
   },
   title: {
-    fontSize: 26,
+    fontSize: 34,
   },
   body: {
     fontSize: 18,

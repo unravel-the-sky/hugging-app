@@ -74,7 +74,7 @@ export default function ShowcaseScreen() {
   );
 }
 
-function Glyph({
+export function Glyph({
   children,
   color = "#FFFFFF",
 }: {

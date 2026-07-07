@@ -8,7 +8,7 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors } from "../../components/ui/squish/theme";
+import { colors, font } from "../../components/ui/squish/theme";
 
 export default function HomeScreen() {
   const toUid = useHugDraft((s) => s.to);
@@ -75,10 +75,9 @@ export default function HomeScreen() {
       ) : (
         <SafeAreaView edges={["bottom"]} style={styles.overlay}>
           <View style={styles.container}>
-            <AppText>Welcome to Hug.me!</AppText>
-            <Text>
+            <AppText variant="title">Hugging app</AppText>
+            <Text style={styles.mainText}>
               Do you feel like you need a hug? Or would you like to send a hug?
-              🥹
             </Text>
             <View
               style={{
@@ -91,8 +90,9 @@ export default function HomeScreen() {
             >
               <Logo />
             </View>
-            <Text>
-              Then click the button, choose a human and send some luuuvvv
+            <Text style={styles.mainText}>
+              Then click the button, choose a hugging friend and send some
+              luuuvvv
             </Text>
             {/* Action Buttons */}
             <View style={styles.actionsContainer}>
@@ -111,6 +111,12 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   // move this to an egen coponent later
+  mainText: {
+    fontFamily: font.ui,
+    fontSize: 14,
+    color: colors.plumInk,
+    marginTop: 2,
+  },
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
@@ -145,7 +151,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+    padding: 16,
     backgroundColor: colors.soft,
   },
   container: {

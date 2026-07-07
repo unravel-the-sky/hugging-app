@@ -88,7 +88,7 @@ export default function TabsLayout() {
         {/* Shared Header */}
         <View style={styles.header}>
           <View>
-            <Text style={{ fontFamily: "CuteFont", fontSize: 20 }}>
+            <Text style={{ fontFamily: "Fredoka_600SemiBold", fontSize: 16 }}>
               {getGreetingMessage()}
             </Text>
             <Text style={styles.usernameText}>{user?.displayName || ""}</Text>

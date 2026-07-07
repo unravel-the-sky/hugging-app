@@ -41,7 +41,7 @@ const VARIANTS: Record<
     tint: colors.surface,
   },
   surface: {
-    face: colors.surface,
+    face: colors.mistBg,
     underside: colors.soft,
     shadowColor: colors.lilac,
     tint: colors.primary,

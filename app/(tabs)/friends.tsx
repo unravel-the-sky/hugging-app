@@ -29,6 +29,7 @@ import {
   shadow,
   spacing,
 } from "../../components/ui/squish/theme";
+import { Glyph } from "@/components/ui/squish/Showcase";
 
 const lastHugLabel = (friend: UserFriend): string => {
   if (!friend.lastSentHug) return "no hugs yet";
@@ -125,18 +126,28 @@ const FriendRequestRow = ({
           {friendRequest.fromName}
         </Text>
       </View>
-      <View style={{ flex: 1, justifyContent: "center", flexDirection: "row" }}>
-        <PlushButton
-          label="decline"
-          variant="soft"
-          height={20}
-          onPress={onDecline}
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          flexDirection: "row",
+          gap: 8,
+        }}
+      >
+        <IconButton
+          variant="surface"
+          icon={<Ionicons name="close-outline" size={25} onPress={onDecline} />}
         />
-        <PlushButton
-          label="accept"
+        <IconButton
           variant="primary"
-          height={20}
-          onPress={onAccept}
+          icon={
+            <Ionicons
+              name="checkmark-outline"
+              size={25}
+              color={"white"}
+              onPress={onAccept}
+            />
+          }
         />
       </View>
     </View>
@@ -267,7 +278,10 @@ export default function FriendsListScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.mistBg },
+  container: {
+    flex: 1,
+    backgroundColor: colors.soft,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",

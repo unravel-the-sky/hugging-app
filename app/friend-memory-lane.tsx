@@ -2,6 +2,7 @@ import AvatarImage from "@/components/avatar/AvatarImage";
 import { colors, font, radius, shadow, spacing } from "@/components/ui/squish";
 import Avatar from "@/components/ui/squish/Avatar";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useGetDownloadUrl } from "@/hooks/useGetDownloadUrl";
 import { auth, db } from "@/lib/firebaseConfig";
 import { UserFriend } from "@/lib/handleFriends";
 import { getHugsWith, Hug } from "@/lib/handleHugs";
@@ -41,7 +42,6 @@ const MONTHS = [
   "December",
 ];
 
-/** "21 July 2026, 14:12" — matches the design's divider label. */
 function formatMemoryDate(d: Date): string {
   const hh = d.getHours().toString().padStart(2, "0");
   const mm = d.getMinutes().toString().padStart(2, "0");
@@ -138,9 +138,8 @@ export default function FriendMemoryLane() {
                   label={createdAt ? formatMemoryDate(createdAt) : "—"}
                 />
 
-                {/* the hug (left) */}
                 <MemRow
-                  side={h.from === user?.uid ? "left" : "right"}
+                  side={h.from === user?.uid ? "right" : "left"}
                   avatar={
                     <AvatarImage avatar={h.fromAvatar || "male"} size="s" />
                   }
@@ -156,10 +155,9 @@ export default function FriendMemoryLane() {
                   ) : null}
                 </MemRow>
 
-                {/* the hug-back (right) */}
                 {hasBack ? (
                   <MemRow
-                    side="right"
+                    side="left"
                     avatar={
                       <AvatarImage avatar={user?.avatar || "male"} size="s" />
                     }
@@ -245,19 +243,6 @@ function MemRow({
   );
 }
 
-/**
- * Soft placeholder polaroid. When you're ready to show real images, resolve
- * the download URL from the hug's imagePath (getDownloadURL(ref(storage, path)))
- * and swap the placeholder body for an <Image source={{ uri }} />.
- */
-const fixFirebaseUrl = (url: string): string => {
-  // Match the path between /o/ and ? and re-encode any unencoded slashes
-  return url.replace(/\/o\/([^?]+)/, (_, path) => {
-    // Decode first (in case it's partially encoded), then re-encode
-    const decoded = decodeURIComponent(path);
-    return `/o/${encodeURIComponent(decoded)}`;
-  });
-};
 function MemImage({
   imagePath,
   caption,
@@ -267,28 +252,31 @@ function MemImage({
 }) {
   console.log("imagePath: ", imagePath);
 
-  const imgUrl =
-    "https://fastly.picsum.photos/id/0/5000/3333.jpg?hmac=_j6ghY5fCfSD6tvtcV74zXivkJSPIfR9B8w34XeQmvU";
+  const { downloadUrl, failed } = useGetDownloadUrl(imagePath);
+
   return (
     <View style={styles.photoCard}>
-      <View style={{ width: "100%", aspectRatio: 4 / 5, marginVertical: 16 }}>
-        <Image
-          source={fixFirebaseUrl(imagePath)}
-          style={styles.photoImage}
-          contentFit="cover"
-          transition={200}
-          cachePolicy="memory-disk"
-          placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }}
-        />
-      </View>
-      {/* <View style={styles.photoPlaceholder}>
-        <Ionicons name="image-outline" size={26} color={colors.lilac} />
-        {caption ? (
-          <Text style={styles.photoCaption} numberOfLines={2}>
-            {caption}
-          </Text>
-        ) : null}
-      </View> */}
+      {!failed ? (
+        <View style={{ width: "100%", aspectRatio: 4 / 5, marginVertical: 16 }}>
+          <Image
+            source={downloadUrl}
+            style={styles.photoImage}
+            contentFit="cover"
+            transition={200}
+            cachePolicy="memory-disk"
+            placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }}
+          />
+        </View>
+      ) : (
+        <View style={styles.photoPlaceholder}>
+          <Ionicons name="image-outline" size={26} color={colors.lilac} />
+          {caption ? (
+            <Text style={styles.photoCaption} numberOfLines={2}>
+              {caption}
+            </Text>
+          ) : null}
+        </View>
+      )}
     </View>
   );
 }
@@ -323,8 +311,6 @@ function MemPill({ label }: { label: string }) {
     </View>
   );
 }
-
-/* ── styles ──────────────────────────────────────────────────────────── */
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.mistBg },
@@ -432,9 +418,6 @@ const styles = StyleSheet.create({
 
   /* photo card */
   photoCard: {
-    // backgroundColor: colors.surface,
-    // borderWidth: 3,
-    // borderColor: colors.surface,
     overflow: "hidden",
     ...shadow,
     shadowOpacity: 0.05,
@@ -445,8 +428,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   photoPlaceholder: {
-    width: 210,
-    height: 140,
+    width: 220,
+    aspectRatio: 3 / 4,
     borderRadius: 17,
     backgroundColor: colors.soft,
     alignItems: "center",
@@ -490,7 +473,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 18,
   },
   noteText: {
-    fontFamily: font.hand,
+    fontFamily: font.display,
     fontSize: 21,
     lineHeight: 23,
     color: colors.plumInk,

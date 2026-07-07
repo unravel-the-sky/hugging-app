@@ -1,9 +1,6 @@
 import AvatarImage from "@/components/avatar/AvatarImage";
-import { PlushButton } from "@/components/ui/squish/PlushButton"; // adjust if path differs
+import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import Loader from "@/components/ui/Loader";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { updateUserAvatar } from "@/lib/createUser";
-import { auth } from "@/lib/firebaseConfig";
 import {
   colors,
   font,
@@ -12,18 +9,17 @@ import {
   spacing,
   tint,
 } from "@/components/ui/squish";
+import { PlushButton } from "@/components/ui/squish/PlushButton"; // adjust if path differs
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { updateUserAvatar } from "@/lib/createUser";
+import { auth } from "@/lib/firebaseConfig";
+import { deleteAccountFn } from "@/lib/handleUser";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { router } from "expo-router";
 import { signOut } from "firebase/auth";
+import { httpsCallable } from "firebase/functions";
 import React, { useEffect, useState } from "react";
-import {
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 type AvatarType = "male" | "female";
 
@@ -42,6 +38,8 @@ export default function ProfileScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
 
   const { user, isHydrating } = useCurrentUser();
 
@@ -86,6 +84,22 @@ export default function ProfileScreen() {
     } catch (error) {
       console.error("Error logging out:", error);
       setLoggingOut(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      await deleteAccountFn();
+      // auth user is now gone server-side; sign out locally to clear state
+      try {
+        if (GoogleSignin.hasPreviousSignIn()) await GoogleSignin.signOut();
+      } catch {}
+      await signOut(auth).catch(() => {}); // may already be invalidated
+      router.replace("/");
+    } catch (e) {
+      console.error("Delete failed:", e);
+      setDeleting(false);
     }
   };
 
@@ -153,56 +167,69 @@ export default function ProfileScreen() {
         {/* logout lives apart from the primary actions */}
         <View style={styles.logoutWrap}>
           <PlushButton
-            label="Log out"
+            label="log out"
             variant="blush"
             fullWidth
             onPress={() => setShowLogout(true)}
           />
         </View>
+        <View>
+          <PlushButton
+            label="delete account"
+            variant="blush"
+            fullWidth
+            onPress={() => setShowDelete(true)}
+          />
+        </View>
       </ScrollView>
 
       {/* logout confirm */}
-      <Modal
-        visible={showLogout}
-        transparent
-        animationType="fade"
+      <ConfirmationModal
+        isVisible={showLogout}
         onRequestClose={() => !loggingOut && setShowLogout(false)}
+        title="Log out?"
+        confirmButtonLabel={loggingOut ? "logging out…" : "log out"}
+        cancelButtonLabel="stay"
+        onConfirm={handleLogout}
+        onCancel={() => setShowLogout(false)}
       >
-        <View style={styles.backdrop}>
-          <View style={styles.sheet}>
-            <Text style={styles.sheetTitle}>Log out?</Text>
+        {isAnonymous ? (
+          <Text style={styles.sheetBody}>
+            You are using a guest account. Logging out erases it for good — your
+            hugs and friends cannot be recovered. Connect Google first if you
+            want to keep them.
+          </Text>
+        ) : (
+          <Text style={styles.sheetBody}>
+            You will need to sign in again to get back to your hugs.
+          </Text>
+        )}
+      </ConfirmationModal>
 
-            {isAnonymous ? (
-              <Text style={styles.sheetBody}>
-                You are using a guest account. Logging out erases it for good —
-                your hugs and friends cannot be recovered. Connect Google first
-                if you want to keep them.
-              </Text>
-            ) : (
-              <Text style={styles.sheetBody}>
-                You will need to sign in again to get back to your hugs.
-              </Text>
-            )}
-
-            <View style={styles.actions}>
-              <PlushButton
-                label="Stay"
-                variant="soft"
-                onPress={() => setShowLogout(false)}
-                disabled={loggingOut}
-                style={styles.actionBtn}
-              />
-              <PlushButton
-                label={loggingOut ? "Logging out…" : "Log out"}
-                variant="blush"
-                onPress={handleLogout}
-                disabled={loggingOut}
-                style={styles.actionBtn}
-              />
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* delete account confirm */}
+      <ConfirmationModal
+        isVisible={showDelete}
+        onRequestClose={() => !deleting && setShowDelete(false)}
+        title="Delete account?"
+        confirmButtonLabel={deleting ? "deleting.." : "delete"}
+        cancelButtonLabel="stay"
+        onConfirm={handleDeleteAccount}
+        onCancel={() => setShowDelete(false)}
+      >
+        {isAnonymous ? (
+          <Text style={styles.sheetBody}>
+            You are using a guest account. Logging out erases it for good — your
+            hugs and friends cannot be recovered. Connect Google first if you
+            want to keep them.
+          </Text>
+        ) : (
+          <Text style={styles.sheetBody}>
+            So, that is it, huh? Thanks for using my app. This action is
+            irreversible and will remove your user from the database, and all
+            the relevant information. Thank you!
+          </Text>
+        )}
+      </ConfirmationModal>
     </View>
   );
 }
