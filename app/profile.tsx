@@ -11,13 +11,13 @@ import {
 } from "@/components/ui/squish";
 import { PlushButton } from "@/components/ui/squish/PlushButton"; // adjust if path differs
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useHugDraft } from "@/hooks/useHugDraft";
 import { updateUserAvatar } from "@/lib/createUser";
 import { auth } from "@/lib/firebaseConfig";
 import { deleteAccountFn } from "@/lib/handleUser";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { router } from "expo-router";
 import { signOut } from "firebase/auth";
-import { httpsCallable } from "firebase/functions";
 import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
@@ -79,6 +79,7 @@ export default function ProfileScreen() {
 
       // the real logout: ends the Firebase session, fires onAuthStateChanged,
       // which useCurrentUser listens to -> routing updates automatically
+      useHugDraft.getState().resetAll();
       await signOut(auth);
       router.replace("/");
     } catch (error) {

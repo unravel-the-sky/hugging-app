@@ -3,7 +3,7 @@ import { FriendAvatar } from "@/components/ui/squish/FriendAvatar";
 import { PlushButton } from "@/components/ui/squish/PlushButton";
 import useCreateHugWithNote from "@/hooks/useCreateHugWithNote";
 import { useFriends } from "@/hooks/useFriends";
-import { auth } from "@/lib/firebaseConfig";
+import { useTopHugger } from "@/hooks/useIncomingHugs";
 import {
   FriendshipRequest,
   onAccept,
@@ -28,8 +28,8 @@ import {
   radius,
   shadow,
   spacing,
+  tint,
 } from "../../components/ui/squish/theme";
-import { Glyph } from "@/components/ui/squish/Showcase";
 
 const lastHugLabel = (friend: UserFriend): string => {
   if (!friend.lastSentHug) return "no hugs yet";
@@ -47,20 +47,27 @@ const lastHugLabel = (friend: UserFriend): string => {
   return `hugged ${days}d ago`;
 };
 
+const TopHuggerBadge = () => (
+  <View style={styles.topBadge}>
+    <Text style={styles.topBadgeText}>TOP HUGGER</Text>
+  </View>
+);
+
 const FriendRow = ({
   friend,
   isFirst,
   isLast,
+  isTop,
   onHug,
 }: {
   friend: UserFriend;
   isFirst: boolean;
   isLast: boolean;
+  isTop: boolean;
   onHug?: () => void;
 }) => (
   <Pressable
     onPress={() => {
-      // console.log("clciked on the friend id: ", friend.id);
       router.push({
         pathname: "/friend-stats",
         params: {
@@ -72,17 +79,21 @@ const FriendRow = ({
     <View
       style={[
         styles.cardItem,
-        isFirst && styles.cardItemFirst,
+        isFirst && !isTop && styles.cardItemFirst,
         isLast && styles.cardItemLast,
+        isTop && styles.cardItemTop,
       ]}
     >
       <View style={[styles.row, !isLast && styles.rowDivider]}>
         <FriendAvatar name={friend.displayName} online={friend.online} />
 
         <View style={styles.rowBody}>
-          <Text style={styles.name} numberOfLines={1}>
-            {friend.displayName}
-          </Text>
+          <View style={styles.nameRow}>
+            {isTop && <TopHuggerBadge />}
+            <Text style={styles.name} numberOfLines={1}>
+              {friend.displayName}
+            </Text>
+          </View>
           <Text style={styles.subText} numberOfLines={1}>
             {lastHugLabel(friend)}
           </Text>
@@ -136,18 +147,17 @@ const FriendRequestRow = ({
       >
         <IconButton
           variant="surface"
-          icon={<Ionicons name="close-outline" size={25} onPress={onDecline} />}
+          size={44}
+          accessibilityLabel="decline friend"
+          icon={<Ionicons name="close-outline" size={24} />}
+          onPress={onDecline}
         />
         <IconButton
           variant="primary"
-          icon={
-            <Ionicons
-              name="checkmark-outline"
-              size={25}
-              color={"white"}
-              onPress={onAccept}
-            />
-          }
+          onPress={onAccept}
+          size={44}
+          accessibilityLabel="accept friend"
+          icon={<Ionicons name="checkmark-outline" color={"white"} size={24} />}
         />
       </View>
     </View>
@@ -160,12 +170,21 @@ export default function FriendsListScreen() {
 
   const { friends, friendRequests, isLoading } = useFriends();
 
+  const { topHuggerUid } = useTopHugger();
+
   const filtered = useMemo(() => {
     const q = search.trim().toLocaleLowerCase();
-    return q
+    const base = q
       ? friends.filter((f) => f.displayName.toLowerCase().includes(q))
       : friends;
-  }, [friends, search]);
+
+    if (!topHuggerUid) return base;
+    return [...base].sort((a, b) => {
+      if (a.id === topHuggerUid) return -1;
+      if (b.id === topHuggerUid) return 1;
+      return 0;
+    });
+  }, [friends, search, topHuggerUid]);
 
   const handleHug = (friend: UserFriend) =>
     startHugWithNote({ displayName: friend.displayName, uid: friend.id });
@@ -173,8 +192,6 @@ export default function FriendsListScreen() {
   const handleAdd = () => router.push("/add-user");
 
   const [showFriendshipRequests, setShowFriendshipRequests] = useState(true);
-
-  console.log("friends: ", friends);
 
   if (isLoading) {
     return (
@@ -259,8 +276,9 @@ export default function FriendsListScreen() {
           renderItem={({ item, index }) => (
             <FriendRow
               friend={item}
-              isFirst={index === 0}
+              isFirst={index === 1}
               isLast={index === filtered.length - 1}
+              isTop={item.id === topHuggerUid}
               onHug={() => handleHug(item)}
             />
           )}
@@ -373,6 +391,30 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontFamily: font.displayBold,
     fontSize: 22,
+    color: colors.plumInk,
+  },
+
+  // top hugger greieieieiei
+  cardItemTop: {
+    backgroundColor: tint(colors.butter, 0.65),
+    borderWidth: 1,
+    borderColor: colors.butter,
+    borderRadius: radius.lg, // stands alone visually even mid-list
+    // borderTopRightRadius: radius.lg, // stands alone visually even mid-list
+    marginBottom: 12,
+  },
+  nameRow: { gap: spacing.xs },
+  topBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: colors.butter,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+  },
+  topBadgeText: {
+    fontFamily: font.uiBold,
+    fontSize: 10,
+    letterSpacing: 0.5,
     color: colors.plumInk,
   },
 });

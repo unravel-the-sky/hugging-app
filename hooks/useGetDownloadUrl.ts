@@ -10,7 +10,10 @@ export const useGetDownloadUrl = (photoUri: string | undefined) => {
     let alive = true;
     getDownloadURL(ref(getStorage(), photoUri))
       .then((u) => alive && setDownloadUrl(u))
-      .catch(() => alive && setFailed(true));
+      .catch((e) => {
+        console.error("error happened while fetching img: ", e);
+        return alive && setFailed(true);
+      });
     return () => {
       alive = false;
     };

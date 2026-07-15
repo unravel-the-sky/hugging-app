@@ -1,4 +1,3 @@
-import HugController from "@/components/hug/HugController";
 import { AppText } from "@/components/ui/AppText";
 import { Logo } from "@/components/ui/Logo";
 import { PlushButton } from "@/components/ui/squish/PlushButton";
@@ -15,9 +14,8 @@ export default function HomeScreen() {
   const toName = useHugDraft((s) => s.toName);
   const note = useHugDraft((s) => s.note);
   const imagePath = useHugDraft((s) => s.photoUri);
-  const reset = useHugDraft((s) => s.reset);
 
-  console.log("hello: ", { toUid, toName, note, imagePath });
+  console.log("hello im index: ", { toUid, toName, note, imagePath });
   const [sendableHug, setSendableHug] = useState<SendableHug | undefined>(
     undefined,
   );
@@ -35,12 +33,6 @@ export default function HomeScreen() {
     router.push({
       pathname: "/(tabs)/friends",
     });
-  };
-
-  const handleCompleteHug = () => {
-    console.log("i am called and resetting it");
-    setHugIsSent(true);
-    reset();
   };
 
   const handleResetHug = () => {
@@ -67,44 +59,43 @@ export default function HomeScreen() {
 
   return (
     <>
-      {sendableHug ? (
+      {/* {sendableHug ? (
         <HugController
           sendableHug={sendableHug}
           onComplete={handleCompleteHug}
         />
-      ) : (
-        <SafeAreaView edges={["bottom"]} style={styles.overlay}>
-          <View style={styles.container}>
-            <AppText variant="title">Hugging app</AppText>
-            <Text style={styles.mainText}>
-              Do you feel like you need a hug? Or would you like to send a hug?
-            </Text>
-            <View
-              style={{
-                display: "flex",
-                width: "100%",
-                padding: 8,
-                justifyContent: "center",
-                alignItems: "center",
-              }}
-            >
-              <Logo />
-            </View>
-            <Text style={styles.mainText}>
-              Then click the button, choose a hugging friend and send some
-              luuuvvv
-            </Text>
-            {/* Action Buttons */}
-            <View style={styles.actionsContainer}>
-              <PlushButton
-                onPress={handleInitiateHug}
-                label="send a hug 🥹"
-                fullWidth
-              />
-            </View>
+      ) : ( */}
+      <SafeAreaView edges={["bottom"]} style={styles.overlay}>
+        <View style={styles.container}>
+          <AppText variant="title">Hugging app</AppText>
+          <Text style={styles.mainText}>
+            Do you feel like you need a hug? Or would you like to send a hug?
+          </Text>
+          <View
+            style={{
+              display: "flex",
+              width: "100%",
+              padding: 8,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <Logo />
           </View>
-        </SafeAreaView>
-      )}
+          <Text style={styles.mainText}>
+            Then click the button, choose a hugging friend and send some luuuvvv
+          </Text>
+          {/* Action Buttons */}
+          <View style={styles.actionsContainer}>
+            <PlushButton
+              onPress={handleInitiateHug}
+              label="send a hug 🥹"
+              fullWidth
+            />
+          </View>
+        </View>
+      </SafeAreaView>
+      {/* )} */}
     </>
   );
 }

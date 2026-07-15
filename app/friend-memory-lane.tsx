@@ -70,7 +70,7 @@ export default function FriendMemoryLane() {
     Promise.all([getDoc(friendRef), getHugsWith(friendId)])
       .then(([snap, sharedHugs]) => {
         if (snap.exists()) setFriend(snap.data() as UserFriend);
-        setHugs(sharedHugs);
+        setHugs(sharedHugs.filter((hug) => hug.seenAt));
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -250,9 +250,11 @@ function MemImage({
   imagePath: string;
   caption?: string;
 }) {
-  console.log("imagePath: ", imagePath);
-
   const { downloadUrl, failed } = useGetDownloadUrl(imagePath);
+
+  console.log("imagePath: ", imagePath);
+  console.log("downloadUrl: ", downloadUrl);
+  console.log("failed: ", failed);
 
   return (
     <View style={styles.photoCard}>

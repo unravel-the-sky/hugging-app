@@ -79,13 +79,13 @@ export default function HugNoteModal() {
     setTo(friendUid);
     setToName(friendName);
     setNote(note.trim());
-    router.replace({
-      pathname: "/(tabs)",
+    console.log("i am sending hug");
+    router.push({
+      pathname: "/send-hug",
     });
   };
 
   const handleClose = () => {
-    reset();
     router.back();
   };
 

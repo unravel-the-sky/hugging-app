@@ -59,7 +59,7 @@ export const fontFamilyFor = (key: FontKey) =>
 /* ------------------------------------------------------------------ */
 
 export const SWATCHES: string[] = [
-  colors.surface, // white
+  colors.softInk,
   colors.plumInk, // dark
   colors.blush, // pink
   colors.peach, // peach

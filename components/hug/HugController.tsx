@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
   Extrapolation,
   interpolate,
@@ -15,6 +15,9 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { auth } from "@/lib/firebaseConfig";
 import { HugCreate, SendableHug, sendHug } from "@/lib/handleHugs";
 import { scheduleOnRN } from "react-native-worklets";
+import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { colors } from "../ui/squish";
 
 export type HugPhase =
   | "idle"
@@ -129,7 +132,37 @@ export default function HugController({ sendableHug, onComplete }: HugProps) {
 
   return (
     <Animated.View style={[styles.container, bgStyle]}>
-      <View></View>
+      <View
+        style={{
+          position: "absolute",
+          top: 100,
+          right: 0,
+          zIndex: 5,
+          paddingHorizontal: 18,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <Pressable
+          onPress={() => router.back()}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: "rgba(255,255,255,0.7)",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          hitSlop={8}
+        >
+          <Ionicons
+            name="close-circle-outline"
+            size={38}
+            color={colors.plumInk}
+          />
+        </Pressable>
+      </View>
       <View style={styles.progressContainer}>
         <Animated.View style={[styles.progressBar, progressBarStyle]} />
       </View>
@@ -157,6 +190,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     // backgroundColor: "#f7b7b7",
     height: "100%",
+    paddingVertical: 16,
   },
   statusContainer: {
     marginBottom: 16,
@@ -174,7 +208,7 @@ const styles = StyleSheet.create({
     height: 15,
     width: "70%",
     position: "absolute",
-    top: 20,
+    bottom: 100,
     backgroundColor: "#eee",
     borderRadius: 4,
     overflow: "hidden",

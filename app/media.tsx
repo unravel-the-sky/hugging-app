@@ -67,7 +67,7 @@ export default function Media({
       text: "",
       fontKey: "fredoka",
       size: 40,
-      color: colors.plumInk,
+      color: colors.softInk,
     });
   };
 
@@ -128,6 +128,7 @@ export default function Media({
   const deleteOverlay = (id: string) => {
     setOverlays((list) => list.filter((o) => o.id !== id));
     setSelectedId((cur) => (cur === id ? null : cur));
+    setEditing((cur) => (cur?.id === id ? null : cur));
   };
 
   // ---- capture ---------------------------------------------------------
@@ -251,7 +252,11 @@ export default function Media({
         <View
           ref={imageRef}
           collapsable={false}
-          style={{ width: canvasWidth, height: canvasHeight }}
+          style={{
+            width: canvasWidth,
+            height: canvasHeight,
+            overflow: "hidden",
+          }}
         >
           <PostImage media={media} selected={selected} />
 

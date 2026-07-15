@@ -1,15 +1,6 @@
-// components/postcard/DraggableOverlay.tsx
-//
-// Draggable / pinchable / rotatable text overlay. Committed values live in
-// parent state; shared values drive the live transform and write back on
-// gesture end so they survive re-renders (and are correct at capture time).
-//
-// Tap selects (shows dashed box + delete). Tapping again opens the editor
-// (handled by the parent via onTap).
-
 import Ionicons from "@expo/vector-icons/Ionicons";
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   runOnJS,
@@ -17,7 +8,7 @@ import Animated, {
   useSharedValue,
 } from "react-native-reanimated";
 
-import { colors } from "@/components/ui/squish/theme";
+import { colors, shadow } from "@/components/ui/squish/theme";
 import { fontFamilyFor, Overlay } from "@/constants/postcardEditorConstants";
 
 type Props = {
@@ -90,8 +81,13 @@ export default function DraggableOverlay({
     })
     .onEnd(() => runOnJS(commit)());
 
+  const deleteTap = Gesture.Tap()
+    .maxDuration(250)
+    .onEnd(() => runOnJS(onDelete)(overlay.id));
+
   const tap = Gesture.Tap()
     .maxDuration(250)
+    .requireExternalGestureToFail(deleteTap)
     .onEnd(() => runOnJS(onTap)(overlay));
 
   const gesture = Gesture.Race(tap, Gesture.Simultaneous(pan, pinch, rotation));
@@ -121,7 +117,9 @@ export default function DraggableOverlay({
                   fontFamily: fontFamilyFor(overlay.fontKey),
                   fontSize: overlay.size,
                   color: overlay.color,
-                  textAlign: "center",
+                  textAlign: "auto",
+                  ...shadow,
+                  shadowOpacity: 0.05,
                 }}
               >
                 {overlay.text}
@@ -129,13 +127,11 @@ export default function DraggableOverlay({
 
               {selected && (
                 <Animated.View style={[styles.deleteWrap, chromeStyle]}>
-                  <Pressable
-                    hitSlop={12}
-                    onPress={() => onDelete(overlay.id)}
-                    style={styles.delete}
-                  >
-                    <Ionicons name="close" size={16} color={colors.blush} />
-                  </Pressable>
+                  <GestureDetector gesture={deleteTap}>
+                    <Animated.View style={styles.delete} hitSlop={12}>
+                      <Ionicons name="close" size={16} color={colors.blush} />
+                    </Animated.View>
+                  </GestureDetector>
                 </Animated.View>
               )}
             </View>
@@ -147,9 +143,9 @@ export default function DraggableOverlay({
 }
 
 const styles = StyleSheet.create({
-  fill: { ...StyleSheet.absoluteFillObject },
+  fill: { ...StyleSheet.absoluteFill },
   center: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -163,7 +159,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.9)",
+    borderColor: colors.mint,
     borderStyle: "dashed",
     borderRadius: 10,
   },

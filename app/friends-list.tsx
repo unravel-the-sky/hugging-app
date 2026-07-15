@@ -11,7 +11,7 @@ export default function FriendsListModal({ onPress }: { onPress: () => void }) {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const { user, loading } = useCurrentUser();
+  const { user } = useCurrentUser();
 
   const { startHugWithNote } = useCreateHugWithNote();
 

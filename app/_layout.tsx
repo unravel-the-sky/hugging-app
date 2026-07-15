@@ -134,6 +134,13 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen
+          name="send-hug"
+          options={{
+            headerShown: false,
+            presentation: "fullScreenModal",
+          }}
+        />
+        <Stack.Screen
           name="friend-stats"
           options={{
             presentation: "modal",

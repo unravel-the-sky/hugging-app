@@ -222,6 +222,7 @@ export default function HugsListScreen() {
   const groups = useMemo<PersonGroup[]>(() => {
     const map = new Map<string, Hug[]>();
     for (const h of incomingHugs) {
+      if (!h.seenAt) continue;
       const arr = map.get(h.from) ?? [];
       arr.push(h);
       map.set(h.from, arr);
@@ -340,16 +341,18 @@ export default function HugsListScreen() {
                 </>
               )}
 
-              <View style={styles.sectionRow}>
-                <Text style={styles.sectionTitle}>ALDREADY SEEN</Text>
-                {/* <Text style={styles.hint}>tap to expand</Text> */}
-              </View>
+              {groups.length > 0 && (
+                <View style={styles.sectionRow}>
+                  <Text style={styles.sectionTitle}>ALREADY SEEN</Text>
+                </View>
+              )}
             </View>
           }
           renderItem={({ item, index }) => (
             <PersonRow
               group={item}
-              isTop={item.uid === topHuggerUid}
+              // isTop={item.uid === topHuggerUid}
+              isTop={false}
               expanded={expanded.has(item.uid)}
               onToggle={() => handleToggle(item.uid, index)}
               onSeeHug={handleSeeHug}
