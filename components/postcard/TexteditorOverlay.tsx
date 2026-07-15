@@ -84,7 +84,7 @@ export default function TextEditorOverlay({
                 fontFamily: fontFamilyFor(fontKey),
                 fontSize: draft.size,
                 textAlign: "center",
-                minWidth: 120,
+                width: "100%",
               }}
             />
           </View>
@@ -172,12 +172,14 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   textFrame: {
-    borderColor: "rgba(255,255,255,0.5)",
-    borderWidth: 1,
-    borderStyle: "dashed",
+    // borderColor: "rgba(255,255,255,0.5)",
+    // borderWidth: 1,
+    // borderStyle: "dashed",
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 8,
+    alignSelf: "stretch",
+    marginHorizontal: 24,
   },
   bar: {
     position: "absolute",
@@ -202,7 +204,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.soft,
   },
   fontChipActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.lilac,
   },
   bottomRow: {
     flexDirection: "row",

@@ -157,8 +157,7 @@ export default function SignInScreen() {
         />
 
         {/* Apple Sign-In button slot — we'll add this in the next phase */}
-        {/* commenting out for now since we don't have apple auth configured yet, it seems to need GCIP which i don't want to bother right now */}
-        {/* {Platform.OS === "ios" && (
+        {Platform.OS === "ios" && (
           <AppleAuthentication.AppleAuthenticationButton
             buttonType={
               AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
@@ -170,7 +169,7 @@ export default function SignInScreen() {
             style={styles.appleButton}
             onPress={handleAppleSignIn}
           />
-        )} */}
+        )}
 
         {__DEV__ && (
           <PlushButton

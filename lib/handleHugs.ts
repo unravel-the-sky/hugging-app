@@ -122,3 +122,14 @@ export async function getHugsWith(friendId: string): Promise<Hug[]> {
       (a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0),
     );
 }
+
+// this is some weird workaround for adding %2F instead of / on firebase downloadUrl
+// fix this better when you have time
+export const fixFirebaseUrl = (url: string): string => {
+  // Match the path between /o/ and ? and re-encode any unencoded slashes
+  return url.replace(/\/o\/([^?]+)/, (_, path) => {
+    // Decode first (in case it's partially encoded), then re-encode
+    const decoded = decodeURIComponent(path);
+    return `/o/${encodeURIComponent(decoded)}`;
+  });
+};

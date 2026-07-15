@@ -67,7 +67,7 @@ export default function Media({
       text: "",
       fontKey: "fredoka",
       size: 40,
-      color: colors.plumInk,
+      color: colors.softInk,
     });
   };
 
@@ -128,6 +128,7 @@ export default function Media({
   const deleteOverlay = (id: string) => {
     setOverlays((list) => list.filter((o) => o.id !== id));
     setSelectedId((cur) => (cur === id ? null : cur));
+    setEditing((cur) => (cur?.id === id ? null : cur));
   };
 
   // ---- capture ---------------------------------------------------------
@@ -197,14 +198,15 @@ export default function Media({
       if (!uid) throw new Error("not signed in");
 
       const imgName = `polaroid-hug-${Date.now()}`;
-      const storageRef = ref(storage, `images/${uid}/${imgName}`);
+      const imgPath = `images/${uid}/${imgName}`;
+      const storageRef = ref(storage, imgPath);
 
-      const snapshot = await uploadBytes(storageRef, blob, {
+      await uploadBytes(storageRef, blob, {
         contentType: "image/jpeg",
       });
-      const downloadUrl = await getDownloadURL(snapshot.ref);
+      // const downloadUrl = await getDownloadURL(snapshot.ref);
 
-      setPhoto(downloadUrl);
+      setPhoto(imgPath);
       router.back();
     } catch (err) {
       console.error("Error adding image to hug:", err);
@@ -250,7 +252,11 @@ export default function Media({
         <View
           ref={imageRef}
           collapsable={false}
-          style={{ width: canvasWidth, height: canvasHeight }}
+          style={{
+            width: canvasWidth,
+            height: canvasHeight,
+            overflow: "hidden",
+          }}
         >
           <PostImage media={media} selected={selected} />
 

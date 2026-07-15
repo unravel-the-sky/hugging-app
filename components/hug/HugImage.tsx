@@ -2,32 +2,11 @@ import { Image } from "expo-image";
 import React, { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import Loader from "../ui/Loader";
-
-// this is some weird workaround for adding %2F instead of / on firebase downloadUrl
-// fix this better when you have time
-export const fixFirebaseUrl = (url: string): string => {
-  // Match the path between /o/ and ? and re-encode any unencoded slashes
-  return url.replace(/\/o\/([^?]+)/, (_, path) => {
-    // Decode first (in case it's partially encoded), then re-encode
-    const decoded = decodeURIComponent(path);
-    return `/o/${encodeURIComponent(decoded)}`;
-  });
-};
+import { fixFirebaseUrl } from "@/lib/handleHugs";
 
 export default function HugImage({ hugImagePath }: { hugImagePath: string }) {
   const [imageUrl, setImageUrl] = useState("");
   const [loading, setLoading] = useState(false);
-
-  // useEffect(() => {
-  //   setLoading(true);
-  //   const storage = getStorage();
-  //   getDownloadURL(storageRef(storage, hugImagePath))
-  //     .then(setImageUrl)
-  //     .catch((err) => console.error("cannot downlad image"))
-  //     .finally(() => {
-  //       setLoading(false);
-  //     });
-  // }, [hugImagePath]);
 
   return (
     <View style={styles.imageContainer}>

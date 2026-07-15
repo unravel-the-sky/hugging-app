@@ -10,6 +10,14 @@ type HugDraftState = {
   setNote: (note: string) => void;
   setPhotoUri: (uri: string | undefined) => void;
   reset: () => void;
+  resetAll: () => void;
+};
+
+const initialState = {
+  note: "",
+  photoUri: undefined,
+  to: "",
+  toName: "",
 };
 
 export const useHugDraft = create<HugDraftState>((set) => ({
@@ -21,5 +29,6 @@ export const useHugDraft = create<HugDraftState>((set) => ({
   setToName: (toName) => set({ toName }),
   setNote: (note) => set({ note }),
   setPhotoUri: (photoUri) => set({ photoUri }),
+  resetAll: () => set(initialState),
   reset: () => set({ note: "", photoUri: undefined }),
 }));

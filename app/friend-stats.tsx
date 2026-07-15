@@ -1,3 +1,4 @@
+import AvatarImage from "@/components/avatar/AvatarImage";
 import {
   colors,
   darken,
@@ -7,7 +8,6 @@ import {
   spacing,
   tint,
 } from "@/components/ui/squish";
-import Avatar from "@/components/ui/squish/Avatar";
 import { PlushButton } from "@/components/ui/squish/PlushButton";
 import { auth, db } from "@/lib/firebaseConfig";
 import { onRemoveFriend, UserFriend } from "@/lib/handleFriends";
@@ -103,7 +103,7 @@ export default function FriendStatsModal() {
       >
         {/* identity */}
         <View style={styles.identity}>
-          <Avatar size={108} />
+          <AvatarImage avatar={friend.avatar || "male"} size="m" />
           <Text style={styles.name}>{friend.displayName}</Text>
         </View>
 

@@ -20,6 +20,8 @@ import {
 import { HttpsError, onCall } from "firebase-functions/https";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import fetch from "node-fetch";
+import { getAuth } from "firebase-admin/auth";
+import { getStorage } from "firebase-admin/storage";
 
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
@@ -519,3 +521,61 @@ async function sendExpoPush(
     console.error("Expo push failed", await res.text());
   }
 }
+
+export const deleteAccount = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in first.");
+
+  const userRef = db.doc(`users/${uid}`);
+
+  // 1. free the username reservation
+  const usernameDocs = await db
+    .collection("usernames")
+    .where("uid", "==", uid)
+    .get();
+  for (const d of usernameDocs.docs) await d.ref.delete();
+
+  // 2. remove uid from everyone's friends arrays
+  const friendsOfUser = await db
+    .collection("users")
+    .where("friends", "array-contains", uid)
+    .get();
+  const batch = db.batch();
+  friendsOfUser.forEach((snap) => {
+    batch.update(snap.ref, { friends: FieldValue.arrayRemove(uid) });
+    batch.delete(snap.ref.collection("friends").doc(uid));
+  });
+  await batch.commit();
+
+  // 3. anonymize sent hugs, delete attached photos
+  const sentHugs = await db.collection("hugs").where("from", "==", uid).get();
+  const hugBatch = db.batch();
+  sentHugs.forEach((snap) =>
+    hugBatch.update(snap.ref, {
+      from: null,
+      fromName: null,
+      imagePath: FieldValue.delete(),
+      senderDeleted: true,
+    }),
+  );
+  await hugBatch.commit();
+
+  // 4. wipe their storage folder (photos)
+  await getStorage()
+    .bucket()
+    .deleteFiles({ prefix: `users/${uid}/` }) // adjust to your path scheme
+    .catch(() => {});
+
+  const ownFriends = await userRef.collection("friends").get();
+  const ownBatch = db.batch();
+  ownFriends.forEach((d) => ownBatch.delete(d.ref));
+  await ownBatch.commit();
+
+  // 5. delete the user doc
+  await userRef.delete();
+
+  // 6. finally, the Auth account itself
+  await getAuth().deleteUser(uid);
+
+  return { ok: true };
+});

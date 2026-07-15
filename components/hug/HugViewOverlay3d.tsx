@@ -1,3 +1,5 @@
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useGetDownloadUrl } from "@/hooks/useGetDownloadUrl";
 import { useHugTexture } from "@/hooks/useHugTexture";
 import { db } from "@/lib/firebaseConfig";
 import { Hug } from "@/lib/handleHugs";
@@ -6,13 +8,11 @@ import { router } from "expo-router";
 import { doc, onSnapshot } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import AvatarImage from "../avatar/AvatarImage";
 import { colors, font, radius, shadow } from "../ui/squish";
 import { PlushButton } from "../ui/squish/PlushButton";
 import Toast from "../ui/squish/Toast";
-import { fixFirebaseUrl } from "./HugImage";
 import HugRevealer from "./HugRevealerNEW";
-import AvatarImage from "../avatar/AvatarImage";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 // Lavender gradient from the "Sealed (before)" screen.
 const SEALED_BG = ["#B9A5EC", "#9A7BD9"] as const;
@@ -47,9 +47,8 @@ export default function HugViewOverlay({
   onIgnore,
 }: Props) {
   const [opened, setOpened] = useState(false);
-  const { loaded, loading } = useHugTexture(
-    fixFirebaseUrl(hug?.imagePath || ""),
-  );
+  const { downloadUrl, failed } = useGetDownloadUrl(hug?.imagePath);
+  const { loaded, loading } = useHugTexture(downloadUrl || "");
 
   const [hugBackNote, setHugBackNote] = useState<string | null>(
     hug.hugBackNote ?? null,
@@ -103,7 +102,7 @@ export default function HugViewOverlay({
           loading={loading}
         />
 
-        {hugBackNote && (
+        {hugBackNote && loaded && (
           <View style={styles.hugBackMessage}>
             <Text style={styles.hugBackMessageText}>{hugBackNote}</Text>
             <AvatarImage avatar={user?.avatar || "male"} size="s" />

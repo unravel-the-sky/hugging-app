@@ -53,12 +53,12 @@ export const MetaIcons = ({ hug }: { hug: Hug }) => {
       {hasNote && (
         <Ionicons
           name="document-text-outline"
-          size={14}
+          size={16}
           color={colors.softInk}
         />
       )}
       {hasImage && (
-        <Ionicons name="image-outline" size={14} color={colors.softInk} />
+        <Ionicons name="image-outline" size={16} color={colors.softInk} />
       )}
     </View>
   );
@@ -151,11 +151,26 @@ export const SeenHugRow = ({
         <View style={styles.subLine}>
           <MetaIcons hug={hug} />
           {isOutgoing && (
-            <View>
+            <View style={{ flex: 1, flexDirection: "row", gap: 4 }}>
               {hug.seenAt ? (
-                <Ionicons name="checkmark-done-outline" color={colors.deep} />
+                <Ionicons
+                  name="checkmark-done-outline"
+                  color={colors.deep}
+                  size={16}
+                />
               ) : (
-                <Ionicons name="checkmark-outline" color={colors.softInk} />
+                <Ionicons
+                  name="checkmark-outline"
+                  color={colors.plumInk}
+                  size={16}
+                />
+              )}
+              {hug.hugBackAt && (
+                <Ionicons
+                  name="people-outline"
+                  color={colors.plumInk}
+                  size={16}
+                />
               )}
             </View>
           )}
