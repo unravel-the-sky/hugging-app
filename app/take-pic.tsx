@@ -1,5 +1,3 @@
-import AntDesign from "@expo/vector-icons/AntDesign";
-import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import {
   CameraMode,
   CameraType,
@@ -12,6 +10,8 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 
+import { colors, IconButton } from "@/components/ui/squish";
+import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import Media from "./media";
 
@@ -128,9 +128,14 @@ export default function TakePicture() {
                   margin: 40,
                 }}
               >
-                <Pressable onPress={pickImageFromMobileAsync}>
-                  <AntDesign name="picture" size={32} color="grey" />
-                </Pressable>
+                <IconButton
+                  variant="surface"
+                  size={50}
+                  accessibilityLabel="pick from device"
+                  icon={<Ionicons name="image-outline" size={30} />}
+                  onPress={pickImageFromMobileAsync}
+                />
+
                 <Pressable onPress={takePic}>
                   {({ pressed }) => (
                     <View
@@ -146,16 +151,20 @@ export default function TakePicture() {
                           styles.shutterBtnInner,
                           {
                             backgroundColor:
-                              mode === "picture" ? "grey" : "red",
+                              mode === "picture" ? colors.deep : "red",
                           },
                         ]}
                       />
                     </View>
                   )}
                 </Pressable>
-                <Pressable onPress={toggleCameraFacing}>
-                  <FontAwesome6 name="rotate-left" size={32} color="grey" />
-                </Pressable>
+                <IconButton
+                  variant="surface"
+                  size={50}
+                  accessibilityLabel="toggle camera"
+                  icon={<Ionicons name="camera-reverse-outline" size={30} />}
+                  onPress={toggleCameraFacing}
+                />
               </View>
             </View>
           </View>
@@ -197,10 +206,10 @@ const styles = StyleSheet.create({
   },
   shutterBtn: {
     backgroundColor: "transparent",
-    borderWidth: 5,
+    borderWidth: 8,
     borderColor: "white",
-    width: 85,
-    height: 85,
+    width: 90,
+    height: 90,
     borderRadius: 45,
     alignItems: "center",
     justifyContent: "center",
