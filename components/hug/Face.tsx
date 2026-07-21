@@ -4,6 +4,7 @@ import {
   HAIR_COLOR,
   MAIN_COLOR,
 } from "@/constants";
+import { AvatarType } from "@/lib/createUser";
 import Animated, {
   Extrapolation,
   interpolate,
@@ -11,16 +12,17 @@ import Animated, {
   useAnimatedProps,
 } from "react-native-reanimated";
 import Svg, { Defs, G, Path, RadialGradient, Stop } from "react-native-svg";
-import { AvatarType } from "../user/Avatar";
+import { PhotoFace } from "./PhotoFace";
 
 const AnimatedG = Animated.createAnimatedComponent(G);
 
 type FaceProps = {
   hugProgress: SharedValue<number>;
   userAvatar: AvatarType;
+  photoUrl?: string;
 };
 
-export function Face({ hugProgress, userAvatar }: FaceProps) {
+export function Face({ hugProgress, userAvatar, photoUrl }: FaceProps) {
   const opacityAnimatedProps = useAnimatedProps(() => ({
     opacity: interpolate(
       hugProgress.value,
@@ -58,6 +60,10 @@ export function Face({ hugProgress, userAvatar }: FaceProps) {
       ],
     };
   });
+
+  if (userAvatar === "photo" && photoUrl) {
+    return <PhotoFace uri={photoUrl} hugProgress={hugProgress} />;
+  }
 
   if (userAvatar === "male")
     return (

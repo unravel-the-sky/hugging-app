@@ -1,8 +1,8 @@
 import AvatarImage from "@/components/avatar/AvatarImage";
 import Loader from "@/components/ui/Loader";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useFriends } from "@/hooks/useFriends";
 import { useHugs } from "@/hooks/useIncomingHugs";
-import { auth } from "@/lib/firebaseConfig";
 import {
   DarkTheme,
   DefaultTheme,
@@ -19,11 +19,11 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import SetupScreen from "../setup";
-import SignInScreen from "../sign-in";
 import { colors } from "../../components/ui/squish/theme";
 import { TabBarContext } from "../context/TabBarContext";
-import { useFriends } from "@/hooks/useFriends";
+import SetupScreen from "../setup";
+import SignInScreen from "../sign-in";
+import ChangeAvatarSheet from "../change-avatar";
 
 const getGreetingMessage = (): string => {
   const currentHour = new Date().getHours();
@@ -41,7 +41,7 @@ const getGreetingMessage = (): string => {
 };
 
 export default function TabsLayout() {
-  const { authUser, user, isHydrating, isSyncing } = useCurrentUser();
+  const { authUser, user, isHydrating } = useCurrentUser();
   const [unreadHugsCount, setUnreadHugsCount] = useState<number>(0);
 
   const [isTabBarHidden, setIsTabBarHidden] = useState(false);
@@ -69,6 +69,10 @@ export default function TabsLayout() {
     return <Loader />;
   }
 
+  if (user && !user.avatar) {
+    return <ChangeAvatarSheet />;
+  }
+
   if (!authUser && !isOnSetup && !user) {
     return <SignInScreen />;
   }
@@ -94,7 +98,11 @@ export default function TabsLayout() {
             <Text style={styles.usernameText}>{user?.displayName || ""}</Text>
           </View>
           <Pressable onPress={() => router.push("/profile")}>
-            <AvatarImage avatar={user?.avatar || "male"} size="s" />
+            {user && <AvatarImage user={user} size="s" />}
+            {/* <FriendAvatar
+              name={"asdf"}
+              photoUri={user.photoThumbPath ?? undefined}
+            /> */}
           </Pressable>
         </View>
 

@@ -1,4 +1,3 @@
-import AvatarImage from "@/components/avatar/AvatarImage";
 import {
   colors,
   darken,
@@ -8,7 +7,9 @@ import {
   spacing,
   tint,
 } from "@/components/ui/squish";
+import { FriendAvatar } from "@/components/ui/squish/FriendAvatar";
 import { PlushButton } from "@/components/ui/squish/PlushButton";
+import { useAvatarThumb } from "@/hooks/useAvatarThumbnail";
 import { auth, db } from "@/lib/firebaseConfig";
 import { onRemoveFriend, UserFriend } from "@/lib/handleFriends";
 import { formatTimestamp } from "@/lib/util";
@@ -73,6 +74,8 @@ export default function FriendStatsModal() {
     }
   };
 
+  const photoUri = useAvatarThumb(friendId);
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -103,7 +106,11 @@ export default function FriendStatsModal() {
       >
         {/* identity */}
         <View style={styles.identity}>
-          <AvatarImage avatar={friend.avatar || "male"} size="m" />
+          {/* <AvatarImage avatar={friend.avatar || "male"} size="m" /> */}
+          <FriendAvatar
+            name={friend.displayName}
+            photoUri={photoUri ?? undefined}
+          />
           <Text style={styles.name}>{friend.displayName}</Text>
         </View>
 

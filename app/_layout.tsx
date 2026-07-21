@@ -1,12 +1,8 @@
+import { colors } from "@/components/ui/squish";
 import { savePushTokenOnUser, useCurrentUser } from "@/hooks/useCurrentUser";
-import { GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from "@/lib/auth-config";
+import { GOOGLE_WEB_CLIENT_ID } from "@/lib/auth-config";
 import { auth } from "@/lib/firebaseConfig";
-import { GoogleSignin } from "@react-native-google-signin/google-signin";
-import { useFonts } from "expo-font";
-import * as Notifications from "expo-notifications";
-import { SplashScreen, Stack, router } from "expo-router";
-import { useEffect, useRef } from "react";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { Caveat_600SemiBold } from "@expo-google-fonts/caveat";
 import {
   Fredoka_600SemiBold,
   Fredoka_700Bold,
@@ -15,7 +11,12 @@ import {
   Quicksand_600SemiBold,
   Quicksand_700Bold,
 } from "@expo-google-fonts/quicksand";
-import { Caveat_600SemiBold } from "@expo-google-fonts/caveat";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
+import { useFonts } from "expo-font";
+import * as Notifications from "expo-notifications";
+import { SplashScreen, Stack, router } from "expo-router";
+import { useEffect, useRef } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -121,7 +122,10 @@ export default function RootLayout() {
             headerLargeTitleShadowVisible: true,
           }}
         />
-        <Stack.Screen name="take-pic" />
+        <Stack.Screen
+          name="take-pic"
+          // options={{ headerShown: false, presentation: "fullScreenModal" }}
+        />
         <Stack.Screen name="media" />
         <Stack.Screen
           name="profile"
@@ -160,6 +164,18 @@ export default function RootLayout() {
             headerShown: false, // cleaner look in a sheet
           }}
         />
+        <Stack.Screen
+          name="change-avatar"
+          options={{
+            presentation: "formSheet",
+            sheetGrabberVisible: true,
+            sheetAllowedDetents: "fitToContents",
+            sheetCornerRadius: 28,
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.surface },
+          }}
+        />
+        <Stack.Screen name="avatar-camera" options={{ headerShown: false }} />
       </Stack>
     </GestureHandlerRootView>
   );

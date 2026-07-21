@@ -1,8 +1,12 @@
+import { colors, font, radius, shadow, spacing } from "@/components/ui/squish";
+import { FriendAvatar } from "@/components/ui/squish/FriendAvatar";
+import { PlushButton } from "@/components/ui/squish/PlushButton";
+import { useFriends } from "@/hooks/useFriends";
+import { getPendingOutgoingUids, sendFriendRequest } from "@/lib/handleFriends";
 import {
   searchUsersByPrefix,
   type UserSearchResult,
 } from "@/lib/searchUsersByPrefix"; // adjust path
-import { getPendingOutgoingUids, sendFriendRequest } from "@/lib/handleFriends";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -16,11 +20,6 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { colors, font, radius, shadow, spacing } from "@/components/ui/squish";
-import Avatar from "@/components/ui/squish/Avatar";
-import { useFriends } from "@/hooks/useFriends";
-import { auth } from "@/lib/firebaseConfig";
-import { PlushButton } from "@/components/ui/squish/PlushButton";
 
 type SentState = Record<string, "idle" | "sending" | "sent">;
 
@@ -29,7 +28,7 @@ export default function AddUserScreen() {
   const [results, setResults] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [sent, setSent] = useState<SentState>({});
-  const { friends } = useFriends(auth.currentUser?.uid);
+  const { friends } = useFriends();
 
   // tracks the latest query so out-of-order responses get discarded
   const latestTerm = useRef("");
@@ -123,7 +122,7 @@ export default function AddUserScreen() {
           const alreadyFriend = friends.find((f) => f.id === item.uid);
           return (
             <View style={styles.row}>
-              <Avatar size={48} />
+              <FriendAvatar name={item.displayName} uid={item.uid} />
               <Text style={styles.rowName} numberOfLines={1}>
                 {item.displayName}
               </Text>

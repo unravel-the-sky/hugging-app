@@ -1,4 +1,3 @@
-import { AvatarType } from "@/components/user/Avatar";
 import {
   arrayUnion,
   collection,
@@ -13,7 +12,7 @@ import {
   where,
 } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
-import { getUserFromCollection, User } from "./createUser";
+import { AvatarType, getUserFromCollection, User } from "./createUser";
 import { auth, db } from "./firebaseConfig";
 import { normalizeUsername } from "./util";
 
@@ -39,6 +38,7 @@ export type UserFriend = {
   numStreakDays?: number;
   addedAt?: Timestamp;
   online?: boolean;
+  photoThumbPath?: string;
 };
 
 export async function getUserByUsername(username: string) {

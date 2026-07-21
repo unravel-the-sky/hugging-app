@@ -30,6 +30,7 @@ import {
   spacing,
   tint,
 } from "../../components/ui/squish/theme";
+import { useAvatarThumb } from "@/hooks/useAvatarThumbnail";
 
 const lastHugLabel = (friend: UserFriend): string => {
   if (!friend.lastSentHug) return "no hugs yet";
@@ -65,49 +66,57 @@ const FriendRow = ({
   isLast: boolean;
   isTop: boolean;
   onHug?: () => void;
-}) => (
-  <Pressable
-    onPress={() => {
-      router.push({
-        pathname: "/friend-stats",
-        params: {
-          friendId: friend.id,
-        },
-      });
-    }}
-  >
-    <View
-      style={[
-        styles.cardItem,
-        isFirst && !isTop && styles.cardItemFirst,
-        isLast && styles.cardItemLast,
-        isTop && styles.cardItemTop,
-      ]}
-    >
-      <View style={[styles.row, !isLast && styles.rowDivider]}>
-        <FriendAvatar name={friend.displayName} online={friend.online} />
+}) => {
+  const photoUri = useAvatarThumb(friend.id);
 
-        <View style={styles.rowBody}>
-          <View style={styles.nameRow}>
-            {isTop && <TopHuggerBadge />}
-            <Text style={styles.name} numberOfLines={1}>
-              {friend.displayName}
+  return (
+    <Pressable
+      onPress={() => {
+        router.push({
+          pathname: "/friend-stats",
+          params: {
+            friendId: friend.id,
+          },
+        });
+      }}
+    >
+      <View
+        style={[
+          styles.cardItem,
+          isFirst && !isTop && styles.cardItemFirst,
+          isLast && styles.cardItemLast,
+          isTop && styles.cardItemTop,
+        ]}
+      >
+        <View style={[styles.row, !isLast && styles.rowDivider]}>
+          <FriendAvatar
+            name={friend.displayName}
+            online={friend.online}
+            photoUri={photoUri ?? undefined}
+          />
+
+          <View style={styles.rowBody}>
+            <View style={styles.nameRow}>
+              {isTop && <TopHuggerBadge />}
+              <Text style={styles.name} numberOfLines={1}>
+                {friend.displayName}
+              </Text>
+            </View>
+            <Text style={styles.subText} numberOfLines={1}>
+              {lastHugLabel(friend)}
             </Text>
           </View>
-          <Text style={styles.subText} numberOfLines={1}>
-            {lastHugLabel(friend)}
-          </Text>
+          <PlushButton
+            label="hug!"
+            variant="primary"
+            height={40}
+            onPress={onHug}
+          />
         </View>
-        <PlushButton
-          label="hug!"
-          variant="primary"
-          height={40}
-          onPress={onHug}
-        />
       </View>
-    </View>
-  </Pressable>
-);
+    </Pressable>
+  );
+};
 
 const FriendRequestRow = ({
   friendRequest,
@@ -121,48 +130,58 @@ const FriendRequestRow = ({
   isLast: boolean;
   onAccept: () => void;
   onDecline: () => void;
-}) => (
-  <View
-    style={[
-      styles.cardItem,
-      isFirst && styles.cardItemFirst,
-      isLast && styles.cardItemLast,
-    ]}
-  >
-    <View style={[styles.row, !isLast && styles.rowDivider]}>
-      <FriendAvatar name={friendRequest.fromName} />
+}) => {
+  const photoUri = useAvatarThumb(friendRequest.from);
 
-      <View style={styles.rowBody}>
-        <Text style={styles.name} numberOfLines={1}>
-          {friendRequest.fromName}
-        </Text>
-      </View>
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          flexDirection: "row",
-          gap: 8,
-        }}
-      >
-        <IconButton
-          variant="surface"
-          size={44}
-          accessibilityLabel="decline friend"
-          icon={<Ionicons name="close-outline" size={24} />}
-          onPress={onDecline}
+  return (
+    <View
+      style={[
+        styles.cardItem,
+        isFirst && styles.cardItemFirst,
+        isLast && styles.cardItemLast,
+      ]}
+    >
+      <View style={[styles.row, !isLast && styles.rowDivider]}>
+        <FriendAvatar
+          name={friendRequest.fromName}
+          photoUri={photoUri || undefined}
         />
-        <IconButton
-          variant="primary"
-          onPress={onAccept}
-          size={44}
-          accessibilityLabel="accept friend"
-          icon={<Ionicons name="checkmark-outline" color={"white"} size={24} />}
-        />
+
+        <View style={styles.rowBody}>
+          <Text style={styles.name} numberOfLines={1}>
+            {friendRequest.fromName}
+          </Text>
+        </View>
+
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            flexDirection: "row",
+            gap: 8,
+          }}
+        >
+          <IconButton
+            variant="surface"
+            size={44}
+            accessibilityLabel="decline friend"
+            icon={<Ionicons name="close-outline" size={24} />}
+            onPress={onDecline}
+          />
+          <IconButton
+            variant="primary"
+            onPress={onAccept}
+            size={44}
+            accessibilityLabel="accept friend"
+            icon={
+              <Ionicons name="checkmark-outline" color={"white"} size={24} />
+            }
+          />
+        </View>
       </View>
     </View>
-  </View>
-);
+  );
+};
 
 export default function FriendsListScreen() {
   const [search, setSearch] = useState("");
@@ -372,7 +391,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
   },
   rowDivider: {
     borderBottomWidth: StyleSheet.hairlineWidth,

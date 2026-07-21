@@ -1,4 +1,5 @@
 import { PlushButton } from "@/components/ui/squish/PlushButton";
+import { useAvatarThumb } from "@/hooks/useAvatarThumbnail";
 import { Hug } from "@/lib/handleHugs";
 import {
   avatarColor,
@@ -16,6 +17,7 @@ import {
   shadow,
   spacing,
 } from "../../components/ui/squish/theme";
+import { FriendAvatar } from "../ui/squish/FriendAvatar";
 
 export type Tab = "received" | "sent";
 
@@ -88,9 +90,10 @@ export const NewHugRow = ({
   showDivider: boolean;
   onSee?: () => void;
 }) => {
+  const photoUri = useAvatarThumb(hug.from);
   return (
     <View style={[styles.row, showDivider && styles.rowDivider]}>
-      <HugAvatar name={hug.fromName} />
+      <FriendAvatar name={hug.fromName} photoUri={photoUri ?? undefined} />
 
       <View style={styles.rowBody}>
         <View style={styles.nameLine}>
@@ -126,7 +129,6 @@ export const SeenHugRow = ({
   showDivider: boolean;
   onPress?: () => void;
 }) => {
-  const avatarName = isOutgoing ? hug.toName : hug.fromName;
   const display = isOutgoing ? `To ${hug.toName}` : hug.fromName;
 
   return (
@@ -142,7 +144,8 @@ export const SeenHugRow = ({
         },
       ]}
     >
-      <HugAvatar name={avatarName} />
+      {/* <HugAvatar name={avatarName} /> */}
+      <FriendAvatar name={hug.fromName} uid={hug.to} />
 
       <View style={styles.rowBody}>
         <Text style={styles.seenName} numberOfLines={1}>

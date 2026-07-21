@@ -15,8 +15,18 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import Media from "./media";
 
-export default function TakePicture() {
-  const [facing, setFacing] = useState<CameraType>("back");
+export interface TakePictureProps {
+  renderPreview?: (uri: string, onRetake: () => void) => React.ReactNode;
+  defaultFacing?: CameraType;
+  circularGuide?: boolean;
+}
+
+export default function TakePicture({
+  renderPreview,
+  defaultFacing = "back",
+  circularGuide = false,
+}: TakePictureProps) {
+  const [facing, setFacing] = useState<CameraType>(defaultFacing);
   const [permission, requestPermission] = useCameraPermissions();
 
   const ref = useRef<CameraView>(null);
@@ -35,7 +45,6 @@ export default function TakePicture() {
   const doubleTap = Gesture.Tap()
     .numberOfTaps(2)
     .onStart(() => {
-      console.log("double tapped!");
       scheduleOnRN(toggleCameraFacing);
     });
 
@@ -70,10 +79,14 @@ export default function TakePicture() {
     );
   }
 
-  const renderPicture = (uri: string) => {
+  const renderPicture = (pictureUri: string) => {
     return (
       <SafeAreaView style={styles.cameraContainer} edges={["top"]}>
-        <Media media={uri} onBack={() => setUri(null)} />
+        {renderPreview ? (
+          renderPreview(pictureUri, () => setUri(null))
+        ) : (
+          <Media media={pictureUri} onBack={() => setUri(null)} />
+        )}
       </SafeAreaView>
     );
   };
@@ -111,6 +124,13 @@ export default function TakePicture() {
                 mirror={true}
                 responsiveOrientationWhenOrientationLocked
               />
+              {circularGuide && (
+                <View
+                  style={styles.circleGuide}
+                  pointerEvents="none"
+                  accessibilityElementsHidden
+                />
+              )}
             </View>
             <View
               style={{
@@ -194,6 +214,14 @@ const styles = StyleSheet.create({
   },
   cameraContainer: StyleSheet.absoluteFill,
   camera: StyleSheet.absoluteFill,
+  circleGuide: {
+    ...StyleSheet.absoluteFill,
+    margin: "auto",
+    aspectRatio: 1,
+    borderRadius: 9999,
+    borderWidth: 3,
+    borderColor: "rgba(255,255,255,0.9)",
+  },
   shutterContainer: {
     position: "absolute",
     bottom: 44,
