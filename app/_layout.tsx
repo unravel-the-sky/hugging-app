@@ -147,11 +147,8 @@ export default function RootLayout() {
         <Stack.Screen
           name="friend-stats"
           options={{
-            presentation: "modal",
-            sheetGrabberVisible: true,
-            headerTransparent: false,
-            headerShadowVisible: true,
-            headerLargeTitleShadowVisible: true,
+            headerShown: false,
+            presentation: "fullScreenModal",
           }}
         />
         <Stack.Screen

@@ -144,8 +144,7 @@ export const SeenHugRow = ({
         },
       ]}
     >
-      {/* <HugAvatar name={avatarName} /> */}
-      <FriendAvatar name={hug.fromName} uid={hug.to} />
+      <FriendAvatar name={hug.fromName} uid={isOutgoing ? hug.to : ""} />
 
       <View style={styles.rowBody}>
         <Text style={styles.seenName} numberOfLines={1}>

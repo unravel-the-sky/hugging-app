@@ -1,6 +1,8 @@
 import AvatarImage from "@/components/avatar/AvatarImage";
 import { colors, font, radius, shadow, spacing } from "@/components/ui/squish";
 import Avatar from "@/components/ui/squish/Avatar";
+import RoundIconButton from "@/components/ui/squish/RountIconButton";
+import { useAvatarThumb } from "@/hooks/useAvatarThumbnail";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useGetDownloadUrl } from "@/hooks/useGetDownloadUrl";
 import { auth, db } from "@/lib/firebaseConfig";
@@ -13,7 +15,6 @@ import { doc, getDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -68,6 +69,9 @@ export default function FriendMemoryLane() {
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [friendId]);
+
+  const friendPhotoUrl = useAvatarThumb(friend?.id);
+  const myPhotoUrl = useAvatarThumb(user?.uid);
 
   if (loading || isHydrating || !user) {
     return (
@@ -133,7 +137,19 @@ export default function FriendMemoryLane() {
 
                 <MemRow
                   side={h.from === user?.uid ? "right" : "left"}
-                  avatar={<AvatarImage user={user} size="s" />}
+                  avatar={
+                    <AvatarImage
+                      avatar={
+                        h.from === user?.uid
+                          ? user.avatar
+                          : friend?.avatar || undefined
+                      }
+                      photoURL={
+                        h.from === user?.uid ? myPhotoUrl : friendPhotoUrl
+                      }
+                      size="s"
+                    />
+                  }
                 >
                   {h.imagePath ? (
                     <MemImage imagePath={h.imagePath} caption={h.note} />
@@ -148,7 +164,7 @@ export default function FriendMemoryLane() {
 
                 {hasBack ? (
                   <MemRow
-                    side="left"
+                    side={recipientIsMe ? "right" : "left"}
                     avatar={<AvatarImage size="s" user={user} />}
                     caption={`${backAuthorName} hugged back 🫂`}
                   >
@@ -178,26 +194,6 @@ export default function FriendMemoryLane() {
 }
 
 /* ── pieces ──────────────────────────────────────────────────────────── */
-
-function RoundIconButton({
-  icon,
-  onPress,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      hitSlop={8}
-      style={({ pressed }) => [styles.roundBtn, pressed && { opacity: 0.7 }]}
-      accessibilityRole="button"
-      accessibilityLabel="Back"
-    >
-      <Ionicons name={icon} size={22} color={colors.plumInk} />
-    </Pressable>
-  );
-}
 
 function MemDivider({ label }: { label: string }) {
   return (

@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/squish";
 import { FriendAvatar } from "@/components/ui/squish/FriendAvatar";
 import { PlushButton } from "@/components/ui/squish/PlushButton";
+import RoundIconButton from "@/components/ui/squish/RountIconButton";
 import { useAvatarThumb } from "@/hooks/useAvatarThumbnail";
 import { auth, db } from "@/lib/firebaseConfig";
 import { onRemoveFriend, UserFriend } from "@/lib/handleFriends";
@@ -26,6 +27,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const showStreak = false;
 const showDeleteHistory = false;
@@ -98,7 +100,24 @@ export default function FriendStatsModal() {
   const streak = friend.numStreakDays ?? 0;
 
   return (
-    <>
+    <SafeAreaView
+      style={{
+        flex: 1,
+        height: "100%",
+        width: "100%",
+      }}
+    >
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          paddingHorizontal: spacing.lg,
+          paddingTop: spacing.sm,
+        }}
+      >
+        <RoundIconButton icon="chevron-back" onPress={() => router.back()} />
+      </View>
+
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.container}
@@ -312,7 +331,7 @@ export default function FriendStatsModal() {
           </View>
         </View>
       </Modal>
-    </>
+    </SafeAreaView>
   );
 }
 
