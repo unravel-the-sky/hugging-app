@@ -62,9 +62,6 @@ export default function ChangeAvatarSheet() {
   };
 
   const handleCamera = () => {
-    // Close the sheet before pushing — presenting a full-screen route
-    // from inside a formSheet is flaky across platforms, and this way
-    // the camera returns straight to the profile when it's done.
     router.back();
     router.push("/avatar-camera");
   };
