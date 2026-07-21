@@ -108,7 +108,7 @@ export default function HugButton({
     const scale = interpolate(
       hugProgress.value,
       [0, 1],
-      [1, 1.8],
+      [1, 1.6],
       Extrapolation.CLAMP,
     );
     const jiggleX = Math.sin(hugProgress.value * Math.PI * 18) * 2;

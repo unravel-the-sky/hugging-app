@@ -17,7 +17,7 @@ import { HugCreate, SendableHug, sendHug } from "@/lib/handleHugs";
 import { scheduleOnRN } from "react-native-worklets";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "../ui/squish";
+import { colors, font, radius } from "../ui/squish";
 
 export type HugPhase =
   | "idle"
@@ -99,10 +99,10 @@ export default function HugController({ sendableHug, onComplete }: HugProps) {
   });
 
   const getHugPhaseStatusText = useCallback(() => {
-    if (hugPhase === "formed") return "Hug is formed!";
-    if (hugPhase === "hugging") return "Hug is hugging!";
-    if (hugPhase === "idle") return "Too early, try again!";
-    if (hugPhase === "thrown") return "Hug is thrown!";
+    if (hugPhase === "formed") return "now pull down and release!";
+    if (hugPhase === "hugging") return "keep pressing!";
+    if (hugPhase === "idle") return "press the buttton to form the hug!";
+    if (hugPhase === "thrown") return "hug is thrown!";
   }, [hugPhase]);
 
   const progressBarStyle = useAnimatedStyle(() => {
@@ -166,12 +166,7 @@ export default function HugController({ sendableHug, onComplete }: HugProps) {
       <View style={styles.progressContainer}>
         <Animated.View style={[styles.progressBar, progressBarStyle]} />
       </View>
-      <View style={styles.statusContainer}>
-        <Text style={styles.statusText}>
-          Send a hug to {sendableHug.toName}
-        </Text>
-        <Text style={styles.statusText}>{getHugPhaseStatusText()}</Text>
-      </View>
+
       <HugButton
         hugProgress={hugPress}
         hugPhase={hugPhase}
@@ -179,6 +174,7 @@ export default function HugController({ sendableHug, onComplete }: HugProps) {
         onPressOut={releaseHug}
         onSendHugProcess={onSendHugProcess}
       />
+      <Text style={styles.statusText}>{getHugPhaseStatusText()}</Text>
     </Animated.View>
   );
 }
@@ -188,17 +184,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    // backgroundColor: "#f7b7b7",
     height: "100%",
     paddingVertical: 16,
   },
-  statusContainer: {
-    marginBottom: 16,
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-  },
   statusText: {
+    backgroundColor: colors.peach,
+    borderRadius: radius.md,
+    padding: 12,
+    fontFamily: font.uiBold,
     fontSize: 16,
   },
   releaseText: {

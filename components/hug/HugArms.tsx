@@ -20,7 +20,7 @@ export type HugArmProps = {
 
 export default function HugArms({ hugProgress }: HugArmProps) {
   const animatedLeftArmStyle = useAnimatedStyle(() => {
-    const translateXVal = interpolate(hugProgress.value, [0, 1], [45, -90]);
+    const translateXVal = interpolate(hugProgress.value, [0, 1], [45, -70]);
 
     return {
       transform: [{ translateX: translateXVal }],
@@ -62,7 +62,7 @@ export default function HugArms({ hugProgress }: HugArmProps) {
           </Svg>
         </Animated.View>
       </Animated.View>
-      <Animated.View style={[styles.leftArm, animatedRightArmStyle]}>
+      <Animated.View style={[styles.rightArm, animatedRightArmStyle]}>
         <Animated.View style={wristStyle}>
           <Svg width={80} height={47} viewBox="0 0 133 57">
             <Path
@@ -86,8 +86,12 @@ const styles = StyleSheet.create({
   },
   leftArm: {
     position: "absolute",
-    right: BUTTON_SIZE / 2,
-    top: 30,
-    left: -38,
+    top: 10,
+    left: -40,
+  },
+  rightArm: {
+    position: "absolute",
+    top: 10,
+    left: -40,
   },
 });

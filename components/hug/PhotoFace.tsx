@@ -20,7 +20,7 @@ import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg";
  * later, this is still the single file to swap.
  */
 
-const SIZE = 110;
+const SIZE = 120;
 const WOBBLE = 0.06; // how much the jelly squishes (0 = off)
 const SHINE = 0.55; // highlight strength (0 = matte)
 
