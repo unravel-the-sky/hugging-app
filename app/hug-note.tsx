@@ -23,6 +23,8 @@ import {
 } from "../components/ui/squish";
 import { useHugDraft } from "../hooks/useHugDraft";
 import { useGetDownloadUrl } from "@/hooks/useGetDownloadUrl";
+import { useAvatarThumb } from "@/hooks/useAvatarThumbnail";
+import { FriendAvatar } from "@/components/ui/squish/FriendAvatar";
 
 const NOTE_MAX_LENGTH = 40;
 
@@ -89,6 +91,8 @@ export default function HugNoteModal() {
     router.back();
   };
 
+  const avatarUri = useAvatarThumb(friendUid);
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -104,11 +108,7 @@ export default function HugNoteModal() {
         </Pressable>
 
         <View style={styles.header}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {friendName?.charAt(0)?.toUpperCase() ?? "?"}
-            </Text>
-          </View>
+          <FriendAvatar name={friendName} photoUri={avatarUri ?? undefined} />
           <Text style={styles.title}>New hug</Text>
           <Text style={styles.subtitle}>to {friendName}</Text>
         </View>

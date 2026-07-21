@@ -11,12 +11,21 @@ import {
 import { auth, db } from "./firebaseConfig";
 import { normalizeUsername } from "./util";
 
-type AvatarType = "male" | "female";
+export type AvatarType = "male" | "female" | "photo";
+
+export type DrawnAvatarType = Exclude<AvatarType, "photo">;
 
 export type UserDoc = {
   displayName: string;
   friends: string[];
   avatar?: AvatarType;
+
+  photoURL?: string; // 512px, download URL stored at upload time
+  photoThumbURL?: string; // 96px thumb for lists
+  photoPath?: string; // storage paths, kept so replace/delete can clean up
+  photoThumbPath?: string;
+  photoUpdatedAt?: number; // ms epoch — same ts as the filenames
+
   createdAt?: FieldValue;
   pushToken?: string;
   stats: {

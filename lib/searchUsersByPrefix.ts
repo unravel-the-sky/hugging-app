@@ -7,7 +7,7 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { auth, db } from "./firebaseConfig";
-import { AvatarType } from "@/components/user/Avatar";
+import { AvatarType } from "./createUser";
 
 export type UserSearchResult = {
   uid: string;

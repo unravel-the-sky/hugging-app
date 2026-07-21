@@ -58,45 +58,36 @@ export default function HomeScreen() {
   }
 
   return (
-    <>
-      {/* {sendableHug ? (
-        <HugController
-          sendableHug={sendableHug}
-          onComplete={handleCompleteHug}
-        />
-      ) : ( */}
-      <SafeAreaView edges={["bottom"]} style={styles.overlay}>
-        <View style={styles.container}>
-          <AppText variant="title">Hugging app</AppText>
-          <Text style={styles.mainText}>
-            Do you feel like you need a hug? Or would you like to send a hug?
-          </Text>
-          <View
-            style={{
-              display: "flex",
-              width: "100%",
-              padding: 8,
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <Logo />
-          </View>
-          <Text style={styles.mainText}>
-            Then click the button, choose a hugging friend and send some luuuvvv
-          </Text>
-          {/* Action Buttons */}
-          <View style={styles.actionsContainer}>
-            <PlushButton
-              onPress={handleInitiateHug}
-              label="send a hug 🥹"
-              fullWidth
-            />
-          </View>
+    <SafeAreaView edges={["bottom"]} style={styles.overlay}>
+      <View style={styles.container}>
+        <AppText variant="title">Hugging app</AppText>
+        <Text style={styles.mainText}>
+          Do you feel like you need a hug? Or would you like to send a hug?
+        </Text>
+        <View
+          style={{
+            display: "flex",
+            width: "100%",
+            padding: 8,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Logo />
         </View>
-      </SafeAreaView>
-      {/* )} */}
-    </>
+        <Text style={styles.mainText}>
+          Then click the button, choose a hugging friend and send some luuuvvv
+        </Text>
+        {/* Action Buttons */}
+        <View style={styles.actionsContainer}>
+          <PlushButton
+            onPress={handleInitiateHug}
+            label="send a hug 🥹"
+            fullWidth
+          />
+        </View>
+      </View>
+    </SafeAreaView>
   );
 }
 

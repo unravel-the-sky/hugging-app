@@ -11,7 +11,7 @@ import {
   where,
 } from "firebase/firestore";
 import { auth, db } from "./firebaseConfig";
-import { AvatarType } from "@/components/user/Avatar";
+import { AvatarType } from "./createUser";
 
 type HugBase<TTimestamp> = {
   from: string;

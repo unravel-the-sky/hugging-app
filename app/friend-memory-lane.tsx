@@ -20,13 +20,6 @@ import {
   View,
 } from "react-native";
 
-/**
- * Memories — a messenger-style timeline of every hug exchanged with one
- * friend, newest first. Each hug renders as the original (photo/note) aligned
- * to whoever sent it, with the hug-back (if any) as a reply bubble opposite it.
- * Scroll to the bottom to reach the very first hug.
- */
-
 const MONTHS = [
   "January",
   "February",
@@ -76,7 +69,7 @@ export default function FriendMemoryLane() {
       .finally(() => setLoading(false));
   }, [friendId]);
 
-  if (loading || isHydrating) {
+  if (loading || isHydrating || !user) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator color={colors.primary} />
@@ -140,9 +133,7 @@ export default function FriendMemoryLane() {
 
                 <MemRow
                   side={h.from === user?.uid ? "right" : "left"}
-                  avatar={
-                    <AvatarImage avatar={h.fromAvatar || "male"} size="s" />
-                  }
+                  avatar={<AvatarImage user={user} size="s" />}
                 >
                   {h.imagePath ? (
                     <MemImage imagePath={h.imagePath} caption={h.note} />
@@ -158,9 +149,7 @@ export default function FriendMemoryLane() {
                 {hasBack ? (
                   <MemRow
                     side="left"
-                    avatar={
-                      <AvatarImage avatar={user?.avatar || "male"} size="s" />
-                    }
+                    avatar={<AvatarImage size="s" user={user} />}
                     caption={`${backAuthorName} hugged back 🫂`}
                   >
                     <MemNote

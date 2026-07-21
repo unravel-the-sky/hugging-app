@@ -1,13 +1,9 @@
 import { createUserWithUsername } from "@/lib/createUser";
 import React, { useState } from "react";
-import {
-  Alert,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
+import { AppText } from "../ui/AppText";
+import { colors, font } from "../ui/squish";
+import { PlushButton } from "../ui/squish/PlushButton";
 
 interface UsernameSetupProps {
   onUsernameSet: (userId: string, username: string) => void;
@@ -59,13 +55,11 @@ export default function UsernameSetup({ onUsernameSet }: UsernameSetupProps) {
   return (
     <View style={styles.content}>
       <View style={styles.header}>
-        <Text style={styles.emoji}>🤗</Text>
-        <Text style={styles.title}>Welcome to Hug</Text>
+        <AppText variant="title">Hugging app</AppText>
         <Text style={styles.subtitle}>Choose a username to get started</Text>
       </View>
 
       <View style={styles.inputContainer}>
-        <Text style={styles.label}>Username</Text>
         <TextInput
           style={styles.input}
           placeholder="username"
@@ -82,15 +76,11 @@ export default function UsernameSetup({ onUsernameSet }: UsernameSetupProps) {
         </Text>
       </View>
 
-      <TouchableOpacity
-        style={[styles.button, isLoading && styles.buttonDisabled]}
+      <PlushButton
         onPress={handleSubmit}
         disabled={isLoading}
-      >
-        <Text style={styles.buttonText}>
-          {isLoading ? "Setting up..." : "Continue"}
-        </Text>
-      </TouchableOpacity>
+        label={isLoading ? "setting up..." : "continue"}
+      />
     </View>
   );
 }
@@ -116,9 +106,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
-    color: "#666",
-    textAlign: "center",
+    fontFamily: font.ui,
+    fontSize: 14,
+    color: colors.plumInk,
+    marginTop: 2,
   },
   inputContainer: {
     marginBottom: 32,
@@ -136,12 +127,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: "#1A1A1A",
+    fontFamily: font.ui,
+    color: colors.plumInk,
+    marginTop: 2,
   },
   hint: {
     fontSize: 12,
-    color: "#999",
     marginTop: 8,
+    fontFamily: font.ui,
+    color: colors.plumInk,
   },
   button: {
     backgroundColor: "#FF6B6B",

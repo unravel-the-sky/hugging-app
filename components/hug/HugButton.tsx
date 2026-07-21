@@ -142,6 +142,7 @@ export default function HugButton({
             <Face
               hugProgress={hugProgress}
               userAvatar={user?.avatar || "male"}
+              photoUrl={user?.photoURL}
             />
             <HeartParticles
               active={

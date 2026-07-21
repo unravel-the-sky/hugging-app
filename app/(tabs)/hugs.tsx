@@ -38,6 +38,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import { useAvatarThumb } from "@/hooks/useAvatarThumbnail";
 
 const MIN_HUGS = 10;
 
@@ -64,9 +65,10 @@ const relTime = (ms: number): string => {
 type PersonGroup = {
   uid: string;
   name: string;
-  hugs: Hug[]; // this person's incoming hugs, newest first
+  hugs: Hug[]; // incoming
   count: number;
   last: Hug;
+  photoUri?: string;
 };
 
 const TopHuggerBadge = () => (
@@ -91,6 +93,8 @@ const PersonRow = ({
   const [contentHeight, setContentHeight] = useState(0);
   const progress = useSharedValue(0);
 
+  const photoUri = useAvatarThumb(group.uid);
+
   useEffect(() => {
     progress.value = withTiming(expanded ? 1 : 0, {
       duration: 220,
@@ -111,7 +115,7 @@ const PersonRow = ({
     <View style={[styles.personCard, isTop && styles.personCardTop]}>
       <Pressable style={styles.personRow} onPress={onToggle}>
         <View style={isTop && styles.avatarRing}>
-          <FriendAvatar name={group.name} />
+          <FriendAvatar name={group.name} photoUri={photoUri ?? undefined} />
         </View>
 
         <View style={styles.personBody}>

@@ -6,16 +6,20 @@ import { Hug } from "@/lib/handleHugs";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { doc, onSnapshot } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import AvatarImage from "../avatar/AvatarImage";
 import { colors, font, radius, shadow } from "../ui/squish";
 import { PlushButton } from "../ui/squish/PlushButton";
 import Toast from "../ui/squish/Toast";
 import HugRevealer from "./HugRevealerNEW";
+import { HugFaceSeal } from "./HugFaceSeal";
+import { FiberCanvas } from "../three/FiberCanvas";
+import HugArms from "./HugArms3d";
+import { useAvatarThumb } from "@/hooks/useAvatarThumbnail";
 
 // Lavender gradient from the "Sealed (before)" screen.
-const SEALED_BG = ["#B9A5EC", "#9A7BD9"] as const;
+const SEALED_BG = ["#ddd6ef", "#d3cfdb"] as const;
 
 interface Props {
   hug: Hug;
@@ -85,6 +89,10 @@ export default function HugViewOverlay({
     });
   };
 
+  const avatarThumbUrl = useAvatarThumb(hug.from);
+  const isPhoto = hug.fromAvatar === "photo" && !!avatarThumbUrl;
+  const { loaded: avatarTex } = useHugTexture(avatarThumbUrl || undefined);
+
   if (!hug) return null;
 
   console.log("HUGVIEWOVERLAY fromName: ", hug.fromName);
@@ -130,10 +138,27 @@ export default function HugViewOverlay({
       <LinearGradient colors={SEALED_BG} style={StyleSheet.absoluteFill} />
 
       <View style={styles.center}>
-        <Envelope />
+        {/* <Envelope /> */}
+        <HugFaceSeal
+          fromUid={hug.from}
+          fromAvatar={hug.fromAvatar}
+          size={150}
+        />
+        {/* {isPhoto && avatarThumbUrl && (
+          <FiberCanvas style={styles.fill}>
+            <ambientLight intensity={0.75} color="#fff3ea" />
+            <directionalLight position={[-1.4, 2, 2.2]} intensity={0.9} />
+            <pointLight
+              position={[1.5, -0.5, 2.5]}
+              intensity={0.5}
+              color="#ffe8d6"
+            />
+            <HugArms map={avatarTex?.texture ?? null} autoPlay />
+          </FiberCanvas>
+        )} */}
 
         <Text style={styles.fromName}>
-          {hug.fromName ?? "Someone"} sent you a hug
+          {hug.fromName ?? "Someone"} sent you a hug!
         </Text>
 
         <PlushButton
@@ -182,6 +207,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 32,
     gap: 22,
+    flexDirection: "column",
   },
 
   fromName: {
@@ -190,6 +216,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#FFFFFF",
     textAlign: "center",
+    top: 0,
   },
   chip: {
     backgroundColor: "rgba(255,255,255,0.28)",

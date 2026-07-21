@@ -82,12 +82,12 @@ const styles = StyleSheet.create({
     width: BUTTON_SIZE,
     height: BUTTON_SIZE,
     alignItems: "center",
-    justifyContent: "center",
     top: 25,
   },
   leftArm: {
     position: "absolute",
     right: BUTTON_SIZE / 2,
     top: 30,
+    left: -38,
   },
 });
