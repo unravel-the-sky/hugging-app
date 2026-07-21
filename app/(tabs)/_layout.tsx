@@ -23,6 +23,7 @@ import { colors } from "../../components/ui/squish/theme";
 import { TabBarContext } from "../context/TabBarContext";
 import SetupScreen from "../setup";
 import SignInScreen from "../sign-in";
+import ChangeAvatarSheet from "../change-avatar";
 
 const getGreetingMessage = (): string => {
   const currentHour = new Date().getHours();
@@ -40,7 +41,7 @@ const getGreetingMessage = (): string => {
 };
 
 export default function TabsLayout() {
-  const { authUser, user, isHydrating, isSyncing } = useCurrentUser();
+  const { authUser, user, isHydrating } = useCurrentUser();
   const [unreadHugsCount, setUnreadHugsCount] = useState<number>(0);
 
   const [isTabBarHidden, setIsTabBarHidden] = useState(false);
@@ -66,6 +67,10 @@ export default function TabsLayout() {
 
   if (isHydrating) {
     return <Loader />;
+  }
+
+  if (user && !user.avatar) {
+    return <ChangeAvatarSheet />;
   }
 
   if (!authUser && !isOnSetup && !user) {

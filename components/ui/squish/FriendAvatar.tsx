@@ -23,7 +23,7 @@ export const FriendAvatar = ({
   size?: number;
   uid?: string;
 }) => {
-  const color = avatarColor(name);
+  const color = avatarColor(name || "");
   const avatarUrl = useAvatarThumb(uid);
 
   return (
