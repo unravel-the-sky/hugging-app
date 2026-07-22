@@ -27,7 +27,6 @@ import {
   Text,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 const showStreak = false;
 const showDeleteHistory = false;
@@ -100,7 +99,7 @@ export default function FriendStatsModal() {
   const streak = friend.numStreakDays ?? 0;
 
   return (
-    <SafeAreaView
+    <View
       style={{
         flex: 1,
         height: "100%",
@@ -128,6 +127,7 @@ export default function FriendStatsModal() {
           {/* <AvatarImage avatar={friend.avatar || "male"} size="m" /> */}
           <FriendAvatar
             name={friend.displayName}
+            size={80}
             photoUri={photoUri ?? undefined}
           />
           <Text style={styles.name}>{friend.displayName}</Text>
@@ -331,14 +331,15 @@ export default function FriendStatsModal() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: colors.mistBg },
   container: {
-    padding: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
     paddingBottom: spacing.xl * 1.6,
     gap: spacing.md,
   },

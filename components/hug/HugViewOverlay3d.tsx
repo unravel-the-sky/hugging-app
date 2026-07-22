@@ -1,3 +1,4 @@
+import { useAvatarThumb } from "@/hooks/useAvatarThumbnail";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useGetDownloadUrl } from "@/hooks/useGetDownloadUrl";
 import { useHugTexture } from "@/hooks/useHugTexture";
@@ -6,24 +7,22 @@ import { Hug } from "@/lib/handleHugs";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { doc, onSnapshot } from "firebase/firestore";
-import { Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import AvatarImage from "../avatar/AvatarImage";
 import { colors, font, radius, shadow } from "../ui/squish";
 import { PlushButton } from "../ui/squish/PlushButton";
 import Toast from "../ui/squish/Toast";
-import HugRevealer from "./HugRevealerNEW";
 import { HugFaceSeal } from "./HugFaceSeal";
-import { FiberCanvas } from "../three/FiberCanvas";
-import HugArms from "./HugArms3d";
-import { useAvatarThumb } from "@/hooks/useAvatarThumbnail";
+import HugRevealer from "./HugRevealerNEW";
 
 // Lavender gradient from the "Sealed (before)" screen.
 const SEALED_BG = ["#ddd6ef", "#d3cfdb"] as const;
 
-interface Props {
+interface HugViewOverlayProps {
   hug: Hug;
-  onHugBack: (hug: Hug) => void;
+  isReadOnly?: boolean;
+  onHugBack?: (hug: Hug) => void;
   onOpen: () => void;
   onClose: () => void;
   onIgnore: () => void;
@@ -45,11 +44,12 @@ function Envelope() {
 
 export default function HugViewOverlay({
   hug,
+  isReadOnly,
   onHugBack,
   onOpen,
   onClose,
   onIgnore,
-}: Props) {
+}: HugViewOverlayProps) {
   const [opened, setOpened] = useState(false);
   const { downloadUrl, failed } = useGetDownloadUrl(hug?.imagePath);
   const { loaded, loading } = useHugTexture(downloadUrl || "");
@@ -97,13 +97,14 @@ export default function HugViewOverlay({
 
   console.log("HUGVIEWOVERLAY fromName: ", hug.fromName);
 
-  if (opened) {
+  if (opened || isReadOnly) {
     return (
       <>
         <HugRevealer
           loaded={loaded}
           hasImage={!!hug.imagePath}
           message={hug.note}
+          isReadOnly={isReadOnly}
           onHugBack={handleHugBack}
           huggedBack={!!hugBackNote}
           onClose={onClose}
