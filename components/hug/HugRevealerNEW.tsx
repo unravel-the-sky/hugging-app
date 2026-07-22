@@ -45,6 +45,7 @@ interface HugRevealProps {
   loading: boolean;
   hasImage: boolean;
   huggedBack: boolean;
+  isReadOnly?: boolean;
   message?: string;
   onHugBack: () => void;
   onClose: () => void;
@@ -198,6 +199,7 @@ export default function HugReveal({
   loading,
   hasImage,
   message,
+  isReadOnly,
   huggedBack = false,
   onHugBack,
   onClose,
@@ -326,7 +328,7 @@ export default function HugReveal({
 
       <View style={styles.buttonRow} pointerEvents="box-none">
         <PlushButton variant="primary" label="close" onPress={onClose} />
-        {!huggedBack && (
+        {!huggedBack && !isReadOnly && (
           <PlushButton variant="blush" label="hug back" onPress={onHugBack} />
         )}
       </View>

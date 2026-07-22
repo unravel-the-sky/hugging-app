@@ -1,55 +1,30 @@
 import { PlushButton } from "@/components/ui/squish/PlushButton";
 import { useAvatarThumb } from "@/hooks/useAvatarThumbnail";
 import { Hug } from "@/lib/handleHugs";
-import {
-  avatarColor,
-  formatTimestamp,
-  getNote,
-  readableText,
-} from "@/lib/util";
+import { counterpartyOf, Direction } from "@/lib/hugs/groups";
+import { formatTimestamp, getNote } from "@/lib/util";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import {
-  colors,
-  font,
-  radius,
-  shadow,
-  spacing,
-} from "../../components/ui/squish/theme";
 import { FriendAvatar } from "../ui/squish/FriendAvatar";
+import { colors, font, radius, shadow, spacing } from "../ui/squish/theme";
 
 export type Tab = "received" | "sent";
-
-export type Section = {
-  key: "new" | "seen";
-  title: string;
-  count?: number;
-  data: Hug[];
-};
 
 export const TABS: { key: Tab; label: string }[] = [
   { key: "received", label: "Received" },
   { key: "sent", label: "Sent" },
 ] as const;
 
-export const HugAvatar = ({ name }: { name: string }) => {
-  const bg = avatarColor(name);
-  return (
-    <View style={styles.avatarWrap}>
-      <View style={[styles.avatar, { backgroundColor: bg }]}>
-        <Text style={[styles.avatarLetter, { color: readableText(bg) }]}>
-          {name?.[0]?.toUpperCase() ?? "?"}
-        </Text>
-      </View>
-    </View>
-  );
-};
+/* ------------------------------------------------------------------ */
+/* Small pieces                                                        */
+/* ------------------------------------------------------------------ */
 
 export const MetaIcons = ({ hug }: { hug: Hug }) => {
   const hasNote = !!getNote(hug);
   const hasImage = !!hug.imagePath;
   if (!hasNote && !hasImage) return null;
+
   return (
     <View style={styles.metaIcons}>
       {hasNote && (
@@ -66,21 +41,42 @@ export const MetaIcons = ({ hug }: { hug: Hug }) => {
   );
 };
 
-export const SeeButton = ({ onPress }: { onPress?: () => void }) => {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.seeBtn,
-        pressed && { opacity: 0.9, transform: [{ scale: 0.97 }] },
-      ]}
-    >
-      <Text style={styles.seeBtnIcon}>✋</Text>
-      <Text style={styles.seeBtnText}>SEE</Text>
-    </Pressable>
-  );
-};
+/** Delivery state of a hug you sent: delivered → seen → hugged back. */
+const DeliveryIcons = ({ hug }: { hug: Hug }) => (
+  <View style={styles.deliveryIcons}>
+    <Ionicons
+      name={hug.seenAt ? "checkmark-done-outline" : "checkmark-outline"}
+      color={hug.seenAt ? colors.deep : colors.plumInk}
+      size={16}
+    />
+    {hug.hugBackAt && (
+      <Ionicons name="people-outline" color={colors.plumInk} size={16} />
+    )}
+  </View>
+);
 
+export const SectionHeader = ({
+  title,
+  count,
+}: {
+  title: string;
+  count?: number;
+}) => (
+  <View style={styles.sectionHeader}>
+    <Text style={styles.sectionTitle}>{title}</Text>
+    {typeof count === "number" && count > 0 && (
+      <View style={styles.countPill}>
+        <Text style={styles.countPillText}>{count}</Text>
+      </View>
+    )}
+  </View>
+);
+
+/* ------------------------------------------------------------------ */
+/* Rows                                                                */
+/* ------------------------------------------------------------------ */
+
+/** An unseen incoming hug, with the call to action. Always incoming. */
 export const NewHugRow = ({
   hug,
   showDivider,
@@ -91,6 +87,7 @@ export const NewHugRow = ({
   onSee?: () => void;
 }) => {
   const photoUri = useAvatarThumb(hug.from);
+
   return (
     <View style={[styles.row, showDivider && styles.rowDivider]}>
       <FriendAvatar name={hug.fromName} photoUri={photoUri ?? undefined} />
@@ -118,73 +115,59 @@ export const NewHugRow = ({
   );
 };
 
-export const SeenHugRow = ({
+/**
+ * One hug in a list, from either direction.
+ *
+ * The avatar and name always belong to the *other* person — previously the
+ * outgoing variant showed the sender's own initial next to "To <name>".
+ */
+export const HugRow = ({
   hug,
-  isOutgoing,
+  direction,
   showDivider,
   onPress,
 }: {
   hug: Hug;
-  isOutgoing: boolean;
+  direction: Direction;
   showDivider: boolean;
   onPress?: () => void;
 }) => {
-  const display = isOutgoing ? `To ${hug.toName}` : hug.fromName;
+  const other = counterpartyOf(hug, direction);
+  const photoUri = useAvatarThumb(other.uid);
+  const isOutgoing = direction === "outgoing";
 
   return (
     <Pressable
       onPress={onPress}
       disabled={!onPress}
       style={({ pressed }) => [
-        styles.seenRow,
+        styles.row,
         showDivider && styles.rowDivider,
-        {
-          backgroundColor: pressed ? colors.lilac : colors.surface,
-          overflow: "hidden",
-        },
+        { backgroundColor: pressed ? colors.lilac : colors.surface },
       ]}
     >
-      <FriendAvatar name={hug.fromName} uid={isOutgoing ? hug.to : ""} />
+      <FriendAvatar name={other.name} photoUri={photoUri ?? undefined} />
 
       <View style={styles.rowBody}>
-        <Text style={styles.seenName} numberOfLines={1}>
-          {display}
+        <Text style={styles.rowName} numberOfLines={1}>
+          {isOutgoing ? `To ${other.name}` : other.name}
         </Text>
         <View style={styles.subLine}>
           <MetaIcons hug={hug} />
-          {isOutgoing && (
-            <View style={{ flex: 1, flexDirection: "row", gap: 4 }}>
-              {hug.seenAt ? (
-                <Ionicons
-                  name="checkmark-done-outline"
-                  color={colors.deep}
-                  size={16}
-                />
-              ) : (
-                <Ionicons
-                  name="checkmark-outline"
-                  color={colors.plumInk}
-                  size={16}
-                />
-              )}
-              {hug.hugBackAt && (
-                <Ionicons
-                  name="people-outline"
-                  color={colors.plumInk}
-                  size={16}
-                />
-              )}
-            </View>
-          )}
+          {isOutgoing && <DeliveryIcons hug={hug} />}
         </View>
       </View>
 
-      <Text style={styles.seenTime}>
+      <Text style={styles.rowTime}>
         {formatTimestamp(hug.createdAt!.toDate())}
       </Text>
     </Pressable>
   );
 };
+
+/* ------------------------------------------------------------------ */
+/* Tabs                                                                */
+/* ------------------------------------------------------------------ */
 
 export const FilterTabs = ({
   value,
@@ -192,62 +175,53 @@ export const FilterTabs = ({
 }: {
   value: Tab;
   onChange: (t: Tab) => void;
-}) => {
-  return (
-    <View style={styles.tabsTrack}>
-      {TABS.map((t) => {
-        const active = value === t.key;
-        return (
-          <Pressable
-            key={t.key}
-            onPress={() => onChange(t.key)}
-            style={[styles.tabItem, active && styles.tabItemActive]}
-          >
-            <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
-              {t.label}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-};
-
-export const SectionHeader = ({
-  title,
-  count,
-}: {
-  title: string;
-  count?: number;
-}) => {
-  return (
-    <View style={styles.sectionHeader}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      {typeof count === "number" && count > 0 && (
-        <View style={styles.countPill}>
-          <Text style={styles.countPillText}>{count}</Text>
-        </View>
-      )}
-    </View>
-  );
-};
+}) => (
+  <View style={styles.tabsTrack}>
+    {TABS.map((t) => {
+      const active = value === t.key;
+      return (
+        <Pressable
+          key={t.key}
+          onPress={() => onChange(t.key)}
+          style={[styles.tabItem, active && styles.tabItemActive]}
+        >
+          <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
+            {t.label}
+          </Text>
+        </Pressable>
+      );
+    })}
+  </View>
+);
 
 const styles = StyleSheet.create({
-  /* avatar + sticker badge */
-  avatarWrap: {
-    width: 50,
-    height: 50,
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+  /* rows */
+  row: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    overflow: "hidden",
   },
-  avatarLetter: {
-    fontFamily: font.displayBold,
-    fontSize: 20,
+  rowDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.soft,
+  },
+  rowBody: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  rowName: {
+    fontFamily: font.uiBold,
+    fontSize: 16,
+    color: colors.plumInk,
+    marginBottom: 2,
+  },
+  rowTime: {
+    fontFamily: font.ui,
+    fontSize: 13,
+    color: colors.softInk,
+    marginLeft: spacing.sm,
   },
 
   /* name + subtitle lines */
@@ -261,12 +235,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.plumInk,
     flexShrink: 1,
-  },
-  seenName: {
-    fontFamily: font.uiBold,
-    fontSize: 16,
-    color: colors.plumInk,
-    marginBottom: 2,
   },
   newPill: {
     backgroundColor: colors.soft,
@@ -296,58 +264,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.xs,
   },
-  metaIcon: {
-    fontSize: 12,
-  },
-
-  /* SEE button (swap for your PlushButton if you'd rather) */
-  seeBtn: {
+  deliveryIcons: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 10,
-    borderRadius: radius.button,
-    ...shadow,
-    shadowOpacity: 0.28,
-  },
-  seeBtnIcon: {
-    fontSize: 13,
-  },
-  seeBtnText: {
-    fontFamily: font.uiBold,
-    fontSize: 13,
-    letterSpacing: 0.5,
-    color: "#FFFFFF",
-  },
-  seenTime: {
-    fontFamily: font.ui,
-    fontSize: 13,
-    color: colors.softInk,
-    marginLeft: spacing.sm,
-  },
-
-  /* rows */
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-  },
-  seenRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-  },
-  rowDivider: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.soft,
-  },
-  rowBody: {
-    flex: 1,
-    marginLeft: spacing.md,
+    gap: spacing.xs,
   },
 
   /* segmented tabs */
@@ -380,24 +299,19 @@ const styles = StyleSheet.create({
     color: colors.deep,
   },
 
-  /* scroll + sections */
-  scrollContent: {
-    paddingHorizontal: spacing.xl,
-  },
-  section: {
-    marginBottom: spacing.xl,
-  },
+  /* section headers */
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
+    justifyContent: "space-between",
+    marginTop: spacing.md,
     marginBottom: spacing.md,
-    marginLeft: spacing.xs,
   },
   sectionTitle: {
     fontFamily: font.uiBold,
     fontSize: 13,
     letterSpacing: 1,
+    textTransform: "uppercase",
     color: colors.softInk,
   },
   countPill: {
@@ -412,6 +326,6 @@ const styles = StyleSheet.create({
   countPillText: {
     fontFamily: font.uiBold,
     fontSize: 12,
-    color: "#FFFFFF",
+    color: colors.surface,
   },
 });

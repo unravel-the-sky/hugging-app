@@ -82,7 +82,7 @@ export default function TabsLayout() {
     return <SignInScreen />;
   }
 
-  if (authUser && !user && !isOnSetup) {
+  if ((authUser && !isOnSetup && !user) || !user?.avatar) {
     return <SetupScreen />;
   }
 
