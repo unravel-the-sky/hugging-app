@@ -54,7 +54,7 @@ const TopHuggerBadge = () => (
   </View>
 );
 
-const FriendRow = ({
+export const FriendRow = ({
   friend,
   isFirst,
   isLast,
@@ -284,9 +284,7 @@ export default function FriendsListScreen() {
         </View>
       )}
 
-      <View>
-        <Text style={styles.sectionTitle}>FRIENDS</Text>
-
+      <View style={{ flex: 1 }}>
         <FlatList
           data={filtered}
           keyExtractor={(f) => f.id}
