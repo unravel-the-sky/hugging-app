@@ -148,7 +148,7 @@ export default function FriendStatsModal() {
         </View>
 
         {/* memory laneee */}
-        <PlushButton
+        {/* <PlushButton
           icon={<Ionicons name="star-sharp" size={20} color={colors.blush} />}
           label="memories"
           variant="soft"
@@ -158,7 +158,7 @@ export default function FriendStatsModal() {
               params: { friendId },
             })
           }
-        />
+        /> */}
 
         {/* directional split */}
         <View style={styles.splitRow}>

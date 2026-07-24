@@ -73,10 +73,8 @@ export const FriendRow = ({
     <Pressable
       onPress={() => {
         router.push({
-          pathname: "/friend-stats",
-          params: {
-            friendId: friend.id,
-          },
+          pathname: "/friend-memory-lane",
+          params: { friendId: friend.id },
         });
       }}
     >

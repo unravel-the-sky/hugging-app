@@ -1,8 +1,10 @@
 import AvatarImage from "@/components/avatar/AvatarImage";
 import { colors, font, radius, shadow, spacing } from "@/components/ui/squish";
-import Avatar from "@/components/ui/squish/Avatar";
+import { FriendAvatar } from "@/components/ui/squish/FriendAvatar";
+import { PlushButton } from "@/components/ui/squish/PlushButton";
 import RoundIconButton from "@/components/ui/squish/RountIconButton";
 import { useAvatarThumb } from "@/hooks/useAvatarThumbnail";
+import useCreateHugWithNote from "@/hooks/useCreateHugWithNote";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useGetDownloadUrl } from "@/hooks/useGetDownloadUrl";
 import { auth, db } from "@/lib/firebaseConfig";
@@ -10,16 +12,19 @@ import { UserFriend } from "@/lib/handleFriends";
 import { getHugsWith, Hug } from "@/lib/handleHugs";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const MONTHS = [
   "January",
@@ -45,6 +50,7 @@ function formatMemoryDate(d: Date): string {
 export default function FriendMemoryLane() {
   const { friendId } = useLocalSearchParams<{ friendId: string }>();
   const { user, isHydrating } = useCurrentUser();
+  const { startHugWithNote } = useCreateHugWithNote();
 
   const [friend, setFriend] = useState<UserFriend | null>(null);
   const [hugs, setHugs] = useState<Hug[]>([]);
@@ -72,6 +78,7 @@ export default function FriendMemoryLane() {
 
   const friendPhotoUrl = useAvatarThumb(friend?.id);
   const myPhotoUrl = useAvatarThumb(user?.uid);
+  const insets = useSafeAreaInsets();
 
   if (loading || isHydrating || !user) {
     return (
@@ -105,7 +112,19 @@ export default function FriendMemoryLane() {
             together
           </Text>
         </View>
-        <Avatar size={36} />
+        <Pressable
+          onPress={() => {
+            router.push({
+              pathname: "/friend-stats",
+              params: {
+                friendId: friend?.id,
+              },
+            });
+          }}
+        >
+          <FriendAvatar name={name} photoUri={friendPhotoUrl} />
+        </Pressable>
+        {/* <Avatar size={36} /> */}
       </View>
 
       {hugs.length === 0 ? (
@@ -188,6 +207,40 @@ export default function FriendMemoryLane() {
             <Text style={styles.endCapCaption}>where it all began</Text>
           </View>
         </ScrollView>
+      )}
+
+      {friend?.displayName && friend.id && (
+        <View
+          style={[
+            styles.footer,
+            { paddingBottom: Math.max(insets.bottom, spacing.lg) },
+          ]}
+          pointerEvents="box-none"
+        >
+          <LinearGradient
+            colors={[
+              "rgba(246,243,251,0)",
+              "rgba(246,243,251,0.85)",
+              colors.mistBg,
+            ]}
+            locations={[0, 0.45, 1]}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+          <PlushButton
+            label="hug!"
+            variant="primary"
+            height={64}
+            borderRadius={radius.pill}
+            onPress={() =>
+              startHugWithNote({
+                displayName: friend?.displayName,
+                uid: friend?.id,
+              })
+            }
+            style={styles.fab}
+          />
+        </View>
       )}
     </View>
   );
@@ -300,7 +353,27 @@ function MemPill({ label }: { label: string }) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.mistBg },
+  screen: {
+    flex: 1,
+    backgroundColor: colors.mistBg,
+    marginTop: spacing.xl * 2,
+  },
+  footer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 160,
+    justifyContent: "flex-end",
+    alignItems: "flex-end",
+    paddingHorizontal: spacing.lg,
+  },
+  fab: {
+    ...shadow,
+    shadowOpacity: 0.28,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+  },
   centered: {
     flex: 1,
     alignItems: "center",
@@ -358,12 +431,13 @@ const styles = StyleSheet.create({
   },
 
   /* lane */
-  lane: { flex: 1 },
+  lane: {
+    flex: 1,
+  },
   laneContent: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
+    paddingBottom: 140,
   },
-
   /* divider */
   divider: {
     flexDirection: "row",

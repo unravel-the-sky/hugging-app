@@ -24,6 +24,7 @@ export interface PlushButtonProps {
   height?: number;
   style?: StyleProp<ViewStyle>;
   pressed?: boolean;
+  borderRadius?: number;
 }
 
 /** Visible depth of the plush "underside", in px. */
@@ -63,6 +64,7 @@ export function PlushButton({
   height = 52,
   style,
   pressed,
+  borderRadius = radius.button,
 }: PlushButtonProps) {
   const v = VARIANTS[variant];
   // Driven on the JS thread so we can animate shadow/elevation too.
@@ -113,6 +115,7 @@ export function PlushButton({
           styles.base,
           {
             height,
+            borderRadius,
             backgroundColor: v.underside,
             shadowColor: v.shadowColor,
             shadowOpacity,
@@ -124,7 +127,12 @@ export function PlushButton({
       <Animated.View
         style={[
           styles.face,
-          { height, backgroundColor: v.face, transform: [{ translateY }] },
+          {
+            height,
+            borderRadius,
+            backgroundColor: v.face,
+            transform: [{ translateY }],
+          },
         ]}
       >
         {icon ? <View style={styles.icon}>{icon}</View> : null}
