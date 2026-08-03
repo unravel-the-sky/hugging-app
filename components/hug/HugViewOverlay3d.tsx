@@ -9,12 +9,13 @@ import { router } from "expo-router";
 import { doc, onSnapshot } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import AvatarImage from "../avatar/AvatarImage";
-import { colors, font, radius, shadow } from "../ui/squish";
+import { colors, font, radius, shadow, spacing } from "../ui/squish";
+import { FriendAvatar } from "../ui/squish/FriendAvatar";
 import { PlushButton } from "../ui/squish/PlushButton";
 import Toast from "../ui/squish/Toast";
 import { HugFaceSeal } from "./HugFaceSeal";
 import HugRevealer from "./HugRevealerNEW";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Lavender gradient from the "Sealed (before)" screen.
 const SEALED_BG = ["#ddd6ef", "#d3cfdb"] as const;
@@ -61,6 +62,7 @@ export default function HugViewOverlay({
   const [alreadyHugged, setAlreadyHugged] = useState(false);
 
   const { user } = useCurrentUser();
+  const insets = useSafeAreaInsets();
 
   // Reset to sealed whenever a different hug is opened.
   useEffect(() => {
@@ -95,7 +97,9 @@ export default function HugViewOverlay({
 
   if (!hug) return null;
 
-  console.log("HUGVIEWOVERLAY fromName: ", hug.fromName);
+  console.log("HUGVIEWOVERLAY fromId: ", hug.from);
+  console.log("am i sender of the hug? ", hug.from === user?.uid);
+  const isSender = hug.from === user?.uid;
 
   if (opened || isReadOnly) {
     return (
@@ -112,9 +116,22 @@ export default function HugViewOverlay({
         />
 
         {hugBackNote && loaded && (
-          <View style={styles.hugBackMessage}>
+          <View
+            style={[
+              styles.hugBackMessage,
+              {
+                bottom: insets.bottom + 140,
+                alignSelf: isSender ? "flex-start" : "flex-end",
+                flexDirection: isSender ? "row-reverse" : "row",
+              },
+            ]}
+          >
             <Text style={styles.hugBackMessageText}>{hugBackNote}</Text>
-            <AvatarImage avatar={user?.avatar || "male"} size="s" />
+            <FriendAvatar
+              name={isSender ? hug.toName : hug.fromName}
+              uid={isSender ? hug.to : user?.uid}
+              size={40}
+            />
           </View>
         )}
 
@@ -183,20 +200,22 @@ const styles = StyleSheet.create({
   fill: { ...StyleSheet.absoluteFill },
   hugBackMessage: {
     position: "absolute",
-    bottom: 200,
-    alignSelf: "flex-end",
-    marginRight: 35,
+    // alignSelf: "flex-end",
+    // marginRight: 35,
+    marginHorizontal: 35,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 18,
+    maxWidth: "85%",
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
     borderRadius: radius.md,
     backgroundColor: colors.mistBg,
     zIndex: 30,
     ...shadow,
   },
   hugBackMessageText: {
+    flexShrink: 1,
     fontFamily: font.uiBold,
     fontSize: 15,
     color: colors.plumInk,

@@ -1,37 +1,41 @@
 /**
- * Squish — design tokens
- * "soft · plush · lavender"
+ * Squish — design tokens · Sherbet Pop
+ * "periwinkle · candy · bright"
+ *
+ * Drop-in replacement for the Lavender Mist token file: same exported
+ * names and shape, different palette. Swap the import (or route it
+ * through theme/index.ts) to preview the whole app in this theme.
  */
 
 export const avatarColors = {
-  primary: "#8C7BDE",
-  deep: "#7163C4",
-  plumInk: "#382F52",
-  softInk: "#8B82A6",
+  primary: "#6C63FF",
+  deep: "#524AD6",
+  plumInk: "#241E45",
+  softInk: "#7C76A8",
 
-  blush: "#EE83AE",
-  peach: "#F2A06A",
-  mint: "#6FC9A6",
-  butter: "#EDC25C",
+  blush: "#FF69B4",
+  peach: "#FFA145",
+  mint: "#33CFA1",
+  butter: "#FFC53D",
 } as const;
 
 export const colors = {
   // Core palette
-  primary: "#8C7BDE",
-  deep: "#7163C4",
-  lilac: "#C2B5F0",
-  soft: "#ECE7FB",
-  mistBg: "#F6F3FB",
+  primary: "#6C63FF",
+  deep: "#524AD6",
+  lilac: "#B9AFFF",
+  soft: "#E6E3FF",
+  mistBg: "#F4F2FF",
   surface: "#FFFFFF",
-  plumInk: "#4A4268",
-  softInk: "#998FB5",
+  plumInk: "#332C5C",
+  softInk: "#8D87B8",
 
   // Accents — hug types & stickers
-  blush: "#F2A4C4",
-  peach: "#F5B488",
-  mint: "#8CD4B8",
-  butter: "#EFD083",
-  sky: "#9DBEEF",
+  blush: "#FF9BD0",
+  peach: "#FFBE73",
+  mint: "#66DDB8",
+  butter: "#FFD873",
+  sky: "#8ABBFF",
 } as const;
 
 /** Darken a hex color toward black. amount: 0..1 */
@@ -81,10 +85,10 @@ export const spacing = {
   xl: 24,
 } as const;
 
-/** Soft lavender drop shadow used across plush surfaces. */
+/** Soft drop shadow used across plush surfaces. */
 export const shadow = {
   shadowColor: colors.deep,
-  shadowOpacity: 0.22,
+  shadowOpacity: 0.26,
   shadowRadius: 8,
   shadowOffset: { width: 0, height: 6 },
   elevation: 6,
@@ -109,7 +113,11 @@ export const hugTypes: Record<HugTypeKey, { label: string; accent: string }> = {
 };
 
 export const theme = {
+  id: "sherbet",
+  name: "Sherbet Pop",
+  mood: "periwinkle · candy · bright",
   colors,
+  avatarColors,
   font,
   radius,
   spacing,

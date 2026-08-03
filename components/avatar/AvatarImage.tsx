@@ -1,6 +1,8 @@
 import { AvatarType, User } from "@/lib/createUser";
 import { Image as ExpoImage } from "expo-image";
 import { Image, StyleSheet } from "react-native";
+import Avatar from "../ui/squish/Avatar";
+import { avatarColor, readableText } from "@/lib/util";
 
 const MaleFace = require("@/assets/images/hugFaceMaleImg.png");
 const FemaleFace = require("@/assets/images/hugFaceFemaleImg.png");
@@ -23,6 +25,7 @@ type AvatarProps = {
    */
   user?: Pick<User, "avatar" | "photoURL" | "photoThumbURL">;
   size?: Size;
+  name?: string;
 };
 
 export default function AvatarImage({
@@ -30,12 +33,14 @@ export default function AvatarImage({
   photoURL,
   photoThumbURL,
   user,
+  name,
   size = "m",
 }: AvatarProps) {
   // Explicit props win; otherwise read from `user`; otherwise default.
   const type: AvatarType = avatar ?? user?.avatar ?? "male";
   const url = photoURL ?? user?.photoURL;
   const thumb = photoThumbURL ?? user?.photoThumbURL;
+  const color = avatarColor(name || "");
 
   if (type === "photo" && (url || thumb)) {
     const d = PHOTO_DIAMETER[size];
@@ -58,16 +63,11 @@ export default function AvatarImage({
   // covers a "photo" type that has no URL yet, so it degrades to a face
   // rather than rendering nothing).
   return (
-    <Image
-      source={type === "female" ? FemaleFace : MaleFace}
-      style={[
-        styles.avatar,
-        size === "s"
-          ? styles.small
-          : size === "m"
-            ? styles.medium
-            : styles.large,
-      ]}
+    <Avatar
+      initials={name?.[0]?.toUpperCase() ?? "?"}
+      size={PHOTO_DIAMETER[size]}
+      color={color}
+      textColor={readableText(color)}
     />
   );
 }

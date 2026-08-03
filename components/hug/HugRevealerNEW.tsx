@@ -155,6 +155,7 @@ function Postcard({
           metalness={0.05}
           clearcoat={0.35}
           clearcoatRoughness={0.25}
+          toneMapped={false}
         />
       </mesh>
 

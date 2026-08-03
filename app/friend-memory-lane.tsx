@@ -161,11 +161,12 @@ export default function FriendMemoryLane() {
                       avatar={
                         h.from === user?.uid
                           ? user.avatar
-                          : friend?.avatar || undefined
+                          : h.fromAvatar || undefined
                       }
                       photoURL={
                         h.from === user?.uid ? myPhotoUrl : friendPhotoUrl
                       }
+                      name={h.fromName}
                       size="s"
                     />
                   }
@@ -184,7 +185,20 @@ export default function FriendMemoryLane() {
                 {hasBack ? (
                   <MemRow
                     side={recipientIsMe ? "right" : "left"}
-                    avatar={<AvatarImage size="s" user={user} />}
+                    avatar={
+                      <AvatarImage
+                        avatar={
+                          h.from === user?.uid
+                            ? user.avatar
+                            : h.fromAvatar || undefined
+                        }
+                        photoURL={
+                          h.from === user?.uid ? friendPhotoUrl : myPhotoUrl
+                        }
+                        name={h.fromName}
+                        size="s"
+                      />
+                    }
                     caption={`${backAuthorName} hugged back 🫂`}
                   >
                     <MemNote
