@@ -103,6 +103,7 @@ export default function HugController({ sendableHug, onComplete }: HugProps) {
     if (hugPhase === "hugging") return "keep pressing!";
     if (hugPhase === "idle") return "press the buttton to form the hug!";
     if (hugPhase === "thrown") return "hug is thrown!";
+    if (hugPhase === "pulling") return "pull down and release!";
   }, [hugPhase]);
 
   const progressBarStyle = useAnimatedStyle(() => {
@@ -167,6 +168,8 @@ export default function HugController({ sendableHug, onComplete }: HugProps) {
         <Animated.View style={[styles.progressBar, progressBarStyle]} />
       </View>
 
+      <Text style={styles.statusText}>{getHugPhaseStatusText()}</Text>
+
       <HugButton
         hugProgress={hugPress}
         hugPhase={hugPhase}
@@ -174,7 +177,6 @@ export default function HugController({ sendableHug, onComplete }: HugProps) {
         onPressOut={releaseHug}
         onSendHugProcess={onSendHugProcess}
       />
-      <Text style={styles.statusText}>{getHugPhaseStatusText()}</Text>
     </Animated.View>
   );
 }

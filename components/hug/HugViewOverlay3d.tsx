@@ -91,15 +91,12 @@ export default function HugViewOverlay({
     });
   };
 
-  const avatarThumbUrl = useAvatarThumb(hug.from);
-  const isPhoto = hug.fromAvatar === "photo" && !!avatarThumbUrl;
-  const { loaded: avatarTex } = useHugTexture(avatarThumbUrl || undefined);
-
   if (!hug) return null;
 
   console.log("HUGVIEWOVERLAY fromId: ", hug.from);
-  console.log("am i sender of the hug? ", hug.from === user?.uid);
   const isSender = hug.from === user?.uid;
+
+  const waitForImage = hug.imagePath ? loaded : true;
 
   if (opened || isReadOnly) {
     return (
@@ -115,7 +112,7 @@ export default function HugViewOverlay({
           loading={loading}
         />
 
-        {hugBackNote && loaded && (
+        {hugBackNote && waitForImage && (
           <View
             style={[
               styles.hugBackMessage,

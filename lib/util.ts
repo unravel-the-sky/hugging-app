@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Hug } from "./handleHugs";
 import { colors } from "@/components/ui/squish";
+import { DayGroup } from "./hugs/groups";
 
 export const resetUser = async () => {
   await AsyncStorage.removeItem("displayName");

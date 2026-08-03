@@ -1,4 +1,5 @@
 import { spacing } from "@/components/ui/squish/theme";
+import { useCollapsibleDays } from "@/hooks/useCollapsibleDays";
 import { Hug } from "@/lib/handleHugs";
 import { DayGroup, groupByDay } from "@/lib/hugs/groups";
 import React, { useMemo } from "react";
@@ -15,28 +16,44 @@ export const SentHugsList = ({
   onSelectHug: (hug: Hug) => void;
 }) => {
   const days = useMemo(() => groupByDay(hugs), [hugs]);
+  const { isExpanded, toggle, overrides } = useCollapsibleDays(days);
 
-  const renderDay = ({ item }: { item: DayGroup }) => (
-    <View>
-      <SectionHeader title={item.title} count={item.hugs.length} />
-      <RowCard>
-        {item.hugs.map((hug, i) => (
-          <HugRow
-            key={hug.id}
-            hug={hug}
-            direction="outgoing"
-            showDivider={i < item.hugs.length - 1}
-            onPress={() => onSelectHug(hug)}
-          />
-        ))}
-      </RowCard>
-    </View>
-  );
+  const renderDay = ({ item }: { item: DayGroup }) => {
+    const expanded = isExpanded(item);
+
+    return (
+      <View>
+        <SectionHeader
+          title={item.title}
+          count={expanded ? undefined : item.hugs.length}
+          countTone="muted"
+          collapsible
+          expanded={expanded}
+          onToggle={() => toggle(item)}
+        />
+
+        {expanded && (
+          <RowCard>
+            {item.hugs.map((hug, i) => (
+              <HugRow
+                key={hug.id}
+                hug={hug}
+                direction="outgoing"
+                showDivider={i < item.hugs.length - 1}
+                onPress={() => onSelectHug(hug)}
+              />
+            ))}
+          </RowCard>
+        )}
+      </View>
+    );
+  };
 
   return (
     <FlatList
       data={days}
       keyExtractor={(day) => day.key}
+      extraData={overrides}
       renderItem={renderDay}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.content}
