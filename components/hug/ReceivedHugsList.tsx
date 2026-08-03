@@ -1,19 +1,13 @@
 import { spacing } from "@/components/ui/squish/theme";
 import { Hug } from "@/lib/handleHugs";
-import { TOP_HUGGER } from "@/lib/hugs/features";
-import {
-  groupByPerson,
-  PersonGroup,
-  pinTopHugger,
-  topHuggerUid,
-} from "@/lib/hugs/groups";
-import { byNewest } from "@/lib/hugs/time";
-import React, { useMemo, useRef, useState } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
-import { NewHugRow, SectionHeader } from "./HugListComponents";
-import { HugsEmptyState } from "./HugsEmptyState";
-import { PersonGroupCard } from "./PersonGroupCard";
+import { DayGroup, groupByDay } from "@/lib/hugs/groups";
+import { byNewest, isRecentGroup } from "@/lib/hugs/time";
+import React, { useMemo, useState } from "react";
+import { FlatList, Pressable, StyleSheet, View } from "react-native";
+import { HugRow, NewHugRow, SectionHeader } from "./HugListComponents";
 import { RowCard } from "./HugRowCard";
+import { HugsEmptyState } from "./HugsEmptyState";
+import { useCollapsibleDays } from "@/hooks/useCollapsibleDays";
 
 export const ReceivedHugsList = ({
   hugs,
@@ -22,86 +16,78 @@ export const ReceivedHugsList = ({
   hugs: Hug[];
   onSelectHug: (hug: Hug) => void;
 }) => {
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const listRef = useRef<FlatList<PersonGroup>>(null);
-
   const newHugs = useMemo(
     () => hugs.filter((hug) => !hug.seenAt).sort(byNewest),
     [hugs],
   );
 
-  const groups = useMemo(() => {
-    const seen = hugs.filter((hug) => !!hug.seenAt);
-    const byPerson = groupByPerson(seen, "incoming");
-    if (!TOP_HUGGER.enabled) return byPerson;
-    return pinTopHugger(byPerson, topHuggerUid(byPerson, TOP_HUGGER.minHugs));
-  }, [hugs]);
-
-  const topUid = useMemo(
-    () =>
-      TOP_HUGGER.enabled ? topHuggerUid(groups, TOP_HUGGER.minHugs) : null,
-    [groups],
+  const days = useMemo(
+    () => groupByDay(hugs.filter((hug) => !!hug.seenAt)),
+    [hugs],
   );
 
-  const toggle = (uid: string, index: number) => {
-    const willExpand = !expanded.has(uid);
+  const { isExpanded, toggle, overrides } = useCollapsibleDays(days);
 
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(uid)) next.delete(uid);
-      else next.add(uid);
-      return next;
-    });
+  const renderDay = ({ item }: { item: DayGroup }) => {
+    const expanded = isExpanded(item);
 
-    if (willExpand) {
-      listRef.current?.scrollToIndex({
-        index,
-        viewPosition: 0,
-        viewOffset: spacing.md,
-        animated: true,
-      });
-    }
+    return (
+      <View>
+        <SectionHeader
+          title={item.title}
+          count={expanded ? undefined : item.hugs.length}
+          countTone="muted"
+          collapsible
+          expanded={expanded}
+          onToggle={() => toggle(item)}
+        />
+
+        {expanded && (
+          <RowCard>
+            {item.hugs.map((hug, i) => (
+              <HugRow
+                key={hug.id}
+                hug={hug}
+                direction="incoming"
+                showDivider={i < item.hugs.length - 1}
+                onPress={() => onSelectHug(hug)}
+              />
+            ))}
+          </RowCard>
+        )}
+      </View>
+    );
   };
 
   return (
     <FlatList
-      ref={listRef}
-      data={groups}
-      keyExtractor={(group) => group.uid}
-      extraData={expanded}
+      data={days}
+      keyExtractor={(day) => day.key}
+      extraData={overrides}
+      renderItem={renderDay}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.content}
       ListHeaderComponent={
-        <View>
-          {newHugs.length > 0 && (
-            <>
-              <SectionHeader title="New hugs" count={newHugs.length} />
-              <RowCard>
-                {newHugs.map((hug, i) => (
-                  <NewHugRow
-                    key={hug.id}
-                    hug={hug}
-                    showDivider={i < newHugs.length - 1}
-                    onSee={() => onSelectHug(hug)}
-                  />
-                ))}
-              </RowCard>
-            </>
-          )}
-
-          {groups.length > 0 && <SectionHeader title="Already seen" />}
-        </View>
+        newHugs.length > 0 ? (
+          <View>
+            <SectionHeader
+              title="New hugs"
+              count={newHugs.length}
+              countTone="unread"
+            />
+            <RowCard>
+              {newHugs.map((hug, i) => (
+                <NewHugRow
+                  key={hug.id}
+                  hug={hug}
+                  showDivider={i < newHugs.length - 1}
+                  onSee={() => onSelectHug(hug)}
+                />
+              ))}
+            </RowCard>
+          </View>
+        ) : null
       }
-      renderItem={({ item, index }) => (
-        <PersonGroupCard
-          group={item}
-          direction="incoming"
-          isTop={item.uid === topUid}
-          expanded={expanded.has(item.uid)}
-          onToggle={() => toggle(item.uid, index)}
-          onSelectHug={onSelectHug}
-        />
-      )}
       ListEmptyComponent={
         newHugs.length > 0 ? null : (
           <HugsEmptyState
@@ -110,15 +96,6 @@ export const ReceivedHugsList = ({
           />
         )
       }
-      onScrollToIndexFailed={({ index }) => {
-        setTimeout(() => {
-          listRef.current?.scrollToIndex({
-            index,
-            viewPosition: 0,
-            animated: true,
-          });
-        }, 50);
-      }}
     />
   );
 };

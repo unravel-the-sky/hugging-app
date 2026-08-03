@@ -58,19 +58,56 @@ const DeliveryIcons = ({ hug }: { hug: Hug }) => (
 export const SectionHeader = ({
   title,
   count,
+  countTone = "unread",
+  collapsible = false,
+  expanded = false,
+  onToggle,
 }: {
   title: string;
   count?: number;
-}) => (
-  <View style={styles.sectionHeader}>
-    <Text style={styles.sectionTitle}>{title}</Text>
-    {typeof count === "number" && count > 0 && (
-      <View style={styles.countPill}>
-        <Text style={styles.countPillText}>{count}</Text>
+  countTone?: "unread" | "muted";
+  collapsible?: boolean;
+  expanded?: boolean;
+  onToggle?: () => void;
+}) => {
+  const showCount = typeof count === "number" && count > 0;
+
+  const content = (
+    <View style={styles.sectionHeader}>
+      <View style={styles.sectionTitleGroup}>
+        {collapsible && (
+          <Ionicons
+            name={expanded ? "chevron-down" : "chevron-forward"}
+            size={14}
+            color={colors.softInk}
+          />
+        )}
+        <Text style={styles.sectionTitle}>{title}</Text>
       </View>
-    )}
-  </View>
-);
+
+      {showCount &&
+        (countTone === "unread" ? (
+          <View style={styles.countPill}>
+            <Text style={styles.countPillText}>{count}</Text>
+          </View>
+        ) : (
+          <Text style={styles.countMuted}>{count}</Text>
+        ))}
+    </View>
+  );
+
+  if (!onToggle) return content;
+
+  return (
+    <Pressable
+      onPress={onToggle}
+      hitSlop={8}
+      style={({ pressed }) => pressed && styles.sectionHeaderPressed}
+    >
+      {content}
+    </Pressable>
+  );
+};
 
 /* ------------------------------------------------------------------ */
 /* Rows                                                                */
@@ -104,7 +141,9 @@ export const NewHugRow = ({
 
         <View style={styles.subLine}>
           <Text style={styles.subText} numberOfLines={1}>
-            {formatTimestamp(hug.createdAt!.toDate())}
+            {hug.createdAt
+              ? formatTimestamp(hug.createdAt.toDate())
+              : "sending…"}
           </Text>
           <MetaIcons hug={hug} />
         </View>
@@ -154,12 +193,12 @@ export const HugRow = ({
         </Text>
         <View style={styles.subLine}>
           <MetaIcons hug={hug} />
-          {isOutgoing && <DeliveryIcons hug={hug} />}
+          <DeliveryIcons hug={hug} />
         </View>
       </View>
 
       <Text style={styles.rowTime}>
-        {formatTimestamp(hug.createdAt!.toDate())}
+        {hug.createdAt ? formatTimestamp(hug.createdAt.toDate()) : "sending…"}
       </Text>
     </Pressable>
   );
@@ -327,5 +366,20 @@ const styles = StyleSheet.create({
     fontFamily: font.uiBold,
     fontSize: 12,
     color: colors.surface,
+  },
+  sectionTitleGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  sectionHeaderPressed: {
+    opacity: 0.6,
+  },
+  countMuted: {
+    fontFamily: font.uiBold,
+    fontSize: 13,
+    color: colors.softInk,
+    minWidth: 22, // matches countPill so headers don't jitter
+    textAlign: "center",
   },
 });

@@ -19,6 +19,7 @@ import HeartParticles from "./HeartParticles";
 import { HugPhase } from "./HugController";
 import { PlushButton } from "../ui/squish/PlushButton";
 import { useState } from "react";
+import { font } from "../ui/squish";
 
 type HugButtonProps = {
   hugProgress: SharedValue<number>;
@@ -128,7 +129,7 @@ export default function HugButton({
   return (
     <View style={styles.hugContainer}>
       <Animated.Text style={[styles.releaseText, releaseTextStyle]}>
-        Release the hug
+        send your hug!
       </Animated.Text>
 
       {/* Avatar visual — never touchable */}
@@ -172,6 +173,7 @@ const styles = StyleSheet.create({
     width: "auto",
     justifyContent: "center",
     alignItems: "center",
+    top: 60,
   },
   button: {
     width: BUTTON_SIZE,
@@ -186,6 +188,7 @@ const styles = StyleSheet.create({
   },
   releaseText: {
     fontSize: 16,
+    fontFamily: font.ui,
   },
   touchArea: {
     width: 200,

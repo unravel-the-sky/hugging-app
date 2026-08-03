@@ -1,5 +1,6 @@
 import { Hug } from "@/lib/handleHugs";
 import { Timestamp } from "firebase/firestore";
+import { DayGroup } from "./groups";
 
 const DAY_MS = 86_400_000;
 
@@ -61,4 +62,33 @@ export const dayTitle = (ms: number, now: Date = new Date()): string => {
     month: "long",
     ...(date.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }),
   });
+};
+
+export const isSameDay = (a: Date, b: Date) =>
+  a.getDate() === b.getDate() &&
+  a.getMonth() === b.getMonth() &&
+  a.getFullYear() === b.getFullYear();
+
+export const isTodayGroup = (day: DayGroup) => {
+  const first = day.hugs.find((hug) => hug.createdAt);
+  if (!first?.createdAt) return false;
+  return isSameDay(first.createdAt.toDate(), new Date());
+};
+
+export const isToday = (day: DayGroup) =>
+  day.key === new Date().toISOString().slice(0, 10);
+
+export const COLLAPSE_AFTER_DAYS = 7;
+
+export const dayGroupAgeInDays = (day: DayGroup): number | null => {
+  const first = day.hugs.find((hug) => hug.createdAt);
+  if (!first?.createdAt) return null;
+  return Math.round(
+    (startOfDay(new Date()) - startOfDay(first.createdAt.toDate())) / DAY_MS,
+  );
+};
+
+export const isRecentGroup = (day: DayGroup) => {
+  const age = dayGroupAgeInDays(day);
+  return age === null || age < COLLAPSE_AFTER_DAYS;
 };
