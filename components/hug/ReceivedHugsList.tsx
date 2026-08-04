@@ -1,21 +1,29 @@
-import { spacing } from "@/components/ui/squish/theme";
+import { colors, spacing } from "@/components/ui/squish/theme";
+import { useCollapsibleDays } from "@/hooks/useCollapsibleDays";
 import { Hug } from "@/lib/handleHugs";
 import { DayGroup, groupByDay } from "@/lib/hugs/groups";
-import { byNewest, isRecentGroup } from "@/lib/hugs/time";
-import React, { useMemo, useState } from "react";
-import { FlatList, Pressable, StyleSheet, View } from "react-native";
+import { byNewest } from "@/lib/hugs/time";
+import React, { useMemo } from "react";
+import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
 import { HugRow, NewHugRow, SectionHeader } from "./HugListComponents";
 import { RowCard } from "./HugRowCard";
 import { HugsEmptyState } from "./HugsEmptyState";
-import { useCollapsibleDays } from "@/hooks/useCollapsibleDays";
+import { useHugs } from "@/hooks/useIncomingHugs";
+import { PlushButton } from "../ui/squish/PlushButton";
 
 export const ReceivedHugsList = ({
-  hugs,
   onSelectHug,
 }: {
-  hugs: Hug[];
   onSelectHug: (hug: Hug) => void;
 }) => {
+  const {
+    isLoading: incomingLoading,
+    hugs,
+    hasMore,
+    loadMore,
+    isLoadingMore,
+  } = useHugs("incoming");
+
   const newHugs = useMemo(
     () => hugs.filter((hug) => !hug.seenAt).sort(byNewest),
     [hugs],
@@ -59,6 +67,14 @@ export const ReceivedHugsList = ({
     );
   };
 
+  if (incomingLoading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <FlatList
       data={days}
@@ -96,6 +112,16 @@ export const ReceivedHugsList = ({
           />
         )
       }
+      ListFooterComponent={
+        hasMore ? (
+          <PlushButton
+            onPress={loadMore}
+            disabled={isLoadingMore}
+            label={isLoadingMore ? "fetching.." : "load more hugs"}
+            variant="blush"
+          />
+        ) : null
+      }
     />
   );
 };
@@ -105,5 +131,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingBottom: 120, // clears the floating tab bar
     flexGrow: 1,
+  },
+  container: {
+    flex: 1,
+    backgroundColor: colors.soft,
+  },
+  centered: {
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

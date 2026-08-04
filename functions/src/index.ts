@@ -18,7 +18,10 @@ import {
   onValueUpdated,
 } from "firebase-functions/database";
 import { HttpsError, onCall } from "firebase-functions/https";
-import { onDocumentCreated } from "firebase-functions/v2/firestore";
+import {
+  onDocumentCreated,
+  onDocumentUpdated,
+} from "firebase-functions/v2/firestore";
 import fetch from "node-fetch";
 import { getAuth } from "firebase-admin/auth";
 import { getStorage } from "firebase-admin/storage";
@@ -67,20 +70,107 @@ export const onHugCreated = onDocumentCreated("hugs/{hugId}", async (event) => {
   }
 
   // update stats here
-  const batch = db.batch();
-  batch.update(db.doc(`users/${hug.from}/friends/${hug.to}`), {
-    // cache
-    totalHugsSent: FieldValue.increment(1),
-    lastSentHug: FieldValue.serverTimestamp(),
-  });
-  batch.update(db.doc(`users/${hug.to}/friends/${hug.from}`), {
-    totalHugsReceived: FieldValue.increment(1),
-  });
+  try {
+    const batch = db.batch();
 
-  await batch.commit();
+    batch.set(
+      db.doc(`users/${hug.from}/friends/${hug.to}`),
+      {
+        totalHugsSent: FieldValue.increment(1),
+        lastSentHug: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    batch.set(
+      db.doc(`users/${hug.to}/friends/${hug.from}`),
+      {
+        totalHugsReceived: FieldValue.increment(1),
+        lastReceivedHug: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    batch.set(
+      db.doc(`users/${hug.from}`),
+      { stats: { hugsSent: FieldValue.increment(1) } },
+      { merge: true },
+    );
+
+    batch.set(
+      db.doc(`users/${hug.to}`),
+      { stats: { hugsReceived: FieldValue.increment(1) } },
+      { merge: true },
+    );
+
+    await batch.commit();
+  } catch (err) {
+    console.error("Stats update failed for hug", snap.id, err);
+  }
 
   // send notification
   await sendPushNotification(hug, snap.id);
+});
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export const onHugBack = onDocumentUpdated("hugs/{hugId}", async (event) => {
+  const before = event.data?.before.data();
+  const after = event.data?.after.data();
+  if (!before || !after) return;
+
+  // this fires on every hug write — markSeen alone will hit it constantly.
+  // only proceed on the transition from no-hug-back to hug-back.
+  if (before.hugBackAt || !after.hugBackAt) return;
+  if (!after.from || !after.to) return;
+
+  const backFrom = after.to; // the original recipient hugged back
+  const backTo = after.from;
+
+  try {
+    const basis = after.seenAt ?? after.createdAt;
+    const ms = basis
+      ? Math.min(after.hugBackAt.toMillis() - basis.toMillis(), DAY_MS)
+      : null;
+
+    const batch = db.batch();
+
+    batch.set(
+      db.doc(`users/${backFrom}`),
+      { stats: { hugsBackSent: FieldValue.increment(1) } },
+      { merge: true },
+    );
+    batch.set(
+      db.doc(`users/${backTo}`),
+      { stats: { hugsBackReceived: FieldValue.increment(1) } },
+      { merge: true },
+    );
+
+    // on the receiver's friend doc: how fast does this friend hug back?
+    batch.set(
+      db.doc(`users/${backTo}/friends/${backFrom}`),
+      {
+        hugBackCount: FieldValue.increment(1),
+        ...(ms !== null && { hugBackTotalMs: FieldValue.increment(ms) }),
+        lastHugBackAt: after.hugBackAt,
+      },
+      { merge: true },
+    );
+
+    await batch.commit();
+  } catch (err) {
+    console.error("Hug-back stats failed", event.params.hugId, err);
+  }
+
+  const userSnap = await db.doc(`users/${backTo}`).get();
+  const token = userSnap.get("pushToken");
+  if (!token) return;
+
+  await sendExpoPush(token, {
+    title: "Hugged back 🫂",
+    body: `${after.toName ?? "Someone"} hugged you back!`,
+    data: { type: "hug_back", hugId: event.params.hugId },
+  });
 });
 
 const sendBotReply = async (originalHug: FirebaseFirestore.DocumentData) => {
@@ -496,7 +586,7 @@ async function sendExpoPush(
     title,
     body,
     data,
-  }: { title: string; body: string; data?: { type: string; requestId: any } },
+  }: { title: string; body: string; data?: Record<string, unknown> },
 ) {
   if (!token) return;
 

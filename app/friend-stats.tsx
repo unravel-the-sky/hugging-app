@@ -147,19 +147,6 @@ export default function FriendStatsModal() {
           </View>
         </View>
 
-        {/* memory laneee */}
-        {/* <PlushButton
-          icon={<Ionicons name="star-sharp" size={20} color={colors.blush} />}
-          label="memories"
-          variant="soft"
-          onPress={() =>
-            router.push({
-              pathname: "/friend-memory-lane",
-              params: { friendId },
-            })
-          }
-        /> */}
-
         {/* directional split */}
         <View style={styles.splitRow}>
           <View style={styles.splitCard}>

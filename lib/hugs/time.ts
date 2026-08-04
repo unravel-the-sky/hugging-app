@@ -2,7 +2,7 @@ import { Hug } from "@/lib/handleHugs";
 import { Timestamp } from "firebase/firestore";
 import { DayGroup } from "./groups";
 
-const DAY_MS = 86_400_000;
+const DAY_MS = 86_400_000_000;
 
 /**
  * Millis of a hug's createdAt.

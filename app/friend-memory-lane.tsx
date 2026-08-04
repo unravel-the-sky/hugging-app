@@ -26,6 +26,14 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  useAnimatedStyle,
+  useDerivedValue,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
+
 const MONTHS = [
   "January",
   "February",
@@ -295,6 +303,8 @@ function MemRow({
   );
 }
 
+const SPRING = { damping: 18, stiffness: 140, mass: 0.6 };
+
 function MemImage({
   imagePath,
   caption,
@@ -304,24 +314,56 @@ function MemImage({
 }) {
   const { downloadUrl, failed } = useGetDownloadUrl(imagePath);
 
-  console.log("imagePath: ", imagePath);
-  console.log("downloadUrl: ", downloadUrl);
-  console.log("failed: ", failed);
+  const turn = useSharedValue(0); // -1 = flipped left, 0 = front, +1 = flipped right
+  const base = useSharedValue(0);
+  const width = useSharedValue(1);
 
-  return (
-    <View style={styles.photoCard}>
-      {!failed ? (
-        <View style={{ width: "100%", aspectRatio: 4 / 5, marginVertical: 16 }}>
-          <Image
-            source={downloadUrl}
-            style={styles.photoImage}
-            contentFit="cover"
-            transition={200}
-            cachePolicy="memory-disk"
-            placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }}
-          />
-        </View>
-      ) : (
+  const pan = Gesture.Pan()
+    .activeOffsetX([-12, 12])
+    .failOffsetY([-10, 10])
+    .onBegin(() => {
+      base.value = turn.value;
+    })
+    .onUpdate((e) => {
+      const next = base.value + e.translationX / width.value;
+      turn.value = Math.min(1, Math.max(-1, next));
+    })
+    .onEnd((e) => {
+      const flung = Math.abs(e.velocityX) > 500;
+      const dir = e.velocityX < 0 ? -1 : 1;
+      const target = flung
+        ? Math.min(1, Math.max(-1, Math.round(turn.value + dir * 0.5)))
+        : Math.abs(turn.value) > 0.5
+          ? Math.sign(turn.value)
+          : 0;
+      turn.value = withSpring(target, SPRING);
+    });
+
+  const tap = Gesture.Tap().onEnd(() => {
+    turn.value = withSpring(Math.abs(turn.value) > 0.5 ? 0 : -1, SPRING);
+  });
+
+  const gesture = Gesture.Exclusive(pan, tap);
+
+  // avoid a backfaceVisibility dependency — Android has historically been flaky with it
+  const showBack = useDerivedValue(() => Math.abs(turn.value) > 0.5);
+
+  const frontStyle = useAnimatedStyle(() => ({
+    opacity: showBack.value ? 0 : 1,
+    transform: [{ perspective: 900 }, { rotateY: `${turn.value * 180}deg` }],
+  }));
+
+  const backStyle = useAnimatedStyle(() => ({
+    opacity: showBack.value ? 1 : 0,
+    transform: [
+      { perspective: 900 },
+      { rotateY: `${turn.value * 180 + 180}deg` },
+    ],
+  }));
+
+  if (failed) {
+    return (
+      <View style={styles.photoCard}>
         <View style={styles.photoPlaceholder}>
           <Ionicons name="image-outline" size={26} color={colors.lilac} />
           {caption ? (
@@ -330,8 +372,36 @@ function MemImage({
             </Text>
           ) : null}
         </View>
-      )}
-    </View>
+      </View>
+    );
+  }
+
+  return (
+    <GestureDetector gesture={gesture}>
+      <View
+        style={styles.flipWrap}
+        onLayout={(e) => {
+          width.value = e.nativeEvent.layout.width || 1;
+        }}
+      >
+        <Animated.View style={[StyleSheet.absoluteFill, frontStyle]}>
+          <Image
+            source={downloadUrl}
+            style={styles.photoImage}
+            contentFit="cover"
+            transition={200}
+            cachePolicy="memory-disk"
+            placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }}
+          />
+        </Animated.View>
+
+        <Animated.View
+          style={[StyleSheet.absoluteFill, styles.cardBack, backStyle]}
+        >
+          <Text style={styles.backNote}>{caption ?? "asdf"}</Text>
+        </Animated.View>
+      </View>
+    </GestureDetector>
   );
 }
 
@@ -517,6 +587,30 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: colors.plumInk,
     textAlign: "center",
+  },
+  flipWrap: {
+    width: "100%",
+    aspectRatio: 4 / 5,
+    marginVertical: 16,
+    ...shadow,
+    shadowOpacity: 0.05,
+  },
+  cardBack: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    width: "100%",
+    backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+    borderWidth: 1.5,
+    borderColor: "#F0EAFB",
+    padding: spacing.lg,
+  },
+  backNote: {
+    fontFamily: font.hand,
+    fontSize: 22,
+    lineHeight: 28,
+    color: colors.plumInk,
   },
 
   /* note bubble */

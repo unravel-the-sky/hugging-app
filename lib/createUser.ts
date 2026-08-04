@@ -31,7 +31,8 @@ export type UserDoc = {
   stats: {
     hugsSent: number;
     hugsReceived: number;
-    lastHugAt?: FieldValue;
+    topHugger?: string;
+    fastestHugger?: string;
   };
 };
 

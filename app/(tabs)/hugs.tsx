@@ -5,14 +5,14 @@ import { ReceivedHugsList } from "@/components/hug/ReceivedHugsList";
 import { SentHugsList } from "@/components/hug/SentHugsList";
 import { colors, font, spacing } from "@/components/ui/squish/theme";
 import useCreateHugWithNote from "@/hooks/useCreateHugWithNote";
-import { useHugs } from "@/hooks/useIncomingHugs";
+import { useHugTotals } from "@/hooks/useIncomingHugs";
 import { db } from "@/lib/firebaseConfig";
-import { Hug } from "@/lib/handleHugs";
+import { getHugWithId, Hug } from "@/lib/handleHugs";
 import { Direction } from "@/lib/hugs/groups";
 import { useLocalSearchParams } from "expo-router";
 import { doc, Timestamp, updateDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 /** What the overlay is showing, and from which side. */
 type Selection = { hug: Hug; direction: Direction };
@@ -21,26 +21,24 @@ export default function HugsListScreen() {
   const [tab, setTab] = useState<Tab>("received");
   const [selection, setSelection] = useState<Selection | undefined>();
 
-  const { isLoading: incomingLoading, hugs: incomingHugs } =
-    useHugs("incoming");
-  const { isLoading: outgoingLoading, hugs: outgoingHugs } =
-    useHugs("outgoing");
+  // const { isLoading: incomingLoading, hugs: incomingHugs } =
+  //   useHugs("incoming");
 
-  const { hugId } = useLocalSearchParams();
   const { startHugWithNote } = useCreateHugWithNote();
 
-  /* Deep link from a push notification always points at a received hug. */
+  // deep link from a push notification always points at a received hug.
+  const { hugId } = useLocalSearchParams();
   useEffect(() => {
     if (!hugId) return;
-    const hug = incomingHugs.find((item) => item.id === hugId);
-    if (hug) setSelection({ hug, direction: "incoming" });
-  }, [hugId, incomingHugs]);
 
-  /**
-   * `seenAt` is the recipient's receipt. Only ever written from the incoming
-   * side — opening your own sent hug must not mark it seen for the other
-   * person.
-   */
+    getHugWithId(hugId as string).then((res) => {
+      const hug = res;
+      if (hug) {
+        setSelection({ hug, direction: "incoming" });
+      }
+    });
+  }, [hugId]);
+
   const markSeen = async (hug: Hug) => {
     if (hug.seenAt) return;
     try {
@@ -67,29 +65,21 @@ export default function HugsListScreen() {
     setSelection(undefined);
   };
 
-  const total = incomingHugs.length + outgoingHugs.length;
-
-  if (incomingLoading || outgoingLoading) {
-    return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
+  const { total: totalNumHugs } = useHugTotals();
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Hugs</Text>
-        {total > 0 && (
+        {totalNumHugs && totalNumHugs > 0 && (
           <View style={styles.allTime}>
             <Text style={styles.heart}>♥</Text>
-            <Text style={styles.allTimeText}>{total} all-time</Text>
+            <Text style={styles.allTimeText}>{totalNumHugs} all-time</Text>
           </View>
         )}
       </View>
 
-      {total === 0 ? (
+      {totalNumHugs === 0 ? (
         <HugsEmptyState
           title="No hugs yet"
           hint="Send one and it'll show up here."
@@ -100,14 +90,12 @@ export default function HugsListScreen() {
 
           {tab === "received" ? (
             <ReceivedHugsList
-              hugs={incomingHugs}
               onSelectHug={(hug) =>
                 setSelection({ hug, direction: "incoming" })
               }
             />
           ) : (
             <SentHugsList
-              hugs={outgoingHugs}
               onSelectHug={(hug) =>
                 setSelection({ hug, direction: "outgoing" })
               }
