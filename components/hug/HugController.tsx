@@ -18,6 +18,7 @@ import { scheduleOnRN } from "react-native-worklets";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, font, radius } from "../ui/squish";
+import { rotate } from "@shopify/react-native-skia";
 
 export type HugPhase =
   | "idle"
@@ -101,7 +102,7 @@ export default function HugController({ sendableHug, onComplete }: HugProps) {
   const getHugPhaseStatusText = useCallback(() => {
     if (hugPhase === "formed") return "now pull down and release!";
     if (hugPhase === "hugging") return "keep pressing!";
-    if (hugPhase === "idle") return "press the buttton to form the hug!";
+    if (hugPhase === "idle") return "press the button to form the hug!";
     if (hugPhase === "thrown") return "hug is thrown!";
     if (hugPhase === "pulling") return "pull down and release!";
   }, [hugPhase]);
@@ -111,8 +112,8 @@ export default function HugController({ sendableHug, onComplete }: HugProps) {
       hugPress.value,
       [0, 1, 1.8, 2],
       [
-        "#f8efcb", // yellow (charging)
-        "#6BCF63", // green (sweet spot)
+        colors.mistBg, // yellow (charging)
+        colors.primary, // green (sweet spot)
         "#6BCF63", // red (overhug)
         "#FF3B3B",
       ],
@@ -190,11 +191,12 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   statusText: {
-    backgroundColor: colors.peach,
+    // backgroundColor: colors.peach,
+    transform: [{ rotate: "-1deg" }],
     borderRadius: radius.md,
     padding: 12,
     fontFamily: font.uiBold,
-    fontSize: 16,
+    fontSize: 18,
   },
   releaseText: {
     fontSize: 16,

@@ -7,6 +7,7 @@ import { Redirect, router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { colors } from "../components/ui/squish/theme";
+import { Confetti } from "react-native-fast-confetti";
 
 export default function SendHug() {
   const toUid = useHugDraft((s) => s.to);
@@ -43,6 +44,12 @@ export default function SendHug() {
   if (hugIsSent) {
     return (
       <View style={styles.emptyContainer}>
+        <Confetti>
+          <Confetti.Flake size={12} radius={6} />
+          <Confetti.Flake width={8} height={14} />
+          <Confetti.Flake width={8} height={14} radius={6.5} />
+          <Confetti.Flake width={8} height={14} radius={4} />
+        </Confetti>
         <AppText style={styles.emptyTitle}>Welldone!!</AppText>
         <AppText style={styles.emptySubtitle}>
           You sent a hug to {sendableHug?.toName || "lol"}
