@@ -3,6 +3,7 @@ import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import Loader from "@/components/ui/Loader";
 import { colors, font, radius, shadow, spacing } from "@/components/ui/squish";
 import { PlushButton } from "@/components/ui/squish/PlushButton";
+import { StatCard, StatCardRow } from "@/components/ui/squish/StatCard";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useHugDraft } from "@/hooks/useHugDraft";
 import { auth } from "@/lib/firebaseConfig";
@@ -96,6 +97,20 @@ export default function ProfileScreen() {
             onPress={openAvatarSheet}
           />
         </View>
+
+        <StatCardRow>
+          <StatCard
+            icon="paper-plane"
+            value={totalSent}
+            label="total hugs sent"
+          />
+          <StatCard
+            tone="blush"
+            icon="gift"
+            value={totalReceived}
+            label="total hugs received"
+          />
+        </StatCardRow>
 
         {/* pushes the account actions to the bottom, per the design */}
         <View style={styles.spacer} />

@@ -195,7 +195,7 @@ export default function FriendsListScreen() {
       ? friends.filter((f) => f.displayName.toLowerCase().includes(q))
       : friends;
 
-    const hugTime = (f: UserFriend) =>
+    const hugSentTime = (f: UserFriend) =>
       f.lastSentHug ? f.lastSentHug.toDate().getTime() : -Infinity;
 
     return [...base].sort((a, b) => {
@@ -203,7 +203,7 @@ export default function FriendsListScreen() {
         if (a.id === topHuggerUid) return -1;
         if (b.id === topHuggerUid) return 1;
       }
-      return hugTime(b) - hugTime(a); // most recent first
+      return hugSentTime(b) - hugSentTime(a); // most recent first
     });
   }, [friends, search, topHuggerUid]);
 

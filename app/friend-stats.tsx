@@ -10,6 +10,7 @@ import {
 import { FriendAvatar } from "@/components/ui/squish/FriendAvatar";
 import { PlushButton } from "@/components/ui/squish/PlushButton";
 import RoundIconButton from "@/components/ui/squish/RountIconButton";
+import { StatCard, StatCardRow } from "@/components/ui/squish/StatCard";
 import { useAvatarThumb } from "@/hooks/useAvatarThumbnail";
 import { auth, db } from "@/lib/firebaseConfig";
 import { onRemoveFriend, UserFriend } from "@/lib/handleFriends";
@@ -148,28 +149,15 @@ export default function FriendStatsModal() {
         </View>
 
         {/* directional split */}
-        <View style={styles.splitRow}>
-          <View style={styles.splitCard}>
-            <View style={[styles.splitIcon, { backgroundColor: colors.soft }]}>
-              <Ionicons name="paper-plane" size={20} color={colors.primary} />
-            </View>
-            <Text style={styles.splitNumber}>{sent}</Text>
-            <Text style={styles.splitLabel}>Hugs you sent</Text>
-          </View>
-
-          <View style={styles.splitCard}>
-            <View
-              style={[
-                styles.splitIcon,
-                { backgroundColor: tint(colors.blush, 0.85) },
-              ]}
-            >
-              <Ionicons name="gift" size={20} color={colors.blush} />
-            </View>
-            <Text style={styles.splitNumber}>{received}</Text>
-            <Text style={styles.splitLabel}>Hugs you got back</Text>
-          </View>
-        </View>
+        <StatCardRow>
+          <StatCard icon="paper-plane" value={sent} label="Hugs you sent" />
+          <StatCard
+            tone="blush"
+            icon="gift"
+            value={received}
+            label="Hugs you got back"
+          />
+        </StatCardRow>
 
         {/* streak */}
         {showStreak && (
