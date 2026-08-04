@@ -67,6 +67,9 @@ export default function ProfileScreen() {
     return <Loader />;
   }
 
+  const totalSent = user.stats.hugsSent ?? 0;
+  const totalReceived = user.stats.hugsReceived ?? 0;
+
   return (
     <View style={styles.screen}>
       <View style={styles.header}>

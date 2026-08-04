@@ -36,6 +36,9 @@ export type UserFriend = {
   lastReceivedHug?: Timestamp | null;
   totalHugsSent?: number;
   totalHugsReceived?: number;
+  hugBackCount?: number;
+  hugBackTotalMs?: number;
+  lastHugBackAt?: number;
   numStreakDays?: number;
   addedAt?: Timestamp;
   online?: boolean;

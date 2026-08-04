@@ -7,10 +7,11 @@ import { colors, font, spacing } from "@/components/ui/squish/theme";
 import useCreateHugWithNote from "@/hooks/useCreateHugWithNote";
 import { useHugTotals } from "@/hooks/useIncomingHugs";
 import { db } from "@/lib/firebaseConfig";
-import { Hug } from "@/lib/handleHugs";
+import { getHugWithId, Hug } from "@/lib/handleHugs";
 import { Direction } from "@/lib/hugs/groups";
+import { useLocalSearchParams } from "expo-router";
 import { doc, Timestamp, updateDoc } from "firebase/firestore";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 /** What the overlay is showing, and from which side. */
@@ -26,12 +27,17 @@ export default function HugsListScreen() {
   const { startHugWithNote } = useCreateHugWithNote();
 
   // deep link from a push notification always points at a received hug.
-  // const { hugId } = useLocalSearchParams();
-  // useEffect(() => {
-  //   if (!hugId) return;
-  //   const hug = incomingHugs.find((item) => item.id === hugId);
-  //   if (hug) setSelection({ hug, direction: "incoming" });
-  // }, [hugId, incomingHugs]);
+  const { hugId } = useLocalSearchParams();
+  useEffect(() => {
+    if (!hugId) return;
+
+    getHugWithId(hugId as string).then((res) => {
+      const hug = res;
+      if (hug) {
+        setSelection({ hug, direction: "incoming" });
+      }
+    });
+  }, [hugId]);
 
   const markSeen = async (hug: Hug) => {
     if (hug.seenAt) return;

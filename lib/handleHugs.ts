@@ -3,6 +3,7 @@ import {
   collection,
   doc,
   FieldValue,
+  getDoc,
   getDocs,
   query,
   serverTimestamp,
@@ -95,6 +96,22 @@ export async function getHugs() {
   return data;
 
   // actually subscribe to this and show real time updates
+}
+
+export async function getHugWithId(hugId: string): Promise<Hug | null> {
+  const docRef = doc(db, "hugs", hugId);
+
+  const docSnap = await getDoc(docRef);
+
+  if (docSnap.exists()) {
+    return {
+      id: docSnap.id,
+      ...(docSnap.data() as HugBase<Timestamp>),
+    };
+  } else {
+    console.error(`no document with ${hugId} was found..`);
+    return null;
+  }
 }
 
 export async function getHugsWith(friendId: string): Promise<Hug[]> {
