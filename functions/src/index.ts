@@ -67,17 +67,43 @@ export const onHugCreated = onDocumentCreated("hugs/{hugId}", async (event) => {
   }
 
   // update stats here
-  const batch = db.batch();
-  batch.update(db.doc(`users/${hug.from}/friends/${hug.to}`), {
-    // cache
-    totalHugsSent: FieldValue.increment(1),
-    lastSentHug: FieldValue.serverTimestamp(),
-  });
-  batch.update(db.doc(`users/${hug.to}/friends/${hug.from}`), {
-    totalHugsReceived: FieldValue.increment(1),
-  });
+  try {
+    const batch = db.batch();
 
-  await batch.commit();
+    batch.set(
+      db.doc(`users/${hug.from}/friends/${hug.to}`),
+      {
+        totalHugsSent: FieldValue.increment(1),
+        lastSentHug: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    batch.set(
+      db.doc(`users/${hug.to}/friends/${hug.from}`),
+      {
+        totalHugsReceived: FieldValue.increment(1),
+        lastReceivedHug: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    batch.set(
+      db.doc(`users/${hug.from}`),
+      { stats: { hugsSent: FieldValue.increment(1) } },
+      { merge: true },
+    );
+
+    batch.set(
+      db.doc(`users/${hug.to}`),
+      { stats: { hugsReceived: FieldValue.increment(1) } },
+      { merge: true },
+    );
+
+    await batch.commit();
+  } catch (err) {
+    console.error("Stats update failed for hug", snap.id, err);
+  }
 
   // send notification
   await sendPushNotification(hug, snap.id);

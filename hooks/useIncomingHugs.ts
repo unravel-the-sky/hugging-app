@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useCurrentUser } from "./useCurrentUser";
+import { useFriends } from "./useFriends";
 
 export type HugDirection = "incoming" | "outgoing";
 
@@ -94,24 +95,22 @@ export function useHugs(direction: HugDirection = "incoming") {
 const MIN_HUGS = 10;
 
 export function useTopHugger() {
-  const { hugs: incomingHugs, isLoading } = useHugs("incoming");
+  const { friends, isLoading } = useFriends();
 
   const topHuggerUid = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const h of incomingHugs) {
-      counts.set(h.from, (counts.get(h.from) ?? 0) + 1);
-    }
-
     let bestUid: string | null = null;
     let bestCount = 0;
-    for (const [uid, count] of counts) {
+
+    for (const f of friends) {
+      const count = f.totalHugsReceived ?? 0;
       if (count > bestCount) {
         bestCount = count;
-        bestUid = uid;
+        bestUid = f.id;
       }
     }
+
     return bestCount > MIN_HUGS ? bestUid : null;
-  }, [incomingHugs]);
+  }, [friends]);
 
   return { topHuggerUid, isLoading };
 }

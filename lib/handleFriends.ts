@@ -33,6 +33,7 @@ export type UserFriend = {
   avatar?: AvatarType | null;
   friendedAt: Timestamp;
   lastSentHug?: Timestamp | null;
+  lastReceivedHug?: Timestamp | null;
   totalHugsSent?: number;
   totalHugsReceived?: number;
   numStreakDays?: number;
