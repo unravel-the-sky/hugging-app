@@ -18,6 +18,7 @@ type AvatarProps = {
   avatar?: AvatarType;
   photoURL?: string;
   photoThumbURL?: string;
+  isDrawn?: boolean;
   /**
    * Convenience: pass a user (or friend) and avatar/photoURL/photoThumbURL
    * are read off it. Lets call sites do `<AvatarImage user={friend} />`
@@ -34,6 +35,7 @@ export default function AvatarImage({
   photoThumbURL,
   user,
   name,
+  isDrawn,
   size = "m",
 }: AvatarProps) {
   // Explicit props win; otherwise read from `user`; otherwise default.
@@ -59,9 +61,25 @@ export default function AvatarImage({
     );
   }
 
-  // Drawn face. Note: default + anything non-female → male (this also
-  // covers a "photo" type that has no URL yet, so it degrades to a face
-  // rather than rendering nothing).
+  if (isDrawn && (type === "female" || type === "male")) {
+    // Drawn face. Note: default + anything non-female → male (this also
+    // covers a "photo" type that has no URL yet, so it degrades to a face
+    // rather than rendering nothing).
+    return (
+      <Image
+        source={type === "female" ? FemaleFace : MaleFace}
+        style={[
+          styles.avatar,
+          size === "s"
+            ? styles.small
+            : size === "m"
+              ? styles.medium
+              : styles.large,
+        ]}
+      />
+    );
+  }
+
   return (
     <Avatar
       initials={name?.[0]?.toUpperCase() ?? "?"}

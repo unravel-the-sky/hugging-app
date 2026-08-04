@@ -91,7 +91,7 @@ export default function AvatarPicker({
               onPress={() => setSelected(opt.type)}
               disabled={busy}
             >
-              <AvatarImage avatar={opt.type} size="m" />
+              <AvatarImage isDrawn avatar={opt.type} size="m" />
               <Text
                 style={[
                   styles.optionLabel,

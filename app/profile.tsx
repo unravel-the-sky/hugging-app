@@ -84,7 +84,7 @@ export default function ProfileScreen() {
         {/* identity */}
         <View style={styles.profileSection}>
           <Pressable onPress={openAvatarSheet} style={styles.avatarWrap}>
-            <AvatarImage user={user} size="l" />
+            <AvatarImage isDrawn user={user} size="l" />
             <View style={styles.cameraBadge}>
               <Ionicons name="camera" size={18} color={colors.surface} />
             </View>

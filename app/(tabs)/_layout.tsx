@@ -98,7 +98,7 @@ export default function TabsLayout() {
             <Text style={styles.usernameText}>{user?.displayName || ""}</Text>
           </View>
           <Pressable onPress={() => router.push("/profile")}>
-            {user && <AvatarImage user={user} size="s" />}
+            {user && <AvatarImage isDrawn user={user} size="s" />}
             {/* <FriendAvatar
               name={"asdf"}
               photoUri={user.photoThumbPath ?? undefined}
