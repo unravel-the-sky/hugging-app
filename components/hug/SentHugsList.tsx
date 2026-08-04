@@ -1,20 +1,28 @@
-import { spacing } from "@/components/ui/squish/theme";
+import { colors, spacing } from "@/components/ui/squish/theme";
 import { useCollapsibleDays } from "@/hooks/useCollapsibleDays";
 import { Hug } from "@/lib/handleHugs";
 import { DayGroup, groupByDay } from "@/lib/hugs/groups";
 import React, { useMemo } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
+import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
 import { HugRow, SectionHeader } from "./HugListComponents";
 import { HugsEmptyState } from "./HugsEmptyState";
 import { RowCard } from "./HugRowCard";
+import { useHugs } from "@/hooks/useIncomingHugs";
+import { PlushButton } from "../ui/squish/PlushButton";
 
 export const SentHugsList = ({
-  hugs,
   onSelectHug,
 }: {
-  hugs: Hug[];
   onSelectHug: (hug: Hug) => void;
 }) => {
+  const {
+    isLoading: outgoingLoading,
+    hugs,
+    hasMore,
+    loadMore,
+    isLoadingMore,
+  } = useHugs("outgoing");
+
   const days = useMemo(() => groupByDay(hugs), [hugs]);
   const { isExpanded, toggle, overrides } = useCollapsibleDays(days);
 
@@ -49,6 +57,14 @@ export const SentHugsList = ({
     );
   };
 
+  if (outgoingLoading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <FlatList
       data={days}
@@ -63,6 +79,16 @@ export const SentHugsList = ({
           hint="Pick a friend and squeeze."
         />
       }
+      ListFooterComponent={
+        hasMore ? (
+          <PlushButton
+            onPress={loadMore}
+            disabled={isLoadingMore}
+            label={isLoadingMore ? "fetching.." : "load more hugs"}
+            variant="blush"
+          />
+        ) : null
+      }
     />
   );
 };
@@ -72,5 +98,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingBottom: 120,
     flexGrow: 1,
+  },
+  container: {
+    flex: 1,
+    backgroundColor: colors.soft,
+  },
+  centered: {
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
