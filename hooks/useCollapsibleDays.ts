@@ -7,7 +7,7 @@ export const useCollapsibleDays = (days: DayGroup[]) => {
   const [overrides, setOverrides] = useState<Record<string, boolean>>({});
 
   const isExpanded = useCallback(
-    (day: DayGroup) => overrides[day.key] ?? isRecentGroup(day),
+    (day: DayGroup) => overrides[day.key] ?? true,
     [overrides],
   );
 
@@ -15,7 +15,7 @@ export const useCollapsibleDays = (days: DayGroup[]) => {
     (day: DayGroup) =>
       setOverrides((prev) => ({
         ...prev,
-        [day.key]: !(prev[day.key] ?? isRecentGroup(day)),
+        [day.key]: !(prev[day.key] ?? true),
       })),
     [],
   );

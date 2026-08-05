@@ -132,12 +132,14 @@ export default function HugViewOverlay({
           </View>
         )}
 
-        <Toast
-          visible={confirmVisible}
-          message={`you hugged ${hug.fromName} back`}
-          onHide={() => console.log("ha deeet")}
-          icon="heart-circle-outline"
-        />
+        {!isReadOnly && (
+          <Toast
+            visible={confirmVisible}
+            message={`you hugged ${hug.fromName} back`}
+            onHide={() => console.log("ha deeet")}
+            icon="heart-circle-outline"
+          />
+        )}
 
         <Toast
           visible={alreadyHugged}

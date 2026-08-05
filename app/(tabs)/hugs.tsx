@@ -20,6 +20,7 @@ type Selection = { hug: Hug; direction: Direction };
 export default function HugsListScreen() {
   const [tab, setTab] = useState<Tab>("received");
   const [selection, setSelection] = useState<Selection | undefined>();
+  const [isFromLocalSearch, setIsFromLocalSearch] = useState(false);
 
   // const { isLoading: incomingLoading, hugs: incomingHugs } =
   //   useHugs("incoming");
@@ -34,6 +35,7 @@ export default function HugsListScreen() {
     getHugWithId(hugId as string).then((res) => {
       const hug = res;
       if (hug) {
+        setIsFromLocalSearch(true);
         setSelection({ hug, direction: "incoming" });
       }
     });
