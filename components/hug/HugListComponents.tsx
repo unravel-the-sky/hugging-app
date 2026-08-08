@@ -7,13 +7,32 @@ import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { FriendAvatar } from "../ui/squish/FriendAvatar";
-import { colors, font, radius, shadow, spacing } from "../ui/squish/theme";
+import { Timestamp } from "firebase/firestore";
+import {
+  colors,
+  darken,
+  font,
+  radius,
+  shadow,
+  spacing,
+} from "../ui/squish/theme";
 
-export type Tab = "received" | "sent";
+const clock = (t?: Timestamp) =>
+  t
+    ? t.toDate().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    : "—";
+
+/* mint at 12px on white fails contrast — darken for text-sized use */
+const SEEN = colors.primary;
+const BACK = darken(colors.mint, 0.38);
+
+export type Tab = "all" | "received" | "sent" | "pending";
 
 export const TABS: { key: Tab; label: string }[] = [
-  { key: "received", label: "Received" },
-  { key: "sent", label: "Sent" },
+  { key: "all", label: "all" },
+  { key: "received", label: "received" },
+  { key: "sent", label: "sent" },
+  { key: "pending", label: "pending" },
 ] as const;
 
 /* ------------------------------------------------------------------ */
@@ -233,6 +252,118 @@ export const FilterTabs = ({
   </View>
 );
 
+const DirectionBadge = ({
+  hug,
+  direction,
+}: {
+  hug: Hug;
+  direction: Direction;
+}) => {
+  const isOutgoing = direction === "outgoing";
+  // a sent hug that's been opened: the badge itself carries the receipt
+  const opened = isOutgoing && !!hug.seenAt;
+
+  return (
+    <View
+      style={[
+        styles.dirBadge,
+        { backgroundColor: isOutgoing ? BACK : colors.primary },
+      ]}
+    >
+      <Ionicons
+        name={
+          opened ? "checkmark-done" : isOutgoing ? "arrow-up" : "arrow-down"
+        }
+        size={opened ? 12 : 11}
+        color={colors.surface}
+      />
+    </View>
+  );
+};
+
+const StatusStack = ({
+  hug,
+  direction,
+}: {
+  hug: Hug;
+  direction: Direction;
+}) => {
+  const hasStatus = !!hug.seenAt || !!hug.hugBackAt;
+
+  return (
+    <View style={styles.statusStack}>
+      <Text style={styles.timeSent}>{clock(hug.createdAt)}</Text>
+
+      {hasStatus && (
+        <View style={styles.statusLine}>
+          {!!hug.seenAt && direction === "incoming" && (
+            <Ionicons name="checkmark-done" size={14} color={SEEN} />
+          )}
+          {!!hug.hugBackAt && <Ionicons name="people" size={14} color={BACK} />}
+        </View>
+      )}
+    </View>
+  );
+};
+
+/** Compact row for the merged timeline: direction lives on the row, not the list. */
+export const TimelineHugRow = ({
+  hug,
+  direction,
+  showDivider,
+  onPress,
+}: {
+  hug: Hug;
+  direction: Direction;
+  showDivider: boolean;
+  onPress?: () => void;
+}) => {
+  const other = counterpartyOf(hug, direction);
+  const photoUri = useAvatarThumb(other.uid);
+  const isOutgoing = direction === "outgoing";
+  const isNew = !isOutgoing && !hug.seenAt;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      style={({ pressed }) => [
+        styles.timelineRow,
+        showDivider && styles.rowDivider,
+        { backgroundColor: pressed ? colors.lilac : colors.surface },
+      ]}
+    >
+      <View>
+        <FriendAvatar name={other.name} photoUri={photoUri ?? undefined} />
+        <DirectionBadge direction={direction} hug={hug} />
+      </View>
+
+      <View style={styles.rowBody}>
+        <View style={styles.nameLine}>
+          <Text style={styles.rowName} numberOfLines={1}>
+            {isOutgoing ? `To ${other.name}` : other.name}
+          </Text>
+          {isNew && (
+            <View style={styles.newPill}>
+              <Text style={styles.newPillText}>NEW</Text>
+            </View>
+          )}
+        </View>
+      </View>
+
+      <StatusStack hug={hug} direction={direction} />
+    </Pressable>
+  );
+};
+
+/** Day header with the trailing rule from the mockup. */
+export const DayHeader = ({ title }: { title: string }) => (
+  <View style={styles.dayHeader}>
+    <Text style={styles.sectionTitle}>{title}</Text>
+    <View style={styles.dayRule} />
+  </View>
+);
+
 const styles = StyleSheet.create({
   /* rows */
   row: {
@@ -381,5 +512,58 @@ const styles = StyleSheet.create({
     color: colors.softInk,
     minWidth: 22, // matches countPill so headers don't jitter
     textAlign: "center",
+  },
+
+  // timeline stuf here
+  timelineRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: spacing.sm, // was md — this is most of the compaction
+    paddingHorizontal: spacing.lg,
+    overflow: "hidden",
+  },
+  dirBadge: {
+    position: "absolute",
+    right: -2,
+    bottom: -2,
+    minWidth: 20, // was width: 20
+    height: 20,
+    paddingHorizontal: 2,
+    borderRadius: radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: colors.surface,
+  },
+  dirBadgeWide: {
+    // paddingHorizontal: 4,
+    // right: -4, // keeps the circle visually centred on the avatar edge
+  },
+  statusStack: {
+    alignItems: "flex-end",
+    marginLeft: spacing.sm,
+    gap: 1,
+  },
+  statusLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  timeSent: {
+    fontFamily: font.uiBold,
+    fontSize: 14,
+    color: colors.plumInk,
+  },
+  dayHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  dayRule: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.soft,
   },
 });
