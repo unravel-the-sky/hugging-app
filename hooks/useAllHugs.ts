@@ -7,7 +7,7 @@ import { byNewest } from "@/lib/hugs/time";
 const ms = (h: Hug) => h.createdAt?.toMillis() ?? 0;
 const oldest = (hugs: Hug[]) => (hugs.length ? Math.min(...hugs.map(ms)) : 0);
 
-export type HugFilter = "all" | "received" | "sent" | "waiting";
+export type HugFilter = "all" | "received" | "sent" | "pending";
 
 export function useAllHugs(filter: HugFilter) {
   const incoming = useHugs("incoming");
@@ -50,7 +50,7 @@ export function useAllHugs(filter: HugFilter) {
           return dir.get(h.id) === "incoming";
         case "sent":
           return dir.get(h.id) === "outgoing";
-        case "waiting":
+        case "pending":
           return dir.get(h.id) === "outgoing" && !h.seenAt;
         default:
           return true;
@@ -63,7 +63,7 @@ export function useAllHugs(filter: HugFilter) {
   const relevant =
     filter === "received"
       ? [incoming]
-      : filter === "sent" || filter === "waiting"
+      : filter === "sent" || filter === "pending"
         ? [outgoing]
         : [incoming, outgoing];
 

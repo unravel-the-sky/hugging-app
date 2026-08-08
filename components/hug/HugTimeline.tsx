@@ -18,8 +18,8 @@ const EMPTY: Record<HugFilter, { title: string; hint: string }> = {
     hint: "They'll show up the moment someone sends one.",
   },
   sent: { title: "No hugs sent yet", hint: "Pick a friend and squeeze." },
-  waiting: {
-    title: "Nothing waiting",
+  pending: {
+    title: "Nothing pending",
     hint: "Every hug you've sent has been opened.",
   },
 };
