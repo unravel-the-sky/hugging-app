@@ -7,10 +7,13 @@ import {
 import React, { useCallback, useRef, useState } from "react";
 import { Button, Pressable, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 
-import { colors, IconButton } from "@/components/ui/squish";
+import { colors, IconButton, spacing } from "@/components/ui/squish";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import Media from "./media";
@@ -41,6 +44,8 @@ export default function TakePicture({
     const photo = await ref.current?.takePictureAsync();
     if (photo?.uri) setUri(photo.uri);
   };
+
+  const insets = useSafeAreaInsets();
 
   const doubleTap = Gesture.Tap()
     .numberOfTaps(2)
@@ -194,18 +199,18 @@ export default function TakePicture({
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        { paddingTop: Math.max(insets.top, spacing.lg) },
+      ]}
+    >
       {uri ? renderPicture(uri) : renderCamera()}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  overlayContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
   container: {
     flex: 1,
     backgroundColor: "#fff",

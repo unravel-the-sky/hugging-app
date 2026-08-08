@@ -12,13 +12,14 @@ import {
 import { TextInput } from "react-native-gesture-handler";
 
 import { PlushButton } from "@/components/ui/squish/PlushButton";
-import { colors, font, radius } from "@/components/ui/squish/theme";
+import { colors, font, radius, spacing } from "@/components/ui/squish/theme";
 import {
   FONT_OPTIONS,
   fontFamilyFor,
   FontKey,
   SWATCHES,
 } from "@/constants/postcardEditorConstants";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export type TextDraft = {
   id?: string; // present when editing
@@ -65,8 +66,12 @@ export default function TextEditorOverlay({
     onDone({ id: draft.id, text, fontKey, size: draft.size, color });
   };
 
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={styles.root}>
+    <View
+      style={[styles.root, { marginTop: Math.max(insets.top, spacing.lg) }]}
+    >
       {/* Dim area + centred live text. Tapping the dim area commits. */}
       <Pressable style={styles.scrim} onPress={commit}>
         <View style={styles.stage} pointerEvents="box-none">

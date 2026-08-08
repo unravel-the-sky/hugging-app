@@ -16,7 +16,7 @@ import { font } from "../ui/squish";
 import { PlushButton } from "../ui/squish/PlushButton";
 import { HeartsGrid } from "./HeartsGrid";
 
-const REVEAL_BG = ["#EFE0F6", "#F7C9DC"] as const;
+const REVEAL_BG = ["#F7C9DC", "#F7C9DC"] as const;
 const MAX_DRAG = (10 * Math.PI) / 180; // ~10° free tilt
 const DRAG_SENS = 0.004; // gentle tilt (non-flip case)
 const FLIP_SENS = 0.0075; // horizontal flip sensitivity — tune to taste

@@ -1,8 +1,7 @@
 import { FilterTabs, Tab } from "@/components/hug/HugListComponents";
 import { HugsEmptyState } from "@/components/hug/HugsEmptyState";
+import { HugTimeline } from "@/components/hug/HugTimeline";
 import HugViewOverlay3d from "@/components/hug/HugViewOverlay3d";
-import { ReceivedHugsList } from "@/components/hug/ReceivedHugsList";
-import { SentHugsList } from "@/components/hug/SentHugsList";
 import { colors, font, spacing } from "@/components/ui/squish/theme";
 import useCreateHugWithNote from "@/hooks/useCreateHugWithNote";
 import { useHugTotals } from "@/hooks/useIncomingHugs";
@@ -18,12 +17,9 @@ import { StyleSheet, Text, View } from "react-native";
 type Selection = { hug: Hug; direction: Direction };
 
 export default function HugsListScreen() {
-  const [tab, setTab] = useState<Tab>("received");
+  const [tab, setTab] = useState<Tab>("all");
   const [selection, setSelection] = useState<Selection | undefined>();
   const [isFromLocalSearch, setIsFromLocalSearch] = useState(false);
-
-  // const { isLoading: incomingLoading, hugs: incomingHugs } =
-  //   useHugs("incoming");
 
   const { startHugWithNote } = useCreateHugWithNote();
 
@@ -89,8 +85,13 @@ export default function HugsListScreen() {
       ) : (
         <>
           <FilterTabs value={tab} onChange={setTab} />
+          <HugTimeline
+            filter={tab}
+            onSelectHug={(hug, direction) => setSelection({ hug, direction })}
+          />
+          {/* <FilterTabs value={tab} onChange={setTab} /> */}
 
-          {tab === "received" ? (
+          {/* {tab === "received" ? (
             <ReceivedHugsList
               onSelectHug={(hug) =>
                 setSelection({ hug, direction: "incoming" })
@@ -102,7 +103,7 @@ export default function HugsListScreen() {
                 setSelection({ hug, direction: "outgoing" })
               }
             />
-          )}
+          )} */}
         </>
       )}
 

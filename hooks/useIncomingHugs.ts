@@ -56,7 +56,7 @@ export function useHugs(direction: HugDirection = "incoming") {
     const merged = new Map<string, Hug>();
     for (const h of [...liveHugs, ...olderHugs]) merged.set(h.id, h);
     return [...merged.values()].sort(
-      (a, b) => b.createdAt!.toMillis() - a.createdAt!.toMillis(),
+      (a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0),
     );
   }, [liveHugs, olderHugs]);
 
