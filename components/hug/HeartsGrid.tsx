@@ -45,8 +45,8 @@ export function HeartsGrid({ tilt }: { tilt: TiltRef }) {
         arr.push({
           x: (col - (COLS - 1) / 2) * SPACING + (Math.random() - 0.5) * 0.2,
           y: (row - (ROWS - 1) / 2) * SPACING + (Math.random() - 0.5) * 0.2,
-          scale: 0.08 + Math.random() * 0.14,
-          rot: (Math.random() - 0.5) * 0.4,
+          scale: 0.08 + Math.random() * 0.1,
+          rot: (Math.random() - 0.5) * 0.5,
           phase: Math.random() * Math.PI * 2,
         });
       }
@@ -59,14 +59,14 @@ export function HeartsGrid({ tilt }: { tilt: TiltRef }) {
     const mesh = ref.current;
     if (!mesh) return;
     const color = new THREE.Color();
-    data.forEach((_, i) => {
-      color.setHSL(
-        0.92 + Math.random() * 0.06,
-        0.55,
-        0.72 + Math.random() * 0.15,
-      );
-      mesh.setColorAt(i, color);
-    });
+    // data.forEach((_, i) => {
+    //   color.setHSL(
+    //     0.92 + Math.random() * 0.06,
+    //     0.55,
+    //     0.72 + Math.random() * 0.15,
+    //   );
+    //   mesh.setColorAt(i, color);
+    // });
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   }, [data]);
 

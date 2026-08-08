@@ -127,7 +127,7 @@ export default function RootLayout() {
         />
         <Stack.Screen
           name="take-pic"
-          // options={{ headerShown: false, presentation: "fullScreenModal" }}
+          options={{ headerShown: false, presentation: "fullScreenModal" }}
         />
         <Stack.Screen name="media" />
         <Stack.Screen

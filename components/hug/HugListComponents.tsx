@@ -26,12 +26,10 @@ const clock = (t?: Timestamp) =>
 const SEEN = colors.primary;
 const BACK = darken(colors.mint, 0.38);
 
-export type Tab = "all" | "received" | "sent" | "pending";
+export type Tab = "all" | "pending";
 
 export const TABS: { key: Tab; label: string }[] = [
   { key: "all", label: "all" },
-  { key: "received", label: "received" },
-  { key: "sent", label: "sent" },
   { key: "pending", label: "pending" },
 ] as const;
 

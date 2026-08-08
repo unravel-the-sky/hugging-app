@@ -218,7 +218,7 @@ export default function Media({
 
   // ---- colours ---------------------------------------------------------
   const { colors: imageColors } = useImageColors(media);
-  const bg = imageColors?.colorOne?.value ?? "#D7C2B2";
+  const bg = imageColors?.colorThree?.value ?? "#D7C2B2";
 
   if (!image) return null;
 
@@ -353,11 +353,11 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     position: "absolute",
-    top: 26,
+    top: 65,
     left: 0,
     right: 0,
     zIndex: 5,
-    paddingHorizontal: 18,
+    paddingHorizontal: 22,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
