@@ -1,3 +1,4 @@
+import { OfflineGate } from "@/components/ui/OfflineGate";
 import { colors } from "@/components/ui/squish";
 import { savePushTokenOnUser, useCurrentUser } from "@/hooks/useCurrentUser";
 import { GOOGLE_WEB_CLIENT_ID } from "@/lib/auth-config";
@@ -180,6 +181,7 @@ export default function RootLayout() {
         />
         <Stack.Screen name="avatar-camera" options={{ headerShown: false }} />
       </Stack>
+      <OfflineGate />
     </GestureHandlerRootView>
   );
 }

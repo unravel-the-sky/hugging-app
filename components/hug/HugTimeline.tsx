@@ -1,4 +1,3 @@
-// components/hug/HugTimeline.tsx
 import { colors, spacing } from "@/components/ui/squish/theme";
 import { Hug } from "@/lib/handleHugs";
 import { DayGroup, Direction, groupByDay } from "@/lib/hugs/groups";
