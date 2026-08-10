@@ -3,7 +3,6 @@ import { HugsEmptyState } from "@/components/hug/HugsEmptyState";
 import { HugTimeline } from "@/components/hug/HugTimeline";
 import HugViewOverlay3d from "@/components/hug/HugViewOverlay3d";
 import { colors, font, spacing } from "@/components/ui/squish/theme";
-import useCreateHugWithNote from "@/hooks/useCreateHugWithNote";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useHugTotals } from "@/hooks/useIncomingHugs";
 import { db } from "@/lib/firebaseConfig";
@@ -21,8 +20,6 @@ export default function HugsListScreen() {
   const [tab, setTab] = useState<Tab>("all");
   const [selection, setSelection] = useState<Selection | undefined>();
   const [isFromLocalSearch, setIsFromLocalSearch] = useState(false);
-
-  const { startHugWithNote } = useCreateHugWithNote();
 
   const { user, isHydrating } = useCurrentUser();
 

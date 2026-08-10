@@ -2,7 +2,7 @@ import { getDownloadURL, getStorage, ref } from "firebase/storage";
 import { useEffect, useState } from "react";
 
 export const useGetDownloadUrl = (photoUri: string | undefined) => {
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [downloadUrl, setDownloadUrl] = useState<string | undefined>(undefined);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
