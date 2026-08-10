@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { DeviceMotion } from "expo-sensors";
 
+import { useSharedValue, type SharedValue } from "react-native-reanimated";
+
 export type TiltRef = React.RefObject<{ x: number; y: number }>;
 
 /**
@@ -56,4 +58,45 @@ export function useTilt(
   }, [enabled, smoothing, clamp]);
 
   return tilt;
+}
+
+export type Tilt = {
+  ref: TiltRef; // for useFrame consumers
+  x: SharedValue<number>; // for worklets — Skia, Reanimated styles
+  y: SharedValue<number>;
+};
+
+export function useTiltNew(
+  enabled = true,
+  smoothing = 0.12,
+  clamp = 0.6,
+): Tilt {
+  const ref = useRef({ x: 0, y: 0 });
+  const x = useSharedValue(0);
+  const y = useSharedValue(0);
+
+  useEffect(() => {
+    if (!enabled) return;
+    let baseline: { x: number; y: number } | null = null;
+    const clampAbs = (v: number) => Math.max(-clamp, Math.min(clamp, v));
+
+    DeviceMotion.setUpdateInterval(16);
+    const sub = DeviceMotion.addListener((data) => {
+      const r = data.rotation;
+      if (!r) return;
+      if (!baseline) baseline = { x: r.beta, y: r.gamma };
+
+      ref.current.x +=
+        (clampAbs(r.beta - baseline.x) - ref.current.x) * smoothing;
+      ref.current.y +=
+        (clampAbs(r.gamma - baseline.y) - ref.current.y) * smoothing;
+
+      x.value = ref.current.x;
+      y.value = ref.current.y;
+    });
+
+    return () => sub.remove();
+  }, [enabled, smoothing, clamp, x, y]);
+
+  return { ref, x, y };
 }

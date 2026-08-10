@@ -124,6 +124,8 @@ function Postcard({
 
   const hintOffset = useRef(0);
 
+  texture.colorSpace = THREE.SRGBColorSpace;
+
   useFrame((state, delta) => {
     const g = ref.current;
     if (!g) return;
@@ -187,7 +189,7 @@ function Postcard({
             roughness={0.75}
             metalness={0.05}
             clearcoat={0.3}
-            clearcoatRoughness={0.3}
+            toneMapped={false}
           />
         </mesh>
       )}

@@ -245,7 +245,7 @@ export default function FriendMemoryLane() {
               "rgba(246,243,251,0.85)",
               colors.mistBg,
             ]}
-            locations={[0, 0.45, 1]}
+            locations={[0, 0.95, 1]}
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           />

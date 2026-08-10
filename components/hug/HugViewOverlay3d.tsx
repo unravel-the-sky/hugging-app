@@ -1,7 +1,4 @@
-import { useAvatarThumb } from "@/hooks/useAvatarThumbnail";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useGetDownloadUrl } from "@/hooks/useGetDownloadUrl";
-import { useHugTexture } from "@/hooks/useHugTexture";
 import { db } from "@/lib/firebaseConfig";
 import { Hug } from "@/lib/handleHugs";
 import { LinearGradient } from "expo-linear-gradient";
@@ -9,13 +6,13 @@ import { router } from "expo-router";
 import { doc, onSnapshot } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, font, radius, shadow, spacing } from "../ui/squish";
 import { FriendAvatar } from "../ui/squish/FriendAvatar";
 import { PlushButton } from "../ui/squish/PlushButton";
 import Toast from "../ui/squish/Toast";
 import { HugFaceSeal } from "./HugFaceSeal";
-import HugRevealer from "./HugRevealerNEW";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import HugRevealerImage from "./HugRevealerImage";
 
 // Lavender gradient from the "Sealed (before)" screen.
 const SEALED_BG = ["#ddd6ef", "#d3cfdb"] as const;
@@ -29,20 +26,6 @@ interface HugViewOverlayProps {
   onIgnore: () => void;
 }
 
-// Stylized envelope built from Views (no extra deps). Swap for your own
-// asset/SVG if you have one.
-function Envelope() {
-  return (
-    <View style={env.wrap}>
-      <View style={env.body} />
-      <View style={env.flap} />
-      <View style={env.badge}>
-        <Text style={env.heart}>♥</Text>
-      </View>
-    </View>
-  );
-}
-
 export default function HugViewOverlay({
   hug,
   isReadOnly,
@@ -52,8 +35,6 @@ export default function HugViewOverlay({
   onIgnore,
 }: HugViewOverlayProps) {
   const [opened, setOpened] = useState(false);
-  const { downloadUrl, failed } = useGetDownloadUrl(hug?.imagePath);
-  const { loaded, loading } = useHugTexture(downloadUrl || "");
 
   const [hugBackNote, setHugBackNote] = useState<string | null>(
     hug.hugBackNote ?? null,
@@ -96,28 +77,25 @@ export default function HugViewOverlay({
   console.log("HUGVIEWOVERLAY fromId: ", hug.from);
   const isSender = hug.from === user?.uid;
 
-  const waitForImage = hug.imagePath ? loaded : true;
-
   if (opened || isReadOnly) {
     return (
       <>
-        <HugRevealer
-          loaded={loaded}
-          hasImage={!!hug.imagePath}
+        <HugRevealerImage
+          imageUri={hug.imagePath}
           message={hug.note}
           isReadOnly={isReadOnly}
           onHugBack={handleHugBack}
           huggedBack={!!hugBackNote}
           onClose={onClose}
-          loading={loading}
+          loading={false}
         />
 
-        {hugBackNote && waitForImage && (
+        {hugBackNote && (
           <View
             style={[
               styles.hugBackMessage,
               {
-                bottom: insets.bottom + 140,
+                bottom: insets.bottom + 110,
                 alignSelf: isSender ? "flex-start" : "flex-end",
                 flexDirection: isSender ? "row-reverse" : "row",
               },
@@ -161,18 +139,6 @@ export default function HugViewOverlay({
           fromAvatar={hug.fromAvatar}
           size={150}
         />
-        {/* {isPhoto && avatarThumbUrl && (
-          <FiberCanvas style={styles.fill}>
-            <ambientLight intensity={0.75} color="#fff3ea" />
-            <directionalLight position={[-1.4, 2, 2.2]} intensity={0.9} />
-            <pointLight
-              position={[1.5, -0.5, 2.5]}
-              intensity={0.5}
-              color="#ffe8d6"
-            />
-            <HugArms map={avatarTex?.texture ?? null} autoPlay />
-          </FiberCanvas>
-        )} */}
 
         <Text style={styles.fromName}>
           {hug.fromName ?? "Someone"} sent you a hug!
@@ -273,48 +239,3 @@ const styles = StyleSheet.create({
 const BODY_W = 220;
 const BODY_H = 150;
 const FLAP_H = 86;
-
-const env = StyleSheet.create({
-  wrap: { width: BODY_W, height: BODY_H },
-  body: {
-    position: "absolute",
-    inset: 0,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 3,
-    shadowColor: "#5A3FA0",
-    shadowOpacity: 0.28,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 16 },
-    overflow: "hidden",
-  },
-  // downward triangle = envelope flap
-  flap: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: 0,
-    height: 0,
-    borderLeftWidth: BODY_W / 2,
-    borderRightWidth: BODY_W / 2,
-    borderTopWidth: FLAP_H,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-    borderTopColor: "#E4D7F7",
-  },
-  badge: {
-    position: "absolute",
-    alignSelf: "center",
-    top: BODY_H / 2 - 28,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#FF7DA8",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#FF7DA8",
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  heart: { color: "#FFFFFF", fontSize: 24 },
-});
