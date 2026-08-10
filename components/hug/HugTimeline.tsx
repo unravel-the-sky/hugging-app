@@ -9,6 +9,7 @@ import { RowCard } from "./HugRowCard";
 import { HugsEmptyState } from "./HugsEmptyState";
 import { HugFilter, useAllHugs } from "@/hooks/useAllHugs";
 import { useCollapsibleDays } from "@/hooks/useCollapsibleDays";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 const EMPTY: Record<HugFilter, { title: string; hint: string }> = {
   all: { title: "No hugs yet", hint: "Send one and it'll show up here." },
@@ -35,8 +36,9 @@ export const HugTimeline = ({
 
   const days = useMemo(() => groupByDay(hugs), [hugs]);
   const { isExpanded, toggle, overrides } = useCollapsibleDays(days);
+  const { user } = useCurrentUser();
 
-  if (isLoading) {
+  if (isLoading || !user) {
     return (
       <View style={[styles.container, styles.centered]}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -57,6 +59,7 @@ export const HugTimeline = ({
                 <TimelineHugRow
                   key={hug.id}
                   hug={hug}
+                  userId={user.uid}
                   direction={direction}
                   showDivider={i < item.hugs.length - 1}
                   onPress={() => onSelectHug(hug, direction)}

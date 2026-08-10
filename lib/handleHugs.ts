@@ -23,9 +23,12 @@ type HugBase<TTimestamp> = {
   fromAvatar?: AvatarType;
   note?: string;
   createdAt?: TTimestamp;
+  /** `to` opened the hug. */
   seenAt?: TTimestamp;
   hugBackNote?: string;
   hugBackAt?: TTimestamp;
+  /** `from` opened the hug back. */
+  hugBackSeenAt?: TTimestamp;
 };
 
 export type HugCreate = HugBase<FieldValue>;

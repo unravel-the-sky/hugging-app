@@ -4,6 +4,7 @@ import { HugTimeline } from "@/components/hug/HugTimeline";
 import HugViewOverlay3d from "@/components/hug/HugViewOverlay3d";
 import { colors, font, spacing } from "@/components/ui/squish/theme";
 import useCreateHugWithNote from "@/hooks/useCreateHugWithNote";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useHugTotals } from "@/hooks/useIncomingHugs";
 import { db } from "@/lib/firebaseConfig";
 import { getHugWithId, Hug } from "@/lib/handleHugs";
@@ -23,6 +24,8 @@ export default function HugsListScreen() {
 
   const { startHugWithNote } = useCreateHugWithNote();
 
+  const { user, isHydrating } = useCurrentUser();
+
   // deep link from a push notification always points at a received hug.
   const { hugId } = useLocalSearchParams();
   useEffect(() => {
@@ -37,29 +40,42 @@ export default function HugsListScreen() {
     });
   }, [hugId]);
 
-  const markSeen = async (hug: Hug) => {
-    if (hug.seenAt) return;
+  const markHugSeen = async (hugId: string) => {
     try {
-      await updateDoc(doc(db, "hugs", hug.id), { seenAt: Timestamp.now() });
+      await updateDoc(doc(db, "hugs", hugId), { seenAt: Timestamp.now() });
     } catch (err) {
-      console.error(`Error while validating hug with id: ${hug.id}`, err);
+      console.error(`Error while validating hug with id: ${hugId}`, err);
+    }
+  };
+
+  const markHugBackSeen = async (hugId: string) => {
+    try {
+      await updateDoc(doc(db, "hugs", hugId), {
+        hugBackSeenAt: Timestamp.now(),
+      });
+    } catch (err) {
+      console.error(`Error while validating hugBack with id: ${hugId}`, err);
+    }
+  };
+
+  const handleMarkHugSeen = async (hug: Hug) => {
+    if (!user) return;
+
+    if (hug.from === user.uid) {
+      if (!hug.hugBackAt || hug.hugBackSeenAt) return;
+      await markHugBackSeen(hug.id);
+    } else {
+      if (hug.seenAt) return;
+      await markHugSeen(hug.id);
     }
   };
 
   const handleOpen = () => {
-    if (selection?.direction === "incoming") markSeen(selection.hug);
+    if (selection) handleMarkHugSeen(selection.hug);
   };
 
   const handleClose = () => {
-    if (selection?.direction === "incoming") markSeen(selection.hug);
-    setSelection(undefined);
-  };
-
-  const handleHugBack = async () => {
-    if (!selection) return;
-    const { hug } = selection;
-    await markSeen(hug);
-    startHugWithNote({ displayName: hug.fromName, uid: hug.from });
+    if (selection) handleMarkHugSeen(selection.hug);
     setSelection(undefined);
   };
 

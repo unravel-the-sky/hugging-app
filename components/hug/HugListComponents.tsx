@@ -1,13 +1,13 @@
-import { PlushButton } from "@/components/ui/squish/PlushButton";
 import { useAvatarThumb } from "@/hooks/useAvatarThumbnail";
 import { Hug } from "@/lib/handleHugs";
+import { isHugUnread } from "@/lib/hugs/features";
 import { counterpartyOf, Direction } from "@/lib/hugs/groups";
 import { formatTimestamp, getNote } from "@/lib/util";
 import { Ionicons } from "@expo/vector-icons";
+import { Timestamp } from "firebase/firestore";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { FriendAvatar } from "../ui/squish/FriendAvatar";
-import { Timestamp } from "firebase/firestore";
 import {
   colors,
   darken,
@@ -129,48 +129,6 @@ export const SectionHeader = ({
 /* ------------------------------------------------------------------ */
 /* Rows                                                                */
 /* ------------------------------------------------------------------ */
-
-/** An unseen incoming hug, with the call to action. Always incoming. */
-export const NewHugRow = ({
-  hug,
-  showDivider,
-  onSee,
-}: {
-  hug: Hug;
-  showDivider: boolean;
-  onSee?: () => void;
-}) => {
-  const photoUri = useAvatarThumb(hug.from);
-
-  return (
-    <View style={[styles.row, showDivider && styles.rowDivider]}>
-      <FriendAvatar name={hug.fromName} photoUri={photoUri ?? undefined} />
-
-      <View style={styles.rowBody}>
-        <View style={styles.nameLine}>
-          <Text style={styles.name} numberOfLines={1}>
-            {hug.fromName}
-          </Text>
-          <View style={styles.newPill}>
-            <Text style={styles.newPillText}>NEW</Text>
-          </View>
-        </View>
-
-        <View style={styles.subLine}>
-          <Text style={styles.subText} numberOfLines={1}>
-            {hug.createdAt
-              ? formatTimestamp(hug.createdAt.toDate())
-              : "sending…"}
-          </Text>
-          <MetaIcons hug={hug} />
-        </View>
-      </View>
-
-      <PlushButton variant="soft" onPress={onSee} label="see" height={40} />
-    </View>
-  );
-};
-
 /**
  * One hug in a list, from either direction.
  *
@@ -258,14 +216,19 @@ const DirectionBadge = ({
   direction: Direction;
 }) => {
   const isOutgoing = direction === "outgoing";
-  // a sent hug that's been opened: the badge itself carries the receipt
   const opened = isOutgoing && !!hug.seenAt;
 
   return (
     <View
       style={[
         styles.dirBadge,
-        { backgroundColor: isOutgoing ? BACK : colors.primary },
+        {
+          backgroundColor: isOutgoing
+            ? hug.seenAt
+              ? darken(colors.mint, 0.38)
+              : colors.peach
+            : colors.primary,
+        },
       ]}
     >
       <Ionicons
@@ -309,17 +272,20 @@ export const TimelineHugRow = ({
   hug,
   direction,
   showDivider,
+  userId,
   onPress,
 }: {
   hug: Hug;
   direction: Direction;
   showDivider: boolean;
+  userId: string;
   onPress?: () => void;
 }) => {
   const other = counterpartyOf(hug, direction);
   const photoUri = useAvatarThumb(other.uid);
   const isOutgoing = direction === "outgoing";
-  const isNew = !isOutgoing && !hug.seenAt;
+  // const isNew = !isOutgoing && !hug.seenAt;
+  const isNew = isHugUnread(hug, userId);
 
   return (
     <Pressable

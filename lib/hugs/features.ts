@@ -1,3 +1,5 @@
+import { Hug } from "../handleHugs";
+
 /**
  * Hug list feature flags.
  *
@@ -11,3 +13,8 @@ export const TOP_HUGGER = {
   /** Minimum hugs received from one person before the badge can appear. */
   minHugs: 10,
 } as const;
+
+export const isHugUnread = (hug: Hug, myUid: string) =>
+  hug.from === myUid
+    ? !!hug.hugBackAt && !hug.hugBackSeenAt // my hug came back, I haven't looked
+    : !hug.seenAt; // sent to me, I haven't opened it
