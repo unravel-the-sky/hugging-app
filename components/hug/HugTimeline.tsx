@@ -1,7 +1,8 @@
 import { colors, spacing } from "@/components/ui/squish/theme";
 import { Hug } from "@/lib/handleHugs";
 import { DayGroup, Direction, groupByDay } from "@/lib/hugs/groups";
-import React, { useMemo } from "react";
+import { useScrollToTop } from "@react-navigation/native";
+import React, { useMemo, useRef } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
 import { PlushButton } from "../ui/squish/PlushButton";
 import { DayHeader, TimelineHugRow } from "./HugListComponents";
@@ -37,6 +38,13 @@ export const HugTimeline = ({
   const days = useMemo(() => groupByDay(hugs), [hugs]);
   const { isExpanded, toggle, overrides } = useCollapsibleDays(days);
   const { user } = useCurrentUser();
+
+  // Tapping the already-active Hugs tab scrolls back to the top. NativeTabs
+  // does emit `tabPress` on repeated selection, so this works on both
+  // platforms; its built-in scroll-to-top effect does not, because that only
+  // walks first children and the list sits below the header and filter tabs.
+  const listRef = useRef<FlatList<DayGroup>>(null);
+  useScrollToTop(listRef);
 
   if (isLoading || !user) {
     return (
@@ -74,6 +82,7 @@ export const HugTimeline = ({
 
   return (
     <FlatList
+      ref={listRef}
       data={days}
       keyExtractor={(day) => day.key}
       renderItem={renderDay}
