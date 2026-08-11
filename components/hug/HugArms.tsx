@@ -1,10 +1,4 @@
-import {
-  BUTTON_SIZE,
-  FANCY_ARM_WIDTH,
-  LEFT_SHOULDER_OFFSET,
-  MAIN_COLOR,
-  RIGHT_SHOULDER_OFFSET,
-} from "@/constants";
+import { BUTTON_SIZE, MAIN_COLOR } from "@/constants";
 import { StyleSheet, View } from "react-native";
 import Animated, {
   Extrapolation,

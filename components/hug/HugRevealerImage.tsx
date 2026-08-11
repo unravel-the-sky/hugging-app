@@ -124,7 +124,7 @@ export default function HugRevealerImage({
   }, [canFlip, hintGain]);
 
   const saveImage = async () => {
-    if (!imageUri) return;
+    if (!downloadUrl) return;
 
     let file: File | undefined;
     try {
@@ -137,10 +137,11 @@ export default function HugRevealerImage({
       }
 
       const target = new File(Paths.cache, `hug-${Date.now()}.jpg`);
-      file = await File.downloadFileAsync(imageUri, target);
+      file = await File.downloadFileAsync(downloadUrl, target);
       await MediaLibrary.saveToLibraryAsync(file.uri);
       setToast({ visible: true, message: "Saved to your photos" });
-    } catch {
+    } catch (err) {
+      console.error("could not save, error: ", err);
       Alert.alert("Couldn't save", "Try again in a moment.");
     } finally {
       file?.delete();
