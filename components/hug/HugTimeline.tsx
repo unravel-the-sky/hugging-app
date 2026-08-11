@@ -39,10 +39,6 @@ export const HugTimeline = ({
   const { isExpanded, toggle, overrides } = useCollapsibleDays(days);
   const { user } = useCurrentUser();
 
-  // Tapping the already-active Hugs tab scrolls back to the top. NativeTabs
-  // does emit `tabPress` on repeated selection, so this works on both
-  // platforms; its built-in scroll-to-top effect does not, because that only
-  // walks first children and the list sits below the header and filter tabs.
   const listRef = useRef<FlatList<DayGroup>>(null);
   useScrollToTop(listRef);
 
