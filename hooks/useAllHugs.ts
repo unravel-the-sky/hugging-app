@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { useHugs } from "@/hooks/useIncomingHugs";
+import { useHugs } from "@/app/context/HugsContext";
 import { Hug } from "@/lib/handleHugs";
 import { Direction } from "@/lib/hugs/groups";
 import { byNewest } from "@/lib/hugs/time";

@@ -7,7 +7,7 @@ import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
 import { HugRow, SectionHeader } from "./HugListComponents";
 import { HugsEmptyState } from "./HugsEmptyState";
 import { RowCard } from "./HugRowCard";
-import { useHugs } from "@/hooks/useIncomingHugs";
+import { useHugs } from "@/app/context/HugsContext";
 import { PlushButton } from "../ui/squish/PlushButton";
 
 export const SentHugsList = ({

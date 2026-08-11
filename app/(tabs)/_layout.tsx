@@ -2,7 +2,7 @@ import AvatarImage from "@/components/avatar/AvatarImage";
 import Loader from "@/components/ui/Loader";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useFriends } from "@/hooks/useFriends";
-import { useHugs } from "@/hooks/useIncomingHugs";
+import { useHugs } from "@/app/context/HugsContext";
 import {
   DarkTheme,
   DefaultTheme,
