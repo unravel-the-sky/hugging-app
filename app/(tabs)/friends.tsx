@@ -86,7 +86,7 @@ export const FriendRow = ({
           isTop && styles.cardItemTop,
         ]}
       >
-        <View style={[styles.row, !isLast && styles.rowDivider]}>
+        <View style={styles.row}>
           <FriendAvatar
             name={friend.displayName}
             online={friend.online}
@@ -111,6 +111,7 @@ export const FriendRow = ({
             onPress={onHug}
           />
         </View>
+        {!isLast && !isTop && <View style={styles.rowDivider} />}
       </View>
     </Pressable>
   );
@@ -120,12 +121,14 @@ const FriendRequestRow = ({
   friendRequest,
   isFirst,
   isLast,
+  isBusy,
   onAccept,
   onDecline,
 }: {
   friendRequest: FriendshipRequest;
   isFirst: boolean;
   isLast: boolean;
+  isBusy: boolean;
   onAccept: () => void;
   onDecline: () => void;
 }) => {
@@ -139,7 +142,7 @@ const FriendRequestRow = ({
         isLast && styles.cardItemLast,
       ]}
     >
-      <View style={[styles.row, !isLast && styles.rowDivider]}>
+      <View style={styles.row}>
         <FriendAvatar
           name={friendRequest.fromName}
           photoUri={photoUri || undefined}
@@ -159,24 +162,35 @@ const FriendRequestRow = ({
             gap: 8,
           }}
         >
-          <IconButton
-            variant="surface"
-            size={44}
-            accessibilityLabel="decline friend"
-            icon={<Ionicons name="close-outline" size={24} />}
-            onPress={onDecline}
-          />
-          <IconButton
-            variant="primary"
-            onPress={onAccept}
-            size={44}
-            accessibilityLabel="accept friend"
-            icon={
-              <Ionicons name="checkmark-outline" color={"white"} size={24} />
-            }
-          />
+          {isBusy ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : (
+            <>
+              <IconButton
+                variant="surface"
+                size={44}
+                accessibilityLabel="decline friend"
+                icon={<Ionicons name="close-outline" size={24} />}
+                onPress={onDecline}
+              />
+              <IconButton
+                variant="primary"
+                onPress={onAccept}
+                size={44}
+                accessibilityLabel="accept friend"
+                icon={
+                  <Ionicons
+                    name="checkmark-outline"
+                    color={"white"}
+                    size={24}
+                  />
+                }
+              />
+            </>
+          )}
         </View>
       </View>
+      {!isLast && <View style={styles.rowDivider} />}
     </View>
   );
 };
@@ -207,12 +221,32 @@ export default function FriendsListScreen() {
     });
   }, [friends, search, topHuggerUid]);
 
+  // the top hugger renders as its own standalone card, so the merged group
+  // starts one row later when they're sorted to the front
+  const groupStart = filtered[0]?.id === topHuggerUid ? 1 : 0;
+
   const handleHug = (friend: UserFriend) =>
     startHugWithNote({ displayName: friend.displayName, uid: friend.id });
 
   const handleAdd = () => router.push("/add-user");
 
   const [showFriendshipRequests, setShowFriendshipRequests] = useState(true);
+
+  // accept/decline round-trip through a cloud function, which can take a few
+  // seconds on a cold start — show the row as busy until the listener catches up
+  const [busyRequestId, setBusyRequestId] = useState<string | null>(null);
+
+  const handleRequest = async (
+    id: string,
+    action: (id: string) => Promise<void>,
+  ) => {
+    setBusyRequestId(id);
+    try {
+      await action(id);
+    } finally {
+      setBusyRequestId(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -276,9 +310,10 @@ export default function FriendsListScreen() {
                 <FriendRequestRow
                   friendRequest={item}
                   isFirst={index === 0}
-                  isLast={index === filtered.length - 1}
-                  onAccept={() => onAccept(item.id)}
-                  onDecline={() => onDecline(item.id)}
+                  isLast={index === friendRequests.length - 1}
+                  isBusy={busyRequestId === item.id}
+                  onAccept={() => handleRequest(item.id, onAccept)}
+                  onDecline={() => handleRequest(item.id, onDecline)}
                 />
               )}
             />
@@ -295,7 +330,7 @@ export default function FriendsListScreen() {
           renderItem={({ item, index }) => (
             <FriendRow
               friend={item}
-              isFirst={index === 1}
+              isFirst={index === groupStart}
               isLast={index === filtered.length - 1}
               isTop={item.id === topHuggerUid}
               onHug={() => handleHug(item)}
@@ -394,8 +429,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   rowDivider: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.soft,
+    height: StyleSheet.hairlineWidth * 2,
+    backgroundColor: colors.lilac,
+    marginHorizontal: spacing.lg,
   },
   rowBody: { flex: 1, marginLeft: spacing.md },
   name: { fontFamily: font.uiBold, fontSize: 16, color: colors.plumInk },

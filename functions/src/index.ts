@@ -601,12 +601,14 @@ export const acceptFriendRequest = onCall(async (request) => {
   const { aSnap, bSnap } = await linkFriends(req.from, req.to);
   await reqRef.delete();
 
+  // the caller is waiting on this response to unblock its UI, so don't make
+  // it sit through a round trip to Expo's push server
   const token = aSnap.get("pushToken");
   if (token) {
-    await sendExpoPush(token, {
+    void sendExpoPush(token, {
       title: "New friend! 🤗",
       body: `${bSnap.get("displayName")} accepted your request`,
-    });
+    }).catch((err) => console.error("accept push failed", err));
   }
   return { ok: true };
 });
