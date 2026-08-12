@@ -8,12 +8,29 @@ import { byNewest, dayKey, dayTitle, hugMillis } from "./time";
  */
 export type Direction = "incoming" | "outgoing";
 
-export type Counterparty = { uid: string; name: string };
+export type Counterparty = { uid: string; name: string; isBlocked?: boolean };
 
-export const counterpartyOf = (hug: Hug, direction: Direction): Counterparty =>
-  direction === "incoming"
-    ? { uid: hug.from, name: hug.fromName || "Someone" }
-    : { uid: hug.to, name: hug.toName || "Someone" };
+/** What a blocked person's past hugs are filed under. */
+export const BLOCKED_NAME = "Blocked user";
+
+/**
+ * Pass `blockedUids` (from `useBlocks`) to file hugs from people you blocked
+ * under a neutral name — the memories stay, the person doesn't.
+ */
+export const counterpartyOf = (
+  hug: Hug,
+  direction: Direction,
+  blockedUids?: ReadonlySet<string>,
+): Counterparty => {
+  const other =
+    direction === "incoming"
+      ? { uid: hug.from, name: hug.fromName || "Someone" }
+      : { uid: hug.to, name: hug.toName || "Someone" };
+
+  return blockedUids?.has(other.uid)
+    ? { ...other, name: BLOCKED_NAME, isBlocked: true }
+    : other;
+};
 
 /* ------------------------------------------------------------------ */
 /* Received tab: group by person                                       */
@@ -33,6 +50,7 @@ export type PersonGroup = {
 export const groupByPerson = (
   hugs: Hug[],
   direction: Direction,
+  blockedUids?: ReadonlySet<string>,
 ): PersonGroup[] => {
   const buckets = new Map<string, Hug[]>();
 
@@ -48,7 +66,7 @@ export const groupByPerson = (
     const sorted = [...bucket].sort(byNewest);
     groups.push({
       uid,
-      name: counterpartyOf(sorted[0], direction).name,
+      name: counterpartyOf(sorted[0], direction, blockedUids).name,
       hugs: sorted,
       count: sorted.length,
       last: sorted[0],

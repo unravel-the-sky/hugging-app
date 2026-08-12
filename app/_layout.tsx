@@ -1,3 +1,4 @@
+import { BlocksProvider } from "@/app/context/BlocksContext";
 import { HugsProvider } from "@/app/context/HugsContext";
 import { OfflineGate } from "@/components/ui/OfflineGate";
 import { colors } from "@/components/ui/squish";
@@ -82,109 +83,124 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <HugsProvider>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-          }}
-        >
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="setup"
-            options={{ headerShown: false, gestureEnabled: false }}
-          />
-          <Stack.Screen name="sign-in" />
-          <Stack.Screen
-            name="hug-note"
-            options={{
-              presentation: "modal",
-              sheetGrabberVisible: true,
-              headerTransparent: false,
-              headerShadowVisible: true,
-              headerLargeTitleShadowVisible: true,
+      <BlocksProvider>
+        <HugsProvider>
+          <Stack
+            screenOptions={{
               headerShown: false,
-              contentStyle: { backgroundColor: "#FAFAFA" }, // semi-transparent background
             }}
-          />
-          <Stack.Screen
-            name="hug-back"
-            options={{
-              presentation: "formSheet",
-              sheetAllowedDetents: "fitToContents",
-              sheetGrabberVisible: true,
-              sheetCornerRadius: 28,
-              headerShown: false,
-              contentStyle: { backgroundColor: "#FFFFFF" }, // match the card so any residual gap isn't grey
-            }}
-          />
-          <Stack.Screen
-            name="add-user"
-            options={{
-              presentation: "modal",
-              sheetAllowedDetents: "fitToContents",
-              sheetGrabberVisible: true,
-              headerTransparent: false,
-              headerShadowVisible: true,
-              headerLargeTitleShadowVisible: true,
-            }}
-          />
-          <Stack.Screen
-            name="take-pic"
-            options={{ headerShown: false, presentation: "fullScreenModal" }}
-          />
-          <Stack.Screen name="media" />
-          <Stack.Screen
-            name="profile"
-            options={{
-              presentation: "modal",
-              sheetGrabberVisible: true,
-              headerTransparent: false,
-              headerShadowVisible: true,
-              headerLargeTitleShadowVisible: true,
-            }}
-          />
-          <Stack.Screen
-            name="send-hug"
-            options={{
-              headerShown: false,
-              presentation: "fullScreenModal",
-            }}
-          />
-          <Stack.Screen
-            name="friend-stats"
-            options={{
-              presentation: "modal",
-              sheetGrabberVisible: true,
-              headerTransparent: false,
-              headerShadowVisible: true,
-              headerLargeTitleShadowVisible: true,
-            }}
-          />
-          <Stack.Screen
-            name="friend-picker"
-            options={{
-              presentation: "formSheet",
-              sheetAllowedDetents: [0.5, 0.9], // half-screen and almost-full
-              sheetInitialDetentIndex: 0, // open at 0.5
-              sheetGrabberVisible: true, // adds the drag handle for free!
-              headerShown: false, // cleaner look in a sheet
-            }}
-          />
-          <Stack.Screen
-            name="change-avatar"
-            options={{
-              presentation: "formSheet",
-              sheetGrabberVisible: true,
-              sheetAllowedDetents: "fitToContents",
-              sheetCornerRadius: 28,
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.surface },
-            }}
-          />
-          <Stack.Screen name="avatar-camera" options={{ headerShown: false }} />
-        </Stack>
-        <OfflineGate />
-      </HugsProvider>
+          >
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="setup"
+              options={{ headerShown: false, gestureEnabled: false }}
+            />
+            <Stack.Screen name="sign-in" />
+            <Stack.Screen
+              name="hug-note"
+              options={{
+                presentation: "modal",
+                sheetGrabberVisible: true,
+                headerTransparent: false,
+                headerShadowVisible: true,
+                headerLargeTitleShadowVisible: true,
+                headerShown: false,
+                contentStyle: { backgroundColor: "#FAFAFA" }, // semi-transparent background
+              }}
+            />
+            <Stack.Screen
+              name="hug-back"
+              options={{
+                presentation: "formSheet",
+                sheetAllowedDetents: "fitToContents",
+                sheetGrabberVisible: true,
+                sheetCornerRadius: 28,
+                headerShown: false,
+                contentStyle: { backgroundColor: "#FFFFFF" }, // match the card so any residual gap isn't grey
+              }}
+            />
+            <Stack.Screen
+              name="add-user"
+              options={{
+                presentation: "modal",
+                sheetAllowedDetents: "fitToContents",
+                sheetGrabberVisible: true,
+                headerTransparent: false,
+                headerShadowVisible: true,
+                headerLargeTitleShadowVisible: true,
+              }}
+            />
+            <Stack.Screen
+              name="take-pic"
+              options={{ headerShown: false, presentation: "fullScreenModal" }}
+            />
+            <Stack.Screen name="media" />
+            <Stack.Screen
+              name="profile"
+              options={{
+                presentation: "modal",
+                sheetGrabberVisible: true,
+                headerTransparent: false,
+                headerShadowVisible: true,
+                headerLargeTitleShadowVisible: true,
+              }}
+            />
+            <Stack.Screen
+              name="send-hug"
+              options={{
+                headerShown: false,
+                presentation: "fullScreenModal",
+              }}
+            />
+            <Stack.Screen
+              name="friend-stats"
+              options={{
+                presentation: "modal",
+                sheetGrabberVisible: true,
+                headerTransparent: false,
+                headerShadowVisible: true,
+                headerLargeTitleShadowVisible: true,
+              }}
+            />
+            <Stack.Screen
+              name="friend-picker"
+              options={{
+                presentation: "formSheet",
+                sheetAllowedDetents: [0.5, 0.9], // half-screen and almost-full
+                sheetInitialDetentIndex: 0, // open at 0.5
+                sheetGrabberVisible: true, // adds the drag handle for free!
+                headerShown: false, // cleaner look in a sheet
+              }}
+            />
+            <Stack.Screen
+              name="change-avatar"
+              options={{
+                presentation: "formSheet",
+                sheetGrabberVisible: true,
+                sheetAllowedDetents: "fitToContents",
+                sheetCornerRadius: 28,
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.surface },
+              }}
+            />
+            <Stack.Screen
+              name="avatar-camera"
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="blocked-people"
+              options={{
+                presentation: "modal",
+                sheetGrabberVisible: true,
+                headerTransparent: false,
+                headerShadowVisible: true,
+                headerLargeTitleShadowVisible: true,
+              }}
+            />
+          </Stack>
+          <OfflineGate />
+        </HugsProvider>
+      </BlocksProvider>
     </GestureHandlerRootView>
   );
 }

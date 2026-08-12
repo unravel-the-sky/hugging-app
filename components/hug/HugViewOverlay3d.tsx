@@ -1,6 +1,8 @@
+import { useBlocks } from "@/app/context/BlocksContext";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { db } from "@/lib/firebaseConfig";
 import { Hug } from "@/lib/handleHugs";
+import { BLOCKED_NAME } from "@/lib/hugs/groups";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { doc, onSnapshot } from "firebase/firestore";
@@ -43,7 +45,16 @@ export default function HugViewOverlay({
   const [alreadyHugged, setAlreadyHugged] = useState(false);
 
   const { user } = useCurrentUser();
+  const { blockedUids } = useBlocks();
   const insets = useSafeAreaInsets();
+
+  // A blocked person's old hugs stay readable, but never under their name.
+  const senderName = blockedUids.has(hug.from)
+    ? BLOCKED_NAME
+    : (hug.fromName ?? "Someone");
+  const recipientName = blockedUids.has(hug.to)
+    ? BLOCKED_NAME
+    : (hug.toName ?? "Someone");
 
   // Reset to sealed whenever a different hug is opened.
   useEffect(() => {
@@ -68,7 +79,7 @@ export default function HugViewOverlay({
     }
     router.push({
       pathname: "/hug-back",
-      params: { hugId: hug.id, toName: hug.fromName },
+      params: { hugId: hug.id, toName: senderName },
     });
   };
 
@@ -103,8 +114,14 @@ export default function HugViewOverlay({
           >
             <Text style={styles.hugBackMessageText}>{hugBackNote}</Text>
             <FriendAvatar
-              name={isSender ? hug.toName : hug.fromName}
-              uid={isSender ? hug.to : user?.uid}
+              name={isSender ? recipientName : senderName}
+              uid={
+                isSender
+                  ? blockedUids.has(hug.to)
+                    ? undefined
+                    : hug.to
+                  : user?.uid
+              }
               size={40}
             />
           </View>
@@ -113,7 +130,7 @@ export default function HugViewOverlay({
         {!isReadOnly && (
           <Toast
             visible={confirmVisible}
-            message={`you hugged ${hug.fromName} back`}
+            message={`you hugged ${senderName} back`}
             onHide={() => console.log("ha deeet")}
             icon="heart-circle-outline"
           />
@@ -121,7 +138,7 @@ export default function HugViewOverlay({
 
         <Toast
           visible={alreadyHugged}
-          message={`you already hugged ${hug.fromName} back`!}
+          message={`you already hugged ${senderName} back`!}
           onHide={() => setAlreadyHugged(false)}
         />
       </>
@@ -135,14 +152,13 @@ export default function HugViewOverlay({
       <View style={styles.center}>
         {/* <Envelope /> */}
         <HugFaceSeal
-          fromUid={hug.from}
+          // no uid for a blocked sender, so no photo resolves for them
+          fromUid={blockedUids.has(hug.from) ? "" : hug.from}
           fromAvatar={hug.fromAvatar}
           size={150}
         />
 
-        <Text style={styles.fromName}>
-          {hug.fromName ?? "Someone"} sent you a hug!
-        </Text>
+        <Text style={styles.fromName}>{senderName} sent you a hug!</Text>
 
         <PlushButton
           variant="blush"

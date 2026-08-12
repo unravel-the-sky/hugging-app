@@ -1,6 +1,7 @@
 import { useAvatarThumb } from "@/hooks/useAvatarThumbnail";
 import { Hug } from "@/lib/handleHugs";
 import { isHugUnread } from "@/lib/hugs/features";
+import { useBlocks } from "@/app/context/BlocksContext";
 import { counterpartyOf, Direction } from "@/lib/hugs/groups";
 import { formatTimestamp, getNote } from "@/lib/util";
 import { Ionicons } from "@expo/vector-icons";
@@ -146,21 +147,31 @@ export const HugRow = ({
   showDivider: boolean;
   onPress?: () => void;
 }) => {
-  const other = counterpartyOf(hug, direction);
+  const { blockedUids } = useBlocks();
+  const other = counterpartyOf(hug, direction, blockedUids);
   const photoUri = useAvatarThumb(other.uid);
   const isOutgoing = direction === "outgoing";
+
+  // A blocked person's hugs stay in the history but can't be opened again.
+  const canOpen = !!onPress && !other.isBlocked;
 
   return (
     <Pressable
       onPress={onPress}
-      disabled={!onPress}
+      disabled={!canOpen}
       style={({ pressed }) => [
         styles.row,
         showDivider && styles.rowDivider,
-        { backgroundColor: pressed ? colors.lilac : colors.surface },
+        {
+          backgroundColor: pressed && canOpen ? colors.lilac : colors.surface,
+        },
+        other.isBlocked && styles.rowBlocked,
       ]}
     >
-      <FriendAvatar name={other.name} photoUri={photoUri ?? undefined} />
+      <FriendAvatar
+        name={other.name}
+        photoUri={other.isBlocked ? undefined : (photoUri ?? undefined)}
+      />
 
       <View style={styles.rowBody}>
         <Text style={styles.rowName} numberOfLines={1}>
@@ -281,24 +292,34 @@ export const TimelineHugRow = ({
   userId: string;
   onPress?: () => void;
 }) => {
-  const other = counterpartyOf(hug, direction);
+  const { blockedUids } = useBlocks();
+  const other = counterpartyOf(hug, direction, blockedUids);
   const photoUri = useAvatarThumb(other.uid);
   const isOutgoing = direction === "outgoing";
   // const isNew = !isOutgoing && !hug.seenAt;
   const isNew = isHugUnread(hug, userId);
 
+  // A blocked person's hugs stay in the history but can't be opened again.
+  const canOpen = !!onPress && !other.isBlocked;
+
   return (
     <Pressable
       onPress={onPress}
-      disabled={!onPress}
+      disabled={!canOpen}
       style={({ pressed }) => [
         styles.timelineRow,
         showDivider && styles.rowDivider,
-        { backgroundColor: pressed ? colors.lilac : colors.surface },
+        {
+          backgroundColor: pressed && canOpen ? colors.lilac : colors.surface,
+        },
+        other.isBlocked && styles.rowBlocked,
       ]}
     >
       <View>
-        <FriendAvatar name={other.name} photoUri={photoUri ?? undefined} />
+        <FriendAvatar
+          name={other.name}
+          photoUri={other.isBlocked ? undefined : (photoUri ?? undefined)}
+        />
         <DirectionBadge direction={direction} hug={hug} />
       </View>
 
@@ -341,6 +362,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.soft,
   },
+  /** Blocked: the row is a record, not something you can act on. */
+  rowBlocked: { opacity: 0.6 },
   rowBody: {
     flex: 1,
     marginLeft: spacing.md,

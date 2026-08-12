@@ -52,6 +52,17 @@ const HugsContext = createContext<Record<HugDirection, HugStream>>({
   outgoing: EMPTY_STREAM,
 });
 
+/**
+ * Hugs from someone you blocked are flagged by the server instead of being
+ * deleted — the sender's own outbox has to look untouched, or a block would
+ * be detectable. Dropping them here is what makes them never land.
+ *
+ * Filtered client-side rather than in the query: Firestore can't match "no
+ * such field", which is every hug ever sent before this existed.
+ */
+const isDeliverable = (hug: Hug, direction: HugDirection) =>
+  direction === "outgoing" || !hug.blockedDelivery;
+
 function useHugStream(
   uid: string | undefined,
   direction: HugDirection,
@@ -100,10 +111,12 @@ function useHugStream(
 
     const unsubscribe = onSnapshot(q, (snap) => {
       hasLiveSnapshot = true;
-      const next = snap.docs.map((d) => ({
-        id: d.id,
-        ...(d.data() as Omit<Hug, "id">),
-      }));
+      const next = snap.docs
+        .map((d) => ({
+          id: d.id,
+          ...(d.data() as Omit<Hug, "id">),
+        }))
+        .filter((h) => isDeliverable(h, direction));
       setLiveHugs(next);
       setIsLoading(false);
 
@@ -148,16 +161,18 @@ function useHugStream(
       );
       setOlderHugs((prev) => [
         ...prev,
-        ...snap.docs.map((d) => ({
-          id: d.id,
-          ...(d.data() as Omit<Hug, "id">),
-        })),
+        ...snap.docs
+          .map((d) => ({
+            id: d.id,
+            ...(d.data() as Omit<Hug, "id">),
+          }))
+          .filter((h) => isDeliverable(h, direction)),
       ]);
       if (snap.docs.length < LIMIT_SIZE) setHasMore(false);
     } finally {
       setIsLoadingMore(false);
     }
-  }, [uid, fieldName, isLoadingMore, hasMore]);
+  }, [uid, fieldName, direction, isLoadingMore, hasMore]);
 
   return useMemo(
     () => ({ hugs, isLoading, isLoadingMore, hasMore, loadMore }),

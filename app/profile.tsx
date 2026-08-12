@@ -116,6 +116,12 @@ export default function ProfileScreen() {
         <View style={styles.spacer} />
 
         <PlushButton
+          label="blocked people"
+          variant="soft"
+          fullWidth
+          onPress={() => router.push("/blocked-people")}
+        />
+        <PlushButton
           label="log out"
           variant="blush"
           fullWidth

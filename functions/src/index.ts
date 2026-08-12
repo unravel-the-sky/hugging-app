@@ -52,6 +52,59 @@ const db = admin.firestore();
 const BOT_UID = "bot-nope";
 const BOT_NAME = "nope";
 
+/* ------------------------------------------------------------------ */
+/* Blocking                                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A block lives at `blocks/{blockerUid}_{blockedUid}`. The deterministic id
+ * means any check is a direct get instead of a query, and the pair can only
+ * ever be blocked once.
+ *
+ * The blocked person must never learn they were blocked, so nothing about a
+ * block is ever exposed to them: security rules keep this collection
+ * server-only, and everything the client needs goes through the callables
+ * below.
+ */
+const blockDocId = (blocker: string, blocked: string) =>
+  `${blocker}_${blocked}`;
+
+const blockRef = (blocker: string, blocked: string) =>
+  db.doc(`blocks/${blockDocId(blocker, blocked)}`);
+
+/**
+ * True if either side has blocked the other. Contact is cut in both
+ * directions: a blocker doesn't want to hear from the person they blocked
+ * either.
+ */
+async function isBlockedEitherWay(a: string, b: string): Promise<boolean> {
+  const [ab, ba] = await db.getAll(blockRef(a, b), blockRef(b, a));
+  return ab.exists || ba.exists;
+}
+
+/** Tear down a friendship in both directions. Safe to call when absent. */
+function unlinkFriends(uid: string, friendId: string) {
+  const batch = db.batch();
+  batch.delete(db.doc(`users/${uid}/friends/${friendId}`));
+  batch.delete(db.doc(`users/${friendId}/friends/${uid}`));
+  batch.update(db.doc(`users/${uid}`), {
+    friends: FieldValue.arrayRemove(friendId),
+  });
+  batch.update(db.doc(`users/${friendId}`), {
+    friends: FieldValue.arrayRemove(uid),
+  });
+  return batch.commit();
+}
+
+/** Drop any friendship request between the two, in either direction. */
+async function clearFriendshipRequests(a: string, b: string) {
+  const refs = [
+    db.doc(`friendshipRequests/${a}_${b}`),
+    db.doc(`friendshipRequests/${b}_${a}`),
+  ];
+  await Promise.all(refs.map((ref) => ref.delete()));
+}
+
 export const onHugCreated = onDocumentCreated("hugs/{hugId}", async (event) => {
   console.log("🔥🔥🔥 onHugCreated FIRED");
   console.log("hugId:", event.params.hugId);
@@ -66,6 +119,16 @@ export const onHugCreated = onDocumentCreated("hugs/{hugId}", async (event) => {
   // do not process hugs that are sent by the
   if (hug.to === BOT_UID && hug.from !== BOT_UID) {
     await sendBotReply(hug);
+    return;
+  }
+
+  // A blocked pair never exchanges hugs. The doc is flagged rather than
+  // deleted so the sender's own outbox still looks normal — they must not be
+  // able to tell a block from a quiet friend. The recipient's list filters
+  // flagged hugs out, and no stats or push follow.
+  if (hug.from && (await isBlockedEitherWay(hug.from, hug.to))) {
+    await snap.ref.update({ blockedDelivery: true });
+    console.log("Hug not delivered, pair is blocked", snap.id);
     return;
   }
 
@@ -249,6 +312,15 @@ export const onHugRoomInvite = onValueCreated(
     const roomId = event.params.roomId;
     // const db = getDatabase();
 
+    // blocked either way: no inbox entry, no push. The inviter is left in an
+    // empty room, exactly as if the other side never picked up.
+    if (invite.from && invite.to) {
+      if (await isBlockedEitherWay(invite.from, invite.to)) {
+        console.log("Invite dropped, pair is blocked", roomId);
+        return;
+      }
+    }
+
     console.log("Writing inbox entry", { to: invite.to, roomId });
 
     await getDatabase().ref(`userInvites/${invite.to}/${roomId}`).set({
@@ -344,6 +416,12 @@ export const onFriendshipRequestCreated = onDocumentCreated(
 
     if (req.to === BOT_UID && req.from !== BOT_UID) {
       await linkFriends(req.to, req.from);
+      return;
+    }
+
+    // blocked either way: drop the request silently, no notification
+    if (await isBlockedEitherWay(req.from, req.to)) {
+      await event.data?.ref.delete();
       return;
     }
 
@@ -528,16 +606,7 @@ export const removeFriend = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "Can't unfriend yourself");
 
   // --- 1. tear down the relationship ---
-  const batch = db.batch();
-  batch.delete(db.doc(`users/${uid}/friends/${friendId}`));
-  batch.delete(db.doc(`users/${friendId}/friends/${uid}`));
-  batch.update(db.doc(`users/${uid}`), {
-    friends: FieldValue.arrayRemove(friendId),
-  });
-  batch.update(db.doc(`users/${friendId}`), {
-    friends: FieldValue.arrayRemove(uid),
-  });
-  await batch.commit();
+  await unlinkFriends(uid, friendId);
 
   // --- 2. optionally purge hug history (both directions) ---
   if (deleteHistory) {
@@ -545,6 +614,121 @@ export const removeFriend = onCall(async (request) => {
   }
 
   return { ok: true, deletedHistory: deleteHistory };
+});
+
+/**
+ * Block someone: cut the friendship, drop pending requests, and record the
+ * block so every delivery path (hugs, requests, room invites, search) starts
+ * skipping this pair. Hug history is deliberately left alone — the blocker
+ * keeps their memories, shown under a neutral name in the app.
+ */
+export const blockUser = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in");
+
+  const targetId: string | undefined = request.data?.targetId;
+  if (!targetId) throw new HttpsError("invalid-argument", "targetId required");
+  if (targetId === uid)
+    throw new HttpsError("invalid-argument", "Can't block yourself");
+
+  const targetSnap = await db.doc(`users/${targetId}`).get();
+  if (!targetSnap.exists) throw new HttpsError("not-found", "No such user");
+
+  await blockRef(uid, targetId).set({
+    blocker: uid,
+    blocked: targetId,
+    // snapshotted so the blocked list still reads well after they rename
+    blockedName: targetSnap.get("displayName") ?? null,
+    createdAt: FieldValue.serverTimestamp(),
+  });
+
+  await Promise.all([
+    unlinkFriends(uid, targetId),
+    clearFriendshipRequests(uid, targetId),
+  ]);
+
+  return { ok: true };
+});
+
+/** Lift a block. Does not restore the friendship — that has to be re-earned. */
+export const unblockUser = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in");
+
+  const targetId: string | undefined = request.data?.targetId;
+  if (!targetId) throw new HttpsError("invalid-argument", "targetId required");
+
+  await blockRef(uid, targetId).delete();
+  return { ok: true };
+});
+
+/**
+ * The people *you* blocked. Served by a callable rather than a client query
+ * so the `blocks` collection can stay unreadable from the client — that's
+ * what keeps the other direction ("who blocked me") private.
+ */
+export const getBlockedUsers = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in");
+
+  const snap = await db.collection("blocks").where("blocker", "==", uid).get();
+
+  const users = snap.docs.map((d) => ({
+    uid: d.get("blocked") as string,
+    displayName: (d.get("blockedName") as string | null) ?? "Someone",
+    blockedAt: (d.get("createdAt") as Timestamp | null)?.toMillis() ?? null,
+  }));
+
+  return { users };
+});
+
+const SEARCH_LIMIT = 10;
+
+/**
+ * Prefix search over displayName, minus yourself and anyone on either end of
+ * a block. Runs server-side because hiding a blocker from the person they
+ * blocked can't be done on the client without handing them the block list.
+ */
+export const searchUsers = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in");
+
+  const term = (request.data?.term ?? "").trim();
+  if (term.length < 3) return { users: [] };
+
+  const snap = await db
+    .collection("users")
+    .where("displayName", ">=", term)
+    // high private-use codepoint as the upper bound -> every prefix match
+    .where("displayName", "<=", term + "")
+    .orderBy("displayName")
+    .limit(SEARCH_LIMIT)
+    .get();
+
+  const candidates = snap.docs.filter((d) => d.id !== uid);
+  if (candidates.length === 0) return { users: [] };
+
+  // one getAll for both directions of every candidate pair
+  const refs = candidates.flatMap((d) => [
+    blockRef(uid, d.id),
+    blockRef(d.id, uid),
+  ]);
+  const blockSnaps = await db.getAll(...refs);
+  const blockedIds = new Set(
+    blockSnaps
+      .filter((s) => s.exists)
+      .flatMap((s) => [s.get("blocker") as string, s.get("blocked") as string]),
+  );
+
+  const users = candidates
+    .filter((d) => !blockedIds.has(d.id))
+    .map((d) => ({
+      uid: d.id,
+      displayName: d.get("displayName") ?? "",
+      avatar: d.get("avatar") ?? null,
+    }));
+
+  return { users };
 });
 
 /**
@@ -655,6 +839,17 @@ export const deleteAccount = onCall(async (request) => {
     .bucket()
     .deleteFiles({ prefix: `users/${uid}/` }) // adjust to your path scheme
     .catch(() => {});
+
+  // 4b. drop every block this account is on either side of
+  const [blocksMade, blocksAgainst] = await Promise.all([
+    db.collection("blocks").where("blocker", "==", uid).get(),
+    db.collection("blocks").where("blocked", "==", uid).get(),
+  ]);
+  const blockBatch = db.batch();
+  [...blocksMade.docs, ...blocksAgainst.docs].forEach((d) =>
+    blockBatch.delete(d.ref),
+  );
+  await blockBatch.commit();
 
   const ownFriends = await userRef.collection("friends").get();
   const ownBatch = db.batch();
