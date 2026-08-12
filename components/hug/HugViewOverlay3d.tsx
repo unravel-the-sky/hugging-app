@@ -1,8 +1,6 @@
-import { useBlocks } from "@/app/context/BlocksContext";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { db } from "@/lib/firebaseConfig";
 import { Hug } from "@/lib/handleHugs";
-import { BLOCKED_NAME } from "@/lib/hugs/groups";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { doc, onSnapshot } from "firebase/firestore";
@@ -45,16 +43,10 @@ export default function HugViewOverlay({
   const [alreadyHugged, setAlreadyHugged] = useState(false);
 
   const { user } = useCurrentUser();
-  const { blockedUids } = useBlocks();
   const insets = useSafeAreaInsets();
 
-  // A blocked person's old hugs stay readable, but never under their name.
-  const senderName = blockedUids.has(hug.from)
-    ? BLOCKED_NAME
-    : (hug.fromName ?? "Someone");
-  const recipientName = blockedUids.has(hug.to)
-    ? BLOCKED_NAME
-    : (hug.toName ?? "Someone");
+  const senderName = hug.fromName ?? "Someone";
+  const recipientName = hug.toName ?? "Someone";
 
   // Reset to sealed whenever a different hug is opened.
   useEffect(() => {
@@ -115,13 +107,7 @@ export default function HugViewOverlay({
             <Text style={styles.hugBackMessageText}>{hugBackNote}</Text>
             <FriendAvatar
               name={isSender ? recipientName : senderName}
-              uid={
-                isSender
-                  ? blockedUids.has(hug.to)
-                    ? undefined
-                    : hug.to
-                  : user?.uid
-              }
+              uid={isSender ? hug.to : user?.uid}
               size={40}
             />
           </View>
@@ -152,8 +138,7 @@ export default function HugViewOverlay({
       <View style={styles.center}>
         {/* <Envelope /> */}
         <HugFaceSeal
-          // no uid for a blocked sender, so no photo resolves for them
-          fromUid={blockedUids.has(hug.from) ? "" : hug.from}
+          fromUid={hug.from}
           fromAvatar={hug.fromAvatar}
           size={150}
         />

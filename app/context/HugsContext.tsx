@@ -1,3 +1,4 @@
+import { useBlocks } from "@/app/context/BlocksContext";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { db } from "@/lib/firebaseConfig";
 import { Hug } from "@/lib/handleHugs";
@@ -52,20 +53,36 @@ const HugsContext = createContext<Record<HugDirection, HugStream>>({
   outgoing: EMPTY_STREAM,
 });
 
+const counterpartyUid = (hug: Hug, direction: HugDirection) =>
+  direction === "incoming" ? hug.from : hug.to;
+
 /**
- * Hugs from someone you blocked are flagged by the server instead of being
- * deleted — the sender's own outbox has to look untouched, or a block would
- * be detectable. Dropping them here is what makes them never land.
+ * Blocking someone takes their whole history out of your lists — otherwise a
+ * single block leaves twenty rows behind, all reading the same anonymous
+ * name. The hugs are only hidden, never deleted: unblocking brings them back.
  *
- * Filtered client-side rather than in the query: Firestore can't match "no
- * such field", which is every hug ever sent before this existed.
+ * Hugs a blocked person sent *after* the block carry the server's
+ * `blockedDelivery` flag. They're flagged rather than deleted so the sender's
+ * own outbox looks untouched — a hug vanishing from their list would tell
+ * them they'd been blocked. Dropping them here is what makes them never land.
+ *
+ * Both are filtered client-side rather than in the query: Firestore can't
+ * match "no such field", which is every hug sent before this existed, and
+ * `not-in` caps out at ten values.
  */
-const isDeliverable = (hug: Hug, direction: HugDirection) =>
-  direction === "outgoing" || !hug.blockedDelivery;
+const isVisible = (
+  hug: Hug,
+  direction: HugDirection,
+  blockedUids: ReadonlySet<string>,
+) => {
+  if (blockedUids.has(counterpartyUid(hug, direction))) return false;
+  return direction === "outgoing" || !hug.blockedDelivery;
+};
 
 function useHugStream(
   uid: string | undefined,
   direction: HugDirection,
+  blockedUids: ReadonlySet<string>,
 ): HugStream {
   const [liveHugs, setLiveHugs] = useState<Hug[]>([]);
   const [olderHugs, setOlderHugs] = useState<Hug[]>([]);
@@ -111,12 +128,10 @@ function useHugStream(
 
     const unsubscribe = onSnapshot(q, (snap) => {
       hasLiveSnapshot = true;
-      const next = snap.docs
-        .map((d) => ({
-          id: d.id,
-          ...(d.data() as Omit<Hug, "id">),
-        }))
-        .filter((h) => isDeliverable(h, direction));
+      const next = snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<Hug, "id">),
+      }));
       setLiveHugs(next);
       setIsLoading(false);
 
@@ -132,16 +147,26 @@ function useHugStream(
     };
   }, [uid, fieldName, direction]);
 
-  const hugs = useMemo(() => {
+  // Everything fetched so far, hidden or not. Paging walks this list rather
+  // than the visible one, so a run of blocked hugs at the tail can't turn
+  // into a cursor that re-reads pages already seen.
+  const fetched = useMemo(() => {
     const merged = new Map<string, Hug>();
     for (const h of [...liveHugs, ...olderHugs]) merged.set(h.id, h);
     return [...merged.values()].sort(byNewest);
   }, [liveHugs, olderHugs]);
 
+  // Kept out of the query so blocking or unblocking re-filters what's already
+  // loaded, with no refetch.
+  const hugs = useMemo(
+    () => fetched.filter((h) => isVisible(h, direction, blockedUids)),
+    [fetched, direction, blockedUids],
+  );
+
   // loadMore only ever needs the *current* tail, and rebuilding it on every
   // snapshot would churn the context value for all consumers.
-  const hugsRef = useRef(hugs);
-  hugsRef.current = hugs;
+  const hugsRef = useRef(fetched);
+  hugsRef.current = fetched;
 
   const loadMore = useCallback(async () => {
     if (!uid || isLoadingMore || !hasMore) return;
@@ -161,18 +186,16 @@ function useHugStream(
       );
       setOlderHugs((prev) => [
         ...prev,
-        ...snap.docs
-          .map((d) => ({
-            id: d.id,
-            ...(d.data() as Omit<Hug, "id">),
-          }))
-          .filter((h) => isDeliverable(h, direction)),
+        ...snap.docs.map((d) => ({
+          id: d.id,
+          ...(d.data() as Omit<Hug, "id">),
+        })),
       ]);
       if (snap.docs.length < LIMIT_SIZE) setHasMore(false);
     } finally {
       setIsLoadingMore(false);
     }
-  }, [uid, fieldName, direction, isLoadingMore, hasMore]);
+  }, [uid, fieldName, isLoadingMore, hasMore]);
 
   return useMemo(
     () => ({ hugs, isLoading, isLoadingMore, hasMore, loadMore }),
@@ -183,9 +206,10 @@ function useHugStream(
 export function HugsProvider({ children }: { children: React.ReactNode }) {
   const { authUser, user } = useCurrentUser();
   const uid = authUser?.uid ?? user?.uid;
+  const { blockedUids } = useBlocks();
 
-  const incoming = useHugStream(uid, "incoming");
-  const outgoing = useHugStream(uid, "outgoing");
+  const incoming = useHugStream(uid, "incoming", blockedUids);
+  const outgoing = useHugStream(uid, "outgoing", blockedUids);
 
   // `uid` is undefined both before auth resolves and after sign-out; only the
   // second case has a previous uid to clean up after.

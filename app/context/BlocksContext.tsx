@@ -12,8 +12,8 @@ import React, {
 /**
  * Who you blocked, fetched once per session and refreshed after a block or
  * unblock. There's no live listener because the list only ever changes from
- * this device — the server is the one enforcing the block, this is just so
- * old hugs from a blocked person can be shown under a neutral name.
+ * this device — the server is the one enforcing the block. This copy is what
+ * keeps a blocked person's hugs out of your lists.
  */
 
 type BlocksValue = {
@@ -49,7 +49,8 @@ export function BlocksProvider({ children }: { children: React.ReactNode }) {
     try {
       setBlocked(await getBlockedUsers());
     } catch (err) {
-      // a failed fetch only costs the name masking, so don't surface it
+      // the server still enforces the block either way; a failed fetch only
+      // means their old hugs stay listed, so don't surface it
       console.error("Could not load blocked users", err);
     } finally {
       setIsLoading(false);
