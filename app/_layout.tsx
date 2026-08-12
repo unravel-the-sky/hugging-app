@@ -63,7 +63,6 @@ export default function RootLayout() {
   }, [uid]);
 
   useEffect(() => {
-    console.log("HALLOOOO im registering the listener here");
     const sub = Notifications.addNotificationResponseReceivedListener(
       (response) => {
         const hugId = response.notification.request.content.data?.hugId;
