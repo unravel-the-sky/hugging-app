@@ -1,8 +1,8 @@
-import { useBlocks } from "@/app/context/BlocksContext";
 import { colors, font, radius, shadow, spacing } from "@/components/ui/squish";
 import { FriendAvatar } from "@/components/ui/squish/FriendAvatar";
 import { PlushButton } from "@/components/ui/squish/PlushButton";
 import RoundIconButton from "@/components/ui/squish/RountIconButton";
+import { useBlocks } from "@/hooks/useBlocks";
 import { unblockUser } from "@/lib/handleBlocks";
 import { router } from "expo-router";
 import React, { useState } from "react";

@@ -1,9 +1,9 @@
-import { useBlocks } from "@/app/context/BlocksContext";
 import { FilterTabs, Tab } from "@/components/hug/HugListComponents";
 import { HugsEmptyState } from "@/components/hug/HugsEmptyState";
 import { HugTimeline } from "@/components/hug/HugTimeline";
 import HugViewOverlay3d from "@/components/hug/HugViewOverlay3d";
 import { colors, font, spacing } from "@/components/ui/squish/theme";
+import { useBlocks } from "@/hooks/useBlocks";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useHugTotals } from "@/hooks/useIncomingHugs";
 import { db } from "@/lib/firebaseConfig";
@@ -23,7 +23,7 @@ export default function HugsListScreen() {
   const [isFromLocalSearch, setIsFromLocalSearch] = useState(false);
 
   const { user, isHydrating } = useCurrentUser();
-  const { blockedUids } = useBlocks();
+  const blockedUids = useBlocks((s) => s.blockedUids);
 
   // deep link from a push notification always points at a received hug.
   const { hugId } = useLocalSearchParams();

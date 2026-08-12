@@ -1,4 +1,4 @@
-import { useBlocks } from "@/app/context/BlocksContext";
+import { useBlocks } from "@/hooks/useBlocks";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { db } from "@/lib/firebaseConfig";
 import { Hug } from "@/lib/handleHugs";
@@ -206,7 +206,7 @@ function useHugStream(
 export function HugsProvider({ children }: { children: React.ReactNode }) {
   const { authUser, user } = useCurrentUser();
   const uid = authUser?.uid ?? user?.uid;
-  const { blockedUids } = useBlocks();
+  const blockedUids = useBlocks((s) => s.blockedUids);
 
   const incoming = useHugStream(uid, "incoming", blockedUids);
   const outgoing = useHugStream(uid, "outgoing", blockedUids);

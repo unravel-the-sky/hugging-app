@@ -1,4 +1,3 @@
-import { useBlocks } from "@/app/context/BlocksContext";
 import { BlockFriendSheet } from "@/components/friend/BlockFriendSheet";
 import {
   colors,
@@ -14,6 +13,7 @@ import { PlushButton } from "@/components/ui/squish/PlushButton";
 import RoundIconButton from "@/components/ui/squish/RountIconButton";
 import { StatCard, StatCardRow } from "@/components/ui/squish/StatCard";
 import { useAvatarThumb } from "@/hooks/useAvatarThumbnail";
+import { useBlocks } from "@/hooks/useBlocks";
 import { auth, db } from "@/lib/firebaseConfig";
 import { blockUser } from "@/lib/handleBlocks";
 import { onRemoveFriend, UserFriend } from "@/lib/handleFriends";
@@ -51,7 +51,7 @@ export default function FriendStatsModal() {
   const [deleteHistory, setDeleteHistory] = useState(false);
   const [blockState, setBlockState] = useState<BlockState>("idle");
 
-  const { refresh: refreshBlocks } = useBlocks();
+  const refreshBlocks = useBlocks((s) => s.refresh);
 
   useEffect(() => {
     const me = auth.currentUser;
