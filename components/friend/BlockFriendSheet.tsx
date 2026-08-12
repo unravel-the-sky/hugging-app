@@ -40,10 +40,10 @@ const consequences = (name: string) => [
     body: "Your profile, status and streaks disappear from their app.",
   },
   {
-    icon: "heart-outline" as const,
-    tone: colors.mint,
-    title: "Your memories stay",
-    body: "Past hugs stay in your history, filed under a blocked name.",
+    icon: "trash-outline" as const,
+    tone: colors.blush,
+    title: "Your hugs disappear",
+    body: `Every hug between you and ${name} is deleted, for both of you. This can't be undone.`,
   },
 ];
 

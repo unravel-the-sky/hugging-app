@@ -136,23 +136,35 @@ export const onHugCreated = onDocumentCreated("hugs/{hugId}", async (event) => {
   try {
     const batch = db.batch();
 
-    batch.set(
-      db.doc(`users/${hug.from}/friends/${hug.to}`),
-      {
-        totalHugsSent: FieldValue.increment(1),
-        lastSentHug: FieldValue.serverTimestamp(),
-      },
-      { merge: true },
-    );
+    // Only touch friend docs that already exist. `set(..., {merge:true})`
+    // creates one when it's missing, which resurrected removed friendships as
+    // a nameless "?" row in the other person's list — any hug landing after an
+    // unfriend or a block was enough to do it.
+    const sentRef = db.doc(`users/${hug.from}/friends/${hug.to}`);
+    const receivedRef = db.doc(`users/${hug.to}/friends/${hug.from}`);
+    const [sentDoc, receivedDoc] = await db.getAll(sentRef, receivedRef);
 
-    batch.set(
-      db.doc(`users/${hug.to}/friends/${hug.from}`),
-      {
-        totalHugsReceived: FieldValue.increment(1),
-        lastReceivedHug: FieldValue.serverTimestamp(),
-      },
-      { merge: true },
-    );
+    if (sentDoc.exists) {
+      batch.set(
+        sentRef,
+        {
+          totalHugsSent: FieldValue.increment(1),
+          lastSentHug: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+    }
+
+    if (receivedDoc.exists) {
+      batch.set(
+        receivedRef,
+        {
+          totalHugsReceived: FieldValue.increment(1),
+          lastReceivedHug: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+    }
 
     batch.set(
       db.doc(`users/${hug.from}`),
@@ -190,6 +202,14 @@ export const onHugBack = onDocumentUpdated("hugs/{hugId}", async (event) => {
   const backFrom = after.to; // the original recipient hugged back
   const backTo = after.from;
 
+  // Blocking deletes the hugs between the pair, so there should be nothing
+  // left to hug back — but a client holding a stale copy can still write one,
+  // and it must not reach the person who blocked them.
+  if (await isBlockedEitherWay(backFrom, backTo)) {
+    console.log("Hug-back dropped, pair is blocked", event.params.hugId);
+    return;
+  }
+
   try {
     const basis = after.seenAt ?? after.createdAt;
     const ms = basis
@@ -210,15 +230,20 @@ export const onHugBack = onDocumentUpdated("hugs/{hugId}", async (event) => {
     );
 
     // on the receiver's friend doc: how fast does this friend hug back?
-    batch.set(
-      db.doc(`users/${backTo}/friends/${backFrom}`),
-      {
-        hugBackCount: FieldValue.increment(1),
-        ...(ms !== null && { hugBackTotalMs: FieldValue.increment(ms) }),
-        lastHugBackAt: after.hugBackAt,
-      },
-      { merge: true },
-    );
+    // skipped when they're no longer friends, so the write can't recreate a
+    // friend doc that was removed (see onHugCreated).
+    const friendRef = db.doc(`users/${backTo}/friends/${backFrom}`);
+    if ((await friendRef.get()).exists) {
+      batch.set(
+        friendRef,
+        {
+          hugBackCount: FieldValue.increment(1),
+          ...(ms !== null && { hugBackTotalMs: FieldValue.increment(ms) }),
+          lastHugBackAt: after.hugBackAt,
+        },
+        { merge: true },
+      );
+    }
 
     await batch.commit();
   } catch (err) {
@@ -646,6 +671,12 @@ export const blockUser = onCall(async (request) => {
     unlinkFriends(uid, targetId),
     clearFriendshipRequests(uid, targetId),
   ]);
+
+  // Every hug between them goes, for both sides. Leaving the blocked person's
+  // copy behind left them a live thread into someone who blocked them: they
+  // could still open those hugs and hug back, and the hug-back would land.
+  // This is deliberately irreversible — unblocking does not bring them back.
+  await purgeHugsBetween(uid, targetId);
 
   return { ok: true };
 });

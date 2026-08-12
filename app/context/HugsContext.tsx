@@ -57,9 +57,10 @@ const counterpartyUid = (hug: Hug, direction: HugDirection) =>
   direction === "incoming" ? hug.from : hug.to;
 
 /**
- * Blocking someone takes their whole history out of your lists — otherwise a
- * single block leaves twenty rows behind, all reading the same anonymous
- * name. The hugs are only hidden, never deleted: unblocking brings them back.
+ * Blocking someone deletes every hug between you, server-side and for both
+ * sides. This filter covers the gap: the purge pages through a long history,
+ * and a cold start can still paint deleted hugs from the disk cache before
+ * the first snapshot lands.
  *
  * Hugs a blocked person sent *after* the block carry the server's
  * `blockedDelivery` flag. They're flagged rather than deleted so the sender's
