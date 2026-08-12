@@ -31,13 +31,13 @@ const consequences = (name: string) => [
     icon: "paper-plane-outline" as const,
     tone: colors.primary,
     title: "Their hugs stop arriving",
-    body: "Anything they send — hugs, nudges, photos — never lands.",
+    body: "Anything they will never be received.",
   },
   {
     icon: "eye-off-outline" as const,
     tone: colors.primary,
     title: "They can't find you",
-    body: "Your profile, status and streaks disappear from their app.",
+    body: "Your profile and status disappear from their app.",
   },
   {
     icon: "trash-outline" as const,
