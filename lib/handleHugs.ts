@@ -29,6 +29,11 @@ type HugBase<TTimestamp> = {
   hugBackAt?: TTimestamp;
   /** `from` opened the hug back. */
   hugBackSeenAt?: TTimestamp;
+  /**
+   * Set by the server when the pair is blocked: the hug exists for the
+   * sender, but is never shown to, or counted for, the recipient.
+   */
+  blockedDelivery?: boolean;
 };
 
 export type HugCreate = HugBase<FieldValue>;

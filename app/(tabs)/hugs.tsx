@@ -3,6 +3,7 @@ import { HugsEmptyState } from "@/components/hug/HugsEmptyState";
 import { HugTimeline } from "@/components/hug/HugTimeline";
 import HugViewOverlay3d from "@/components/hug/HugViewOverlay3d";
 import { colors, font, spacing } from "@/components/ui/squish/theme";
+import { useBlocks } from "@/hooks/useBlocks";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useHugTotals } from "@/hooks/useIncomingHugs";
 import { db } from "@/lib/firebaseConfig";
@@ -22,6 +23,7 @@ export default function HugsListScreen() {
   const [isFromLocalSearch, setIsFromLocalSearch] = useState(false);
 
   const { user, isHydrating } = useCurrentUser();
+  const blockedUids = useBlocks((s) => s.blockedUids);
 
   // deep link from a push notification always points at a received hug.
   const { hugId } = useLocalSearchParams();
@@ -30,12 +32,14 @@ export default function HugsListScreen() {
 
     getHugWithId(hugId as string).then((res) => {
       const hug = res;
-      if (hug) {
+      // an older notification can still point at a hug from someone since
+      // blocked — their hugs are never opened again, deep link or not
+      if (hug && !blockedUids.has(hug.from)) {
         setIsFromLocalSearch(true);
         setSelection({ hug, direction: "incoming" });
       }
     });
-  }, [hugId]);
+  }, [hugId, blockedUids]);
 
   const markHugSeen = async (hugId: string) => {
     try {

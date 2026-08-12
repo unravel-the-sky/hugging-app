@@ -1,6 +1,7 @@
 import { HugsProvider } from "@/app/context/HugsContext";
 import { OfflineGate } from "@/components/ui/OfflineGate";
 import { colors } from "@/components/ui/squish";
+import { useBlocks } from "@/hooks/useBlocks";
 import { savePushTokenOnUser, useCurrentUser } from "@/hooks/useCurrentUser";
 import { GOOGLE_WEB_CLIENT_ID } from "@/lib/auth-config";
 import { auth } from "@/lib/firebaseConfig";
@@ -51,6 +52,15 @@ export default function RootLayout() {
 
     if (currentUser) savePushTokenOnUser(currentUser.uid);
   }, [isHydrating, user]);
+
+  // Load who this user blocked before any list renders, and drop the list on
+  // sign-out so the next user doesn't inherit it.
+  const uid = user?.uid;
+  useEffect(() => {
+    const { refresh, clear } = useBlocks.getState();
+    if (uid) refresh();
+    else clear();
+  }, [uid]);
 
   useEffect(() => {
     console.log("HALLOOOO im registering the listener here");
@@ -182,6 +192,16 @@ export default function RootLayout() {
             }}
           />
           <Stack.Screen name="avatar-camera" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="blocked-people"
+            options={{
+              presentation: "modal",
+              sheetGrabberVisible: true,
+              headerTransparent: false,
+              headerShadowVisible: true,
+              headerLargeTitleShadowVisible: true,
+            }}
+          />
         </Stack>
         <OfflineGate />
       </HugsProvider>

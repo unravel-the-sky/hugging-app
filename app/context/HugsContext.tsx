@@ -1,3 +1,4 @@
+import { useBlocks } from "@/hooks/useBlocks";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { db } from "@/lib/firebaseConfig";
 import { Hug } from "@/lib/handleHugs";
@@ -52,9 +53,37 @@ const HugsContext = createContext<Record<HugDirection, HugStream>>({
   outgoing: EMPTY_STREAM,
 });
 
+const counterpartyUid = (hug: Hug, direction: HugDirection) =>
+  direction === "incoming" ? hug.from : hug.to;
+
+/**
+ * Blocking someone deletes every hug between you, server-side and for both
+ * sides. This filter covers the gap: the purge pages through a long history,
+ * and a cold start can still paint deleted hugs from the disk cache before
+ * the first snapshot lands.
+ *
+ * Hugs a blocked person sent *after* the block carry the server's
+ * `blockedDelivery` flag. They're flagged rather than deleted so the sender's
+ * own outbox looks untouched — a hug vanishing from their list would tell
+ * them they'd been blocked. Dropping them here is what makes them never land.
+ *
+ * Both are filtered client-side rather than in the query: Firestore can't
+ * match "no such field", which is every hug sent before this existed, and
+ * `not-in` caps out at ten values.
+ */
+const isVisible = (
+  hug: Hug,
+  direction: HugDirection,
+  blockedUids: ReadonlySet<string>,
+) => {
+  if (blockedUids.has(counterpartyUid(hug, direction))) return false;
+  return direction === "outgoing" || !hug.blockedDelivery;
+};
+
 function useHugStream(
   uid: string | undefined,
   direction: HugDirection,
+  blockedUids: ReadonlySet<string>,
 ): HugStream {
   const [liveHugs, setLiveHugs] = useState<Hug[]>([]);
   const [olderHugs, setOlderHugs] = useState<Hug[]>([]);
@@ -119,16 +148,26 @@ function useHugStream(
     };
   }, [uid, fieldName, direction]);
 
-  const hugs = useMemo(() => {
+  // Everything fetched so far, hidden or not. Paging walks this list rather
+  // than the visible one, so a run of blocked hugs at the tail can't turn
+  // into a cursor that re-reads pages already seen.
+  const fetched = useMemo(() => {
     const merged = new Map<string, Hug>();
     for (const h of [...liveHugs, ...olderHugs]) merged.set(h.id, h);
     return [...merged.values()].sort(byNewest);
   }, [liveHugs, olderHugs]);
 
+  // Kept out of the query so blocking or unblocking re-filters what's already
+  // loaded, with no refetch.
+  const hugs = useMemo(
+    () => fetched.filter((h) => isVisible(h, direction, blockedUids)),
+    [fetched, direction, blockedUids],
+  );
+
   // loadMore only ever needs the *current* tail, and rebuilding it on every
   // snapshot would churn the context value for all consumers.
-  const hugsRef = useRef(hugs);
-  hugsRef.current = hugs;
+  const hugsRef = useRef(fetched);
+  hugsRef.current = fetched;
 
   const loadMore = useCallback(async () => {
     if (!uid || isLoadingMore || !hasMore) return;
@@ -168,9 +207,10 @@ function useHugStream(
 export function HugsProvider({ children }: { children: React.ReactNode }) {
   const { authUser, user } = useCurrentUser();
   const uid = authUser?.uid ?? user?.uid;
+  const blockedUids = useBlocks((s) => s.blockedUids);
 
-  const incoming = useHugStream(uid, "incoming");
-  const outgoing = useHugStream(uid, "outgoing");
+  const incoming = useHugStream(uid, "incoming", blockedUids);
+  const outgoing = useHugStream(uid, "outgoing", blockedUids);
 
   // `uid` is undefined both before auth resolves and after sign-out; only the
   // second case has a previous uid to clean up after.

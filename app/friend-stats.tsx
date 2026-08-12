@@ -1,3 +1,4 @@
+import { BlockFriendSheet } from "@/components/friend/BlockFriendSheet";
 import {
   colors,
   darken,
@@ -12,7 +13,9 @@ import { PlushButton } from "@/components/ui/squish/PlushButton";
 import RoundIconButton from "@/components/ui/squish/RountIconButton";
 import { StatCard, StatCardRow } from "@/components/ui/squish/StatCard";
 import { useAvatarThumb } from "@/hooks/useAvatarThumbnail";
+import { useBlocks } from "@/hooks/useBlocks";
 import { auth, db } from "@/lib/firebaseConfig";
+import { blockUser } from "@/lib/handleBlocks";
 import { onRemoveFriend, UserFriend } from "@/lib/handleFriends";
 import { formatTimestamp } from "@/lib/util";
 import { Ionicons } from "@expo/vector-icons";
@@ -33,6 +36,7 @@ const showStreak = false;
 const showDeleteHistory = false;
 
 type RemoveState = "idle" | "confirming" | "removing" | "done" | "error";
+type BlockState = "idle" | "confirming" | "blocking" | "error";
 
 export default function FriendStatsModal() {
   const { friendId } = useLocalSearchParams<{
@@ -45,6 +49,9 @@ export default function FriendStatsModal() {
 
   const [removeState, setRemoveState] = useState<RemoveState>("idle");
   const [deleteHistory, setDeleteHistory] = useState(false);
+  const [blockState, setBlockState] = useState<BlockState>("idle");
+
+  const refreshBlocks = useBlocks((s) => s.refresh);
 
   useEffect(() => {
     const me = auth.currentUser;
@@ -73,6 +80,19 @@ export default function FriendStatsModal() {
       setRemoveState("done");
     } catch {
       setRemoveState("error");
+    }
+  };
+
+  const handleBlockFriend = async () => {
+    if (!friend) return;
+    setBlockState("blocking");
+    try {
+      await blockUser(friendId);
+      // the sheet already spelled out what happens; nothing left to confirm
+      await refreshBlocks();
+      router.back();
+    } catch {
+      setBlockState("error");
     }
   };
 
@@ -215,7 +235,26 @@ export default function FriendStatsModal() {
             onPress={() => setRemoveState("confirming")}
           />
         </View>
+
+        {/* block person — heavier than removing, so it sits below it */}
+        <View style={styles.removeWrap}>
+          <PlushButton
+            label="block person"
+            variant="soft"
+            onPress={() => setBlockState("confirming")}
+          />
+        </View>
       </ScrollView>
+
+      <BlockFriendSheet
+        visible={blockState !== "idle"}
+        name={friend.displayName}
+        photoUri={photoUri ?? undefined}
+        isBlocking={blockState === "blocking"}
+        hasError={blockState === "error"}
+        onConfirm={handleBlockFriend}
+        onCancel={() => setBlockState("idle")}
+      />
 
       {/* confirm / progress / success modal */}
       <Modal

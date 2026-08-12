@@ -45,6 +45,9 @@ export default function HugViewOverlay({
   const { user } = useCurrentUser();
   const insets = useSafeAreaInsets();
 
+  const senderName = hug.fromName ?? "Someone";
+  const recipientName = hug.toName ?? "Someone";
+
   // Reset to sealed whenever a different hug is opened.
   useEffect(() => {
     setOpened(false);
@@ -68,7 +71,7 @@ export default function HugViewOverlay({
     }
     router.push({
       pathname: "/hug-back",
-      params: { hugId: hug.id, toName: hug.fromName },
+      params: { hugId: hug.id, toName: senderName },
     });
   };
 
@@ -103,7 +106,7 @@ export default function HugViewOverlay({
           >
             <Text style={styles.hugBackMessageText}>{hugBackNote}</Text>
             <FriendAvatar
-              name={isSender ? hug.toName : hug.fromName}
+              name={isSender ? recipientName : senderName}
               uid={isSender ? hug.to : user?.uid}
               size={40}
             />
@@ -113,7 +116,7 @@ export default function HugViewOverlay({
         {!isReadOnly && (
           <Toast
             visible={confirmVisible}
-            message={`you hugged ${hug.fromName} back`}
+            message={`you hugged ${senderName} back`}
             onHide={() => console.log("ha deeet")}
             icon="heart-circle-outline"
           />
@@ -121,7 +124,7 @@ export default function HugViewOverlay({
 
         <Toast
           visible={alreadyHugged}
-          message={`you already hugged ${hug.fromName} back`!}
+          message={`you already hugged ${senderName} back`!}
           onHide={() => setAlreadyHugged(false)}
         />
       </>
@@ -140,9 +143,7 @@ export default function HugViewOverlay({
           size={150}
         />
 
-        <Text style={styles.fromName}>
-          {hug.fromName ?? "Someone"} sent you a hug!
-        </Text>
+        <Text style={styles.fromName}>{senderName} sent you a hug!</Text>
 
         <PlushButton
           variant="blush"
