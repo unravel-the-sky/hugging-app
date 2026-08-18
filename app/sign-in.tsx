@@ -236,14 +236,14 @@ export default function SignInScreen() {
               style={styles.legalLink}
               onPress={() => WebBrowser.openBrowserAsync(TERMS_URL)}
             >
-              Terms
+              terms
             </Text>{" "}
             and{" "}
             <Text
               style={styles.legalLink}
               onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL)}
             >
-              Privacy Policy
+              privacy policy
             </Text>
             .
           </Text>
