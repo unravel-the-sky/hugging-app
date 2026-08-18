@@ -1,3 +1,4 @@
+import { DriftingAvatars } from "@/components/landing/DriftingAvatars";
 import { AppText } from "@/components/ui/AppText";
 import { Logo } from "@/components/ui/Logo";
 import { PlushButton } from "@/components/ui/squish/PlushButton";
@@ -21,7 +22,6 @@ export default function HomeScreen() {
   );
   const [hugIsSent, setHugIsSent] = useState(false);
 
-  console.log("yello i am rendered and sendableHug: ", sendableHug);
   useEffect(() => {
     if (toUid && toName) {
       setSendableHug({ to: toUid, toName: toName, note, imagePath });
@@ -59,6 +59,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView edges={["bottom"]} style={styles.overlay}>
+      <DriftingAvatars count={5} intensity={90} />
       <View style={styles.container}>
         <AppText variant="title">Hugging app</AppText>
         <Text style={styles.mainText}>
@@ -137,7 +138,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.soft,
   },
   container: {
-    backgroundColor: colors.soft,
+    // backgroundColor: colors.soft,
     borderRadius: 24,
     padding: 20,
     width: "100%",
