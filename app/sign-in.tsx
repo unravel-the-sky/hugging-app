@@ -1,5 +1,8 @@
+import { DriftingAvatars } from "@/components/landing/DriftingAvatars";
 import { Logo } from "@/components/ui/Logo";
 import { PlushButton } from "@/components/ui/squish/PlushButton";
+import { colors, font, radius } from "@/components/ui/squish/theme";
+import AntDesign from "@expo/vector-icons/AntDesign";
 import { auth } from "@/lib/firebaseConfig";
 import {
   GoogleSignin,
@@ -7,6 +10,8 @@ import {
 } from "@react-native-google-signin/google-signin";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as Crypto from "expo-crypto";
+import { Image } from "expo-image";
+import * as WebBrowser from "expo-web-browser";
 import {
   GoogleAuthProvider,
   linkWithCredential,
@@ -16,6 +21,15 @@ import {
 } from "firebase/auth";
 import React, { useState } from "react";
 import { Alert, Platform, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+// TODO: point these at the real hosted pages before submitting to the stores.
+const TERMS_URL = "https://example.com/terms";
+const PRIVACY_URL = "https://example.com/privacy";
+
+/** Mirrors PlushButton's default face height and its DEPTH constant. */
+const BUTTON_HEIGHT = 52;
+const BUTTON_DEPTH = 5;
 
 export default function SignInScreen() {
   const [isLoading, setIsLoading] = useState(false);
@@ -135,122 +149,210 @@ export default function SignInScreen() {
   };
 
   return (
-    <View style={styles.content}>
-      <View style={styles.header}>
-        {/* <Text style={styles.emoji}>🤗</Text> */}
-        <Logo size="s" />
-        <Text style={styles.title}>
-          {isExistingUser ? "Welcome back" : "Hello there!"}
-        </Text>
-        <Text style={styles.subtitle}>
-          {isExistingUser
-            ? "Sign in to secure your account and access it on any device."
-            : "Sign in to get started with sending hugs."}
-        </Text>
-      </View>
+    <View style={styles.root}>
+      {/* Background: theme-colored avatars drifting under a full-screen blur pane. */}
+      <DriftingAvatars intensity={80} />
 
-      <View style={styles.buttonContainer}>
-        <PlushButton
-          label={"continue with google"}
-          onPress={handleGoogleSignIn}
-          disabled={isLoading}
-        />
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+        <View style={styles.content}>
+          {/* Wordmark */}
+          <View style={styles.brand}>
+            <Image
+              source={require("@/assets/images/splash-icon-mine-trans.png")}
+              style={styles.brandMark}
+              contentFit="contain"
+            />
+            <View>
+              <Text style={styles.brandName}>Hugging</Text>
+              <Text style={styles.brandTagline}>send a hug, share love!</Text>
+            </View>
+          </View>
 
-        {/* Apple Sign-In button slot — we'll add this in the next phase */}
-        {Platform.OS === "ios" && (
-          <AppleAuthentication.AppleAuthenticationButton
-            buttonType={
-              AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
-            }
-            buttonStyle={
-              AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
-            }
-            cornerRadius={12}
-            style={styles.appleButton}
-            onPress={handleAppleSignIn}
-          />
-        )}
+          {/* Hero — the animated version of the same drawing as the app icon. */}
+          <View style={styles.hero}>
+            <Logo size="m" />
+          </View>
 
-        {__DEV__ && (
-          <PlushButton
-            label={"dev: Skip Sign-In"}
-            onPress={() => signInAnonymously(auth)}
-            disabled={isLoading}
-            variant="soft"
-          />
-        )}
-      </View>
+          <View style={styles.copy}>
+            <Text style={styles.title}>
+              {isExistingUser ? "Welcome back." : "a hug,"}
+              {!isExistingUser && "\n"}
+              {!isExistingUser && (
+                <Text style={styles.titleAccent}>to your friends.</Text>
+              )}
+            </Text>
+            <Text style={styles.subtitle}>
+              {isExistingUser
+                ? "sign in to secure your account and access it on your device."
+                : "send a hug one to someone. add postcard if you like, or a note."}
+            </Text>
+          </View>
+
+          <View style={styles.buttonContainer}>
+            <PlushButton
+              label={"Continue with Google"}
+              icon={
+                <AntDesign name="google" size={18} color={colors.surface} />
+              }
+              onPress={handleGoogleSignIn}
+              disabled={isLoading}
+              fullWidth
+            />
+
+            {Platform.OS === "ios" && (
+              /* Apple forbids restyling the button itself, so the plush
+                 underside is a sibling underneath it, never a change to it. */
+              <View style={styles.applePlush}>
+                <View style={styles.appleUnderside} />
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={
+                    AppleAuthentication.AppleAuthenticationButtonType.CONTINUE
+                  }
+                  buttonStyle={
+                    AppleAuthentication.AppleAuthenticationButtonStyle
+                      .WHITE_OUTLINE
+                  }
+                  cornerRadius={radius.button}
+                  style={styles.appleButton}
+                  onPress={handleAppleSignIn}
+                />
+              </View>
+            )}
+
+            {__DEV__ && (
+              <PlushButton
+                label={"dev: Skip Sign-In"}
+                onPress={() => signInAnonymously(auth)}
+                disabled={isLoading}
+                variant="soft"
+                fullWidth
+              />
+            )}
+          </View>
+
+          <Text style={styles.legal}>
+            by continuing you agree to our{" "}
+            <Text
+              style={styles.legalLink}
+              onPress={() => WebBrowser.openBrowserAsync(TERMS_URL)}
+            >
+              Terms
+            </Text>{" "}
+            and{" "}
+            <Text
+              style={styles.legalLink}
+              onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL)}
+            >
+              Privacy Policy
+            </Text>
+            .
+          </Text>
+        </View>
+      </SafeAreaView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: colors.mistBg,
+  },
+  safe: {
+    flex: 1,
+  },
   content: {
     flex: 1,
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 28,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  brand: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  brandMark: {
+    width: 44,
+    height: 48,
+  },
+  brandName: {
+    fontFamily: font.displayBold,
+    fontSize: 30,
+    color: colors.plumInk,
+    lineHeight: 34,
+  },
+  brandTagline: {
+    fontFamily: font.ui,
+    fontSize: 12,
+    color: colors.primary,
+  },
+  hero: {
+    alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 32,
+  },
+  copy: {
+    alignItems: "center",
+    gap: 8,
+  },
+  title: {
+    fontFamily: font.displayBold,
+    fontSize: 30,
+    lineHeight: 38,
+    textAlign: "center",
+    color: colors.plumInk,
+  },
+  titleAccent: {
+    color: colors.primary,
+  },
+  subtitle: {
+    fontFamily: font.ui,
+    fontSize: 15,
+    lineHeight: 21,
+    color: colors.softInk,
+    textAlign: "center",
+    paddingHorizontal: 8,
+  },
+  buttonContainer: {
+    alignSelf: "stretch",
+    gap: 12,
+  },
+  /* PlushButton draws a 52pt face over a 5pt underside; matching those
+     numbers is what keeps the two buttons the same size. */
+  applePlush: {
+    height: BUTTON_HEIGHT + BUTTON_DEPTH,
+    alignSelf: "stretch",
+  },
+  appleUnderside: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: BUTTON_HEIGHT,
+    borderRadius: radius.button,
+    backgroundColor: colors.lilac,
+    shadowColor: colors.lilac,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 8,
+    elevation: 6,
   },
   appleButton: {
     width: "100%",
-    height: 56,
+    height: BUTTON_HEIGHT,
   },
-  devButton: {
-    marginTop: 12,
-    backgroundColor: "#DDD",
-    borderRadius: 12,
-    padding: 16,
-    alignItems: "center",
-    minHeight: 56,
-    justifyContent: "center",
-    shadowColor: "#FF6B6B",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  header: {
-    alignItems: "center",
-    marginBottom: 48,
-  },
-  emoji: {
-    fontSize: 72,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#1A1A1A",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#666",
+  legal: {
+    fontFamily: font.ui,
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.softInk,
     textAlign: "center",
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
   },
-  buttonContainer: {
-    gap: 12,
-  },
-  button: {
-    backgroundColor: "#FF6B6B",
-    borderRadius: 12,
-    padding: 16,
-    alignItems: "center",
-    minHeight: 56,
-    justifyContent: "center",
-    shadowColor: "#FF6B6B",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  buttonDisabled: {
-    backgroundColor: "#FFB3B3",
-    shadowOpacity: 0.1,
-  },
-  buttonText: {
-    color: "#FFF",
-    fontSize: 18,
-    fontWeight: "bold",
+  legalLink: {
+    color: colors.primary,
+    textDecorationLine: "underline",
   },
 });
