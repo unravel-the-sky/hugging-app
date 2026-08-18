@@ -5,7 +5,7 @@ import React from "react";
 export default function ChangeAvatarRoute() {
   return (
     <AvatarPicker
-      title="change avatar"
+      title="choose avatar"
       onSaved={() => router.back()}
       onOpenCamera={() => {
         router.back();

@@ -73,7 +73,7 @@ export default function AvatarPicker({
 
   return (
     <View style={styles.content}>
-      <Text style={styles.title}>change avatar</Text>
+      <Text style={styles.title}>choose avatar</Text>
 
       <View style={styles.dividerRow}>
         <View style={styles.dividerLine} />
@@ -132,7 +132,7 @@ export default function AvatarPicker({
         onPress={onOpenCamera}
       />
       <PlushButton
-        label={uploading ? "saving" : "choose from library"}
+        label={uploading ? "loading" : "choose from library"}
         variant="soft"
         fullWidth
         disabled={busy}
