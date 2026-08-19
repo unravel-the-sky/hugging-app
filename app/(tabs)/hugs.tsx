@@ -13,6 +13,7 @@ import { useLocalSearchParams } from "expo-router";
 import { doc, Timestamp, updateDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 /** What the overlay is showing, and from which side. */
 type Selection = { hug: Hug; direction: Direction };
@@ -83,15 +84,16 @@ export default function HugsListScreen() {
   const { total: totalNumHugs } = useHugTotals();
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView edges={["top"]} style={styles.container}>
+      {/* pinned: the list scrolls underneath it, the title stays put */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Hugs</Text>
-        {totalNumHugs && totalNumHugs > 0 && (
+        {totalNumHugs && totalNumHugs > 0 ? (
           <View style={styles.allTime}>
             <Text style={styles.heart}>♥</Text>
             <Text style={styles.allTimeText}>{totalNumHugs} all-time</Text>
           </View>
-        )}
+        ) : null}
       </View>
 
       {totalNumHugs === 0 ? (
@@ -101,9 +103,13 @@ export default function HugsListScreen() {
         />
       ) : (
         <>
-          <FilterTabs value={tab} onChange={setTab} />
           <HugTimeline
             filter={tab}
+            listHeader={
+              <View style={styles.stickyTabs}>
+                <FilterTabs value={tab} onChange={setTab} />
+              </View>
+            }
             onSelectHug={(hug, direction) => setSelection({ hug, direction })}
           />
           {/* <FilterTabs value={tab} onChange={setTab} /> */}
@@ -133,7 +139,7 @@ export default function HugsListScreen() {
           onIgnore={() => setSelection(undefined)}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -158,6 +164,13 @@ const styles = StyleSheet.create({
     fontFamily: font.displayBold,
     fontSize: 34,
     color: colors.plumInk,
+  },
+  // the pill has side margins of its own, so the sticky band has to reach past
+  // the list's horizontal padding — otherwise rows show through beside it
+  stickyTabs: {
+    marginHorizontal: -spacing.xl,
+    paddingTop: spacing.xs,
+    backgroundColor: colors.soft,
   },
   allTime: {
     flexDirection: "row",

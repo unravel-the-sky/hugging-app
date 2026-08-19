@@ -21,6 +21,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { FlatList } from "react-native-gesture-handler";
 import {
   colors,
@@ -257,7 +258,7 @@ export default function FriendsListScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView edges={["top"]} style={styles.container}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <Text style={styles.headerTitle}>Friends</Text>
@@ -345,7 +346,7 @@ export default function FriendsListScreen() {
           }
         />
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 

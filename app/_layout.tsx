@@ -143,16 +143,6 @@ export default function RootLayout() {
           />
           <Stack.Screen name="media" />
           <Stack.Screen
-            name="profile"
-            options={{
-              presentation: "modal",
-              sheetGrabberVisible: true,
-              headerTransparent: false,
-              headerShadowVisible: true,
-              headerLargeTitleShadowVisible: true,
-            }}
-          />
-          <Stack.Screen
             name="send-hug"
             options={{
               headerShown: false,

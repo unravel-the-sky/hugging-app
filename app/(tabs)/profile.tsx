@@ -14,6 +14,7 @@ import { router } from "expo-router";
 import { signOut } from "firebase/auth";
 import React, { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ProfileScreen() {
   const [showLogout, setShowLogout] = useState(false);
@@ -72,11 +73,7 @@ export default function ProfileScreen() {
   const totalReceived = user.stats.hugsReceived ?? 0;
 
   return (
-    <View style={styles.screen}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
-      </View>
-
+    <SafeAreaView edges={["top"]} style={styles.screen}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -181,7 +178,7 @@ export default function ProfileScreen() {
           </Text>
         )}
       </ConfirmationModal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -202,6 +199,7 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     padding: spacing.xl,
+    paddingBottom: 120,
     gap: spacing.md,
   },
   spacer: { flex: 1 },

@@ -28,9 +28,16 @@ const EMPTY: Record<HugFilter, { title: string; hint: string }> = {
 export const HugTimeline = ({
   filter,
   onSelectHug,
+  listHeader,
 }: {
   filter: HugFilter;
   onSelectHug: (hug: Hug, direction: Direction) => void;
+  /**
+   * Rendered above the first day and pinned to the top once it gets there.
+   * Lives inside the list (rather than above it) because only a scroll view's
+   * own children can be sticky.
+   */
+  listHeader?: React.ReactElement;
 }) => {
   const { hugs, directions, isLoading, hasMore, loadMore, isLoadingMore } =
     useAllHugs(filter);
@@ -42,15 +49,10 @@ export const HugTimeline = ({
   const listRef = useRef<FlatList<DayGroup>>(null);
   useScrollToTop(listRef);
 
-  if (isLoading || !user) {
-    return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
   const renderDay = ({ item }: { item: DayGroup }) => {
+    // `data` is empty until the user is loaded, so this is belt and braces
+    if (!user) return null;
+
     const expanded = isExpanded(item);
     return (
       <View>
@@ -76,17 +78,32 @@ export const HugTimeline = ({
     );
   };
 
+  const loading = isLoading || !user;
+
   return (
     <FlatList
       ref={listRef}
-      data={days}
+      data={loading ? [] : days}
       keyExtractor={(day) => day.key}
       renderItem={renderDay}
       showsVerticalScrollIndicator={false}
+      // the screen already sits inside a SafeAreaView, so letting iOS add its
+      // own inset on top would double up
+      contentInsetAdjustmentBehavior="never"
       contentContainerStyle={styles.content}
-      ListEmptyComponent={<HugsEmptyState {...EMPTY[filter]} />}
+      ListHeaderComponent={listHeader}
+      stickyHeaderIndices={listHeader ? [0] : undefined}
+      ListEmptyComponent={
+        loading ? (
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : (
+          <HugsEmptyState {...EMPTY[filter]} />
+        )
+      }
       ListFooterComponent={
-        hasMore ? (
+        hasMore && !loading ? (
           <PlushButton
             onPress={loadMore}
             disabled={isLoadingMore}
@@ -102,5 +119,5 @@ export const HugTimeline = ({
 const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.xl, paddingBottom: 120, flexGrow: 1 },
   container: { flex: 1, backgroundColor: colors.soft },
-  centered: { justifyContent: "center", alignItems: "center" },
+  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
 });
