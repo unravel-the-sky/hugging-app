@@ -1,5 +1,5 @@
 import { Image } from "expo-image";
-import { useEffect, useRef, useState } from "react";
+import { use, useEffect, useState } from "react";
 import {
   Alert,
   StyleSheet,
@@ -20,13 +20,14 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
+import { TabBarContext } from "@/app/context/TabBarContext";
 import { useGetDownloadUrl } from "@/hooks/useGetDownloadUrl";
 import { useTiltNew } from "@/hooks/useTilt";
 import { File, Paths } from "expo-file-system";
 import * as MediaLibrary from "expo-media-library";
+import { useFocusEffect } from "expo-router";
 import { scheduleOnRN } from "react-native-worklets";
 import { colors, font } from "../ui/squish";
-import { PlushButton } from "../ui/squish/PlushButton";
 import Toast from "../ui/squish/Toast";
 import { HeartsGridSkia } from "./HeartGridSkia";
 
@@ -59,21 +60,24 @@ interface HugRevealerImageProps {
   message?: string;
   aspect?: number; // width / height, from the hug doc
   loading?: boolean;
-  huggedBack?: boolean;
-  isReadOnly?: boolean;
-  onHugBack: () => void;
-  onClose: () => void;
 }
 
+/**
+ * The card itself, and nothing else. The close / hug-back buttons live with the
+ * hug-back note in the parent overlay, which owns everything below the card.
+ */
 export default function HugRevealerImage({
   imageUri,
   message,
   aspect = 3 / 4,
-  huggedBack = false,
-  isReadOnly,
-  onHugBack,
-  onClose,
 }: HugRevealerImageProps) {
+  const { setIsTabBarHidden } = use(TabBarContext);
+
+  useFocusEffect(() => {
+    setIsTabBarHidden(true);
+    return () => setIsTabBarHidden(false);
+  });
+
   const hasImage = !!imageUri;
   const canFlip = hasImage && !!message && message.trim() !== "";
 
@@ -283,13 +287,6 @@ export default function HugRevealerImage({
         </View>
       )}
 
-      <View style={styles.buttonRow} pointerEvents="box-none">
-        <PlushButton variant="primary" label="close" onPress={onClose} />
-        {!huggedBack && !isReadOnly && (
-          <PlushButton variant="blush" label="hug back" onPress={onHugBack} />
-        )}
-      </View>
-
       <Toast
         visible={toast.visible}
         message={toast.message}
@@ -309,7 +306,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 32,
-    paddingBottom: 200,
+    paddingBottom: 150,
   },
   flipWrap: {
     // width: "100%",
@@ -352,15 +349,6 @@ const styles = StyleSheet.create({
     lineHeight: 32,
     color: "#4A3A6B",
     textAlign: "center",
-  },
-  buttonRow: {
-    position: "absolute",
-    flexDirection: "row",
-    justifyContent: "space-around",
-    width: "100%",
-    paddingHorizontal: 20,
-    bottom: 100,
-    gap: 12,
   },
   loadingWrap: {
     ...StyleSheet.absoluteFillObject,

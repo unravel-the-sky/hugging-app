@@ -1,16 +1,16 @@
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Hug } from "@/lib/handleHugs";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { use, useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, font, radius, shadow, spacing } from "../ui/squish";
 import { FriendAvatar } from "../ui/squish/FriendAvatar";
 import { PlushButton } from "../ui/squish/PlushButton";
 import Toast from "../ui/squish/Toast";
 import { HugFaceSeal } from "./HugFaceSeal";
 import HugRevealerImage from "./HugRevealerImage";
+import { TabBarContext } from "@/app/context/TabBarContext";
 
 // Lavender gradient from the "Sealed (before)" screen.
 const SEALED_BG = ["#ddd6ef", "#d3cfdb"] as const;
@@ -34,11 +34,17 @@ export default function HugViewOverlay({
 }: HugViewOverlayProps) {
   const [opened, setOpened] = useState(false);
 
+  const { setIsTabBarHidden } = use(TabBarContext);
+
+  useFocusEffect(() => {
+    setIsTabBarHidden(true);
+    return () => setIsTabBarHidden(false);
+  });
+
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [alreadyHugged, setAlreadyHugged] = useState(false);
 
   const { user } = useCurrentUser();
-  const insets = useSafeAreaInsets();
 
   const senderName = hug.fromName ?? "Someone";
   const recipientName = hug.toName ?? "Someone";
@@ -91,32 +97,42 @@ export default function HugViewOverlay({
         <HugRevealerImage
           imageUri={hug.imagePath}
           message={hug.note}
-          isReadOnly={isReadOnly}
-          onHugBack={handleHugBack}
-          huggedBack={!!hugBackNote}
-          onClose={onClose}
           loading={false}
         />
 
-        {hugBackNote && (
-          <View
-            style={[
-              styles.hugBackMessage,
-              {
-                bottom: insets.bottom + 110,
-                alignSelf: isSender ? "flex-start" : "flex-end",
-                flexDirection: isSender ? "row-reverse" : "row",
-              },
-            ]}
-          >
-            <Text style={styles.hugBackMessageText}>{hugBackNote}</Text>
-            <FriendAvatar
-              name={isSender ? recipientName : senderName}
-              uid={isSender ? hug.to : user?.uid}
-              size={40}
-            />
+        {/* Everything below the card: the note stacks on the buttons rather
+            than floating over them at its own absolute offset. */}
+        <View style={styles.footer} pointerEvents="box-none">
+          {hugBackNote && (
+            <View
+              style={[
+                styles.hugBackMessage,
+                {
+                  alignSelf: isSender ? "flex-start" : "flex-end",
+                  flexDirection: isSender ? "row-reverse" : "row",
+                },
+              ]}
+            >
+              <Text style={styles.hugBackMessageText}>{hugBackNote}</Text>
+              <FriendAvatar
+                name={isSender ? recipientName : senderName}
+                uid={isSender ? hug.to : user?.uid}
+                size={40}
+              />
+            </View>
+          )}
+
+          <View style={styles.buttonRow}>
+            <PlushButton variant="primary" label="close" onPress={onClose} />
+            {!hugBackNote && !isReadOnly && (
+              <PlushButton
+                variant="blush"
+                label="hug back"
+                onPress={handleHugBack}
+              />
+            )}
           </View>
-        )}
+        </View>
 
         {!isReadOnly && (
           <Toast
@@ -169,20 +185,31 @@ export default function HugViewOverlay({
 
 const styles = StyleSheet.create({
   fill: { ...StyleSheet.absoluteFill },
-  hugBackMessage: {
+  footer: {
     position: "absolute",
-    // alignSelf: "flex-end",
-    // marginRight: 35,
+    left: 0,
+    right: 0,
+    bottom: 100,
+    gap: spacing.md,
+    zIndex: 30,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  hugBackMessage: {
     marginHorizontal: 35,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     maxWidth: "85%",
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.md,
     borderRadius: radius.md,
     backgroundColor: colors.mistBg,
-    zIndex: 30,
+    bottom: 50,
     ...shadow,
   },
   hugBackMessageText: {
@@ -241,7 +268,3 @@ const styles = StyleSheet.create({
   },
   dismissTxt: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
 });
-
-const BODY_W = 220;
-const BODY_H = 150;
-const FLAP_H = 86;
