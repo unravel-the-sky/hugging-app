@@ -17,6 +17,7 @@ import { colors, IconButton, spacing } from "@/components/ui/squish";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import Media from "./media";
+import { router } from "expo-router";
 
 export interface TakePictureProps {
   renderPreview?: (uri: string, onRetake: () => void) => React.ReactNode;
@@ -102,9 +103,9 @@ export default function TakePicture({
         <SafeAreaView
           style={{
             ...StyleSheet.absoluteFill,
-            paddingHorizontal: 22,
-            paddingVertical: 26,
-            marginTop: 80,
+            paddingHorizontal: 24,
+            // paddingVertical: 26,
+            marginTop: 40,
             shadowColor: "#000",
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.2,
@@ -113,6 +114,15 @@ export default function TakePicture({
           }}
         >
           <View style={{ flex: 1 }}>
+            <View style={styles.header} pointerEvents="box-none">
+              <Pressable
+                onPress={() => router.back()}
+                style={styles.headerBtn}
+                hitSlop={8}
+              >
+                <Ionicons name="arrow-back" size={24} color={colors.plumInk} />
+              </Pressable>
+            </View>
             <View
               style={{
                 flex: 3,
@@ -214,6 +224,20 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  header: {
+    flex: 0.5,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  headerBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.7)",
     alignItems: "center",
     justifyContent: "center",
   },
