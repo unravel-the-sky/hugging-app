@@ -1,10 +1,8 @@
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { db } from "@/lib/firebaseConfig";
 import { Hug } from "@/lib/handleHugs";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { doc, onSnapshot } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, font, radius, shadow, spacing } from "../ui/squish";
@@ -36,9 +34,6 @@ export default function HugViewOverlay({
 }: HugViewOverlayProps) {
   const [opened, setOpened] = useState(false);
 
-  const [hugBackNote, setHugBackNote] = useState<string | null>(
-    hug.hugBackNote ?? null,
-  );
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [alreadyHugged, setAlreadyHugged] = useState(false);
 
@@ -48,21 +43,31 @@ export default function HugViewOverlay({
   const senderName = hug.fromName ?? "Someone";
   const recipientName = hug.toName ?? "Someone";
 
-  // Reset to sealed whenever a different hug is opened.
+  // The hug arrives live from the hugs stream, so a hug-back written on the
+  // /hug-back screen shows up here as a prop change.
+  const hugBackNote = hug.hugBackNote ?? null;
+
+  // Whatever the note was when this hug was first shown; anything past that is
+  // a hug-back that landed while the overlay was open, and gets confirmed once.
+  const seenNote = useRef(hugBackNote);
+
+  // Reset to sealed whenever a different hug is opened. Declared before the
+  // effect below so the new hug's note counts as already seen, not as new.
   useEffect(() => {
     setOpened(false);
-  }, [hug?.id]);
+    seenNote.current = hug?.hugBackNote ?? null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hug.id]);
 
   useEffect(() => {
-    return onSnapshot(doc(db, "hugs", hug.id), (snap) => {
-      const next = snap.data()?.hugBackNote as string | undefined;
-      if (next && next !== hugBackNote) {
-        setHugBackNote(next);
-        setConfirmVisible(true);
-        setTimeout(() => setConfirmVisible(false), 25000);
-      }
-    });
-  }, [hug.id, hugBackNote]);
+    const isNew = !!hugBackNote && !seenNote.current;
+    seenNote.current = hugBackNote;
+    if (!isNew) return;
+
+    setConfirmVisible(true);
+    const timer = setTimeout(() => setConfirmVisible(false), 25000);
+    return () => clearTimeout(timer);
+  }, [hugBackNote]);
 
   const handleHugBack = () => {
     if (hugBackNote) {
