@@ -27,6 +27,7 @@ import { File, Paths } from "expo-file-system";
 import * as MediaLibrary from "expo-media-library";
 import { useFocusEffect } from "expo-router";
 import { scheduleOnRN } from "react-native-worklets";
+import { contrastingTint } from "@/lib/util";
 import { colors, font } from "../ui/squish";
 import Toast from "../ui/squish/Toast";
 import { HeartsGridSkia } from "./HeartGridSkia";
@@ -60,6 +61,8 @@ interface HugRevealerImageProps {
   message?: string;
   aspect?: number; // width / height, from the hug doc
   loading?: boolean;
+  /** hex the sender picked in the editor; falls back to the stock lavender */
+  backgroundColor?: string;
 }
 
 /**
@@ -70,7 +73,14 @@ export default function HugRevealerImage({
   imageUri,
   message,
   aspect = 3 / 4,
+  backgroundColor,
 }: HugRevealerImageProps) {
+  // The sender's backdrop carries over, and the hearts take the far end of it
+  // so they stay legible whichever way the photo leaned.
+  const backdrop = backgroundColor || colors.mistBg;
+  const heartColor = backgroundColor
+    ? contrastingTint(backgroundColor)
+    : undefined;
   const { setIsTabBarHidden } = use(TabBarContext);
 
   useFocusEffect(() => {
@@ -249,8 +259,13 @@ export default function HugRevealerImage({
   });
 
   return (
-    <View style={styles.root}>
-      <HeartsGridSkia tiltX={tiltX} tiltY={tiltY} unit={cardH * 0.25} />
+    <View style={[styles.root, { backgroundColor: backdrop }]}>
+      <HeartsGridSkia
+        tiltX={tiltX}
+        tiltY={tiltY}
+        unit={cardH * 0.25}
+        color={heartColor}
+      />
 
       {hasImage && (
         <View style={styles.stage} pointerEvents="box-none">
@@ -306,6 +321,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 32,
+    // Leaves room for the sender header above and the hug-back button below,
+    // so the card centres in what's left rather than under the header.
+    paddingTop: 96,
     paddingBottom: 150,
   },
   flipWrap: {

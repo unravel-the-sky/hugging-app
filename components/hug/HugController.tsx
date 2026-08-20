@@ -83,6 +83,7 @@ export default function HugController({ sendableHug, onComplete }: HugProps) {
         fromAvatar: user?.avatar || "male",
         note: sendableHug.note,
         imagePath: sendableHug.imagePath,
+        backgroundColor: sendableHug.backgroundColor,
         seenAt: undefined, // toa avoid crash
       };
 

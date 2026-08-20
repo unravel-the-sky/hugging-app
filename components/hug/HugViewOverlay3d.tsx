@@ -4,7 +4,17 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import { use, useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, font, radius, shadow, spacing } from "../ui/squish";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { formatTimestamp, readableText } from "@/lib/util";
+import {
+  colors,
+  font,
+  IconButton,
+  radius,
+  shadow,
+  spacing,
+} from "../ui/squish";
 import { FriendAvatar } from "../ui/squish/FriendAvatar";
 import { PlushButton } from "../ui/squish/PlushButton";
 import Toast from "../ui/squish/Toast";
@@ -48,6 +58,13 @@ export default function HugViewOverlay({
 
   const senderName = hug.fromName ?? "Someone";
   const recipientName = hug.toName ?? "Someone";
+
+  const insets = useSafeAreaInsets();
+
+  // The header sits on the sender's backdrop, so its ink follows it.
+  const backdrop = hug.backgroundColor || colors.mistBg;
+  const headerInk = readableText(backdrop);
+  const sentAt = hug.createdAt?.toDate?.();
 
   // The hug arrives live from the hugs stream, so a hug-back written on the
   // /hug-back screen shows up here as a prop change.
@@ -97,8 +114,39 @@ export default function HugViewOverlay({
         <HugRevealerImage
           imageUri={hug.imagePath}
           message={hug.note}
+          backgroundColor={hug.backgroundColor}
           loading={false}
         />
+
+        {/* Who sent it, when, and the way out. Sits above the card rather
+            than inside the revealer, which owns only the card itself. */}
+        <View
+          style={[styles.header, { paddingTop: insets.top + spacing.lg }]}
+          pointerEvents="box-none"
+        >
+          <FriendAvatar
+            name={isSender ? recipientName : senderName}
+            uid={isSender ? hug.to : hug.from}
+            size={56}
+          />
+
+          <View style={styles.headerText}>
+            <Text style={[styles.headerTitle, { color: headerInk }]}>
+              {isSender
+                ? `you hugged ${recipientName}`
+                : `${senderName} hugged you`}
+            </Text>
+            {sentAt && (
+              <Text style={[styles.headerTime, { color: headerInk }]}>
+                {formatTimestamp(sentAt)}
+              </Text>
+            )}
+          </View>
+
+          <Pressable onPress={onClose} style={styles.headerBtn} hitSlop={8}>
+            <Ionicons name="close" size={24} color={colors.plumInk} />
+          </Pressable>
+        </View>
 
         {/* Everything below the card: the note stacks on the buttons rather
             than floating over them at its own absolute offset. */}
@@ -122,16 +170,15 @@ export default function HugViewOverlay({
             </View>
           )}
 
-          <View style={styles.buttonRow}>
-            <PlushButton variant="primary" label="close" onPress={onClose} />
-            {!hugBackNote && !isReadOnly && (
+          {!hugBackNote && !isReadOnly && (
+            <View style={styles.buttonRow}>
               <PlushButton
                 variant="blush"
                 label="hug back"
                 onPress={handleHugBack}
               />
-            )}
-          </View>
+            </View>
+          )}
         </View>
 
         {!isReadOnly && (
@@ -193,9 +240,43 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     zIndex: 30,
   },
+  header: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 30,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+    backgroundColor: "rgba(244, 242, 255, 0.20)",
+  },
+  headerBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.7)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerText: {
+    flex: 1,
+    gap: 2,
+  },
+  headerTitle: {
+    fontFamily: font.displayBold,
+    fontSize: 20,
+  },
+  headerTime: {
+    fontFamily: font.ui,
+    fontSize: 14,
+    opacity: 0.65,
+  },
   buttonRow: {
     flexDirection: "row",
-    justifyContent: "space-around",
+    justifyContent: "center",
     paddingHorizontal: 20,
     gap: 12,
   },

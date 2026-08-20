@@ -60,7 +60,10 @@ export default function usePhotoTransform({
     const spanY = windowWidth * as + windowHeight * ac;
 
     const min = Math.max(spanX / photoWidth, spanY / photoHeight);
-    scale.value = Math.min(Math.max(scale.value, min), Math.max(MAX_SCALE, min));
+    scale.value = Math.min(
+      Math.max(scale.value, min),
+      Math.max(MAX_SCALE, min),
+    );
 
     const limX = Math.max(0, (scale.value * photoWidth - spanX) / 2);
     const limY = Math.max(0, (scale.value * photoHeight - spanY) / 2);
@@ -111,10 +114,7 @@ export default function usePhotoTransform({
       if (onTap) runOnJS(onTap)();
     });
 
-  const gesture = Gesture.Race(
-    tap,
-    Gesture.Simultaneous(pan, pinch, rotation),
-  );
+  const gesture = Gesture.Race(tap, Gesture.Simultaneous(pan, pinch, rotation));
 
   // Skia applies these left to right, around the origin the Group is given.
   const transform = useDerivedValue<Transforms3d>(() => [

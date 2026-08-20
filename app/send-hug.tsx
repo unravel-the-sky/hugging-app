@@ -14,6 +14,7 @@ export default function SendHug() {
   const toName = useHugDraft((s) => s.toName);
   const note = useHugDraft((s) => s.note);
   const imagePath = useHugDraft((s) => s.photoUri);
+  const backgroundColor = useHugDraft((s) => s.backgroundColor);
   const resetAll = useHugDraft((s) => s.resetAll);
 
   console.log("hello im send-hug: ", { toUid, toName, note, imagePath });
@@ -25,9 +26,15 @@ export default function SendHug() {
   console.log("yello i am rendered and sendableHug: ", sendableHug);
   useEffect(() => {
     if (toUid && toName) {
-      setSendableHug({ to: toUid, toName: toName, note, imagePath });
+      setSendableHug({
+        to: toUid,
+        toName: toName,
+        note,
+        imagePath,
+        backgroundColor,
+      });
     }
-  }, [imagePath, note, toName, toUid]);
+  }, [backgroundColor, imagePath, note, toName, toUid]);
 
   const handleCompleteHug = () => {
     console.log("i am called and resetting it");

@@ -15,6 +15,7 @@ export default function HomeScreen() {
   const toName = useHugDraft((s) => s.toName);
   const note = useHugDraft((s) => s.note);
   const imagePath = useHugDraft((s) => s.photoUri);
+  const backgroundColor = useHugDraft((s) => s.backgroundColor);
 
   console.log("hello im index: ", { toUid, toName, note, imagePath });
   const [sendableHug, setSendableHug] = useState<SendableHug | undefined>(
@@ -24,9 +25,15 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (toUid && toName) {
-      setSendableHug({ to: toUid, toName: toName, note, imagePath });
+      setSendableHug({
+        to: toUid,
+        toName: toName,
+        note,
+        imagePath,
+        backgroundColor,
+      });
     }
-  }, [imagePath, note, toName, toUid]);
+  }, [backgroundColor, imagePath, note, toName, toUid]);
 
   const handleInitiateHug = () => {
     console.log("send to friends here");
