@@ -87,8 +87,7 @@ export default function HugController({ sendableHug, onComplete }: HugProps) {
         seenAt: undefined, // toa avoid crash
       };
 
-      console.log("created hug object: ", hug);
-      await sendHug(hug);
+      sendHug(hug);
       onComplete();
     }
     setHugPhase(phase);

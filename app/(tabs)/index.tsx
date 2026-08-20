@@ -84,7 +84,7 @@ export default function HomeScreen() {
           <Logo />
         </View>
         <Text style={styles.mainText}>
-          Then click the button, choose a hugging friend and send some luuuvvv
+          Then click the button, choose a hugging friend and send some love!
         </Text>
         {/* Action Buttons */}
         <View style={styles.actionsContainer}>
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
   // move this to an egen coponent later
   mainText: {
     fontFamily: font.ui,
-    fontSize: 14,
+    fontSize: 16,
     color: colors.plumInk,
     marginTop: 2,
   },

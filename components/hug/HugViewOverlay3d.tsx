@@ -208,7 +208,7 @@ export default function HugViewOverlay({
         <HugFaceSeal
           fromUid={hug.from}
           fromAvatar={hug.fromAvatar}
-          size={150}
+          size={160}
         />
 
         <Text style={styles.fromName}>{senderName} sent you a hug!</Text>

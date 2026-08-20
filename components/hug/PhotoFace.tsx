@@ -6,21 +6,7 @@ import Animated, {
 } from "react-native-reanimated";
 import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg";
 
-/**
- * PhotoFace — circular photo "face" for the send-hug button.
- *
- * Fakes a 3D sphere without Skia:
- *  - a specular highlight (top-left) + rim vignette shade the flat disc
- *    into a ball. These are static SVG gradients over the image.
- *  - a volume-preserving jelly wobble driven by hugProgress: as the hug
- *    charges, one axis squashes while the other stretches, so it feels
- *    like a springy sphere. The overall grow still comes from the parent.
- *
- * Dial the two knobs below to taste. When you want the "real" warp
- * later, this is still the single file to swap.
- */
-
-const SIZE = 120;
+const SIZE = 130;
 const WOBBLE = 0.06; // how much the jelly squishes (0 = off)
 const SHINE = 0.55; // highlight strength (0 = matte)
 

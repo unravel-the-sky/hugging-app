@@ -37,7 +37,6 @@ export default function SendHug() {
   }, [backgroundColor, imagePath, note, toName, toUid]);
 
   const handleCompleteHug = () => {
-    console.log("i am called and resetting it");
     setHugIsSent(true);
     resetAll();
   };
