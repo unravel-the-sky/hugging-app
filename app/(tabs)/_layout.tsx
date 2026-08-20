@@ -34,8 +34,9 @@ export default function TabsLayout() {
 
   // the profile tab wears the user's own avatar, rendered off-screen and
   // snapshotted because iOS tab items only accept images
-  const { source: avatarIconSource, snapshotView } =
-    useAvatarTabIcon(user ?? undefined);
+  const { source: avatarIconSource, snapshotView } = useAvatarTabIcon(
+    user ?? undefined,
+  );
 
   console.log(
     `TabsLayout is called, isHydaring: ${isHydrating} and userId: ${user?.uid}`,
@@ -76,7 +77,7 @@ export default function TabsLayout() {
 
         <TabBarContext value={{ setIsTabBarHidden }}>
           <NativeTabs
-            blurEffect="light"
+            blurEffect="extraLight"
             hidden={isTabBarHidden}
             iconColor={colors.primary}
           >

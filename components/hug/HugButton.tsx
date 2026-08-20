@@ -77,8 +77,8 @@ export default function HugButton({
           { velocity: THROW_VELOCITY },
           (finished) => {
             if (!finished) return; // don't reset if the throw was interrupted
-            translateY.value = 0;
-            hugProgress.value = 0;
+            // Leave the avatar parked off-screen. Resetting here would paint a
+            // frame of the idle hug before the JS thread swaps in the sent view.
             scheduleOnRN(onSendHugProcess, "thrown");
           },
         );
@@ -129,7 +129,7 @@ export default function HugButton({
   return (
     <View style={styles.hugContainer}>
       <Animated.Text style={[styles.releaseText, releaseTextStyle]}>
-        send your hug!
+        release to send your hug!
       </Animated.Text>
 
       {/* Avatar visual — never touchable */}

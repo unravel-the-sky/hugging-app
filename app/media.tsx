@@ -1,7 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { GestureDetector } from "react-native-gesture-handler";
 
 import * as ImageManipulator from "expo-image-manipulator";
 import * as MediaLibrary from "expo-media-library";
@@ -18,16 +19,24 @@ import Toast from "@/components/ui/squish/Toast";
 import { colors, font } from "@/components/ui/squish/theme";
 
 import { FilterKey, filterKeys, FILTERS } from "@/constants/postcardConstants";
-import { newOverlayId, Overlay } from "@/constants/postcardEditorConstants";
+import {
+  coverSize,
+  newOverlayId,
+  Overlay,
+} from "@/constants/postcardEditorConstants";
 
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useImageColors } from "@/hooks/useImageColors";
 import { useHugDraft } from "@/hooks/useHugDraft";
+import usePhotoTransform from "@/hooks/usePhotoTransform";
 import usePolaroidFrameCalc from "@/hooks/usePolaroidFrameCalc";
 
 import { auth, storage } from "@/lib/firebaseConfig";
+import { readableText } from "@/lib/util";
 import { useImage } from "@shopify/react-native-skia";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+
+const FALLBACK_BG = "#D7C2B2";
 
 const getPixelSize = (uri: string) =>
   new Promise<{ width: number; height: number }>((resolve, reject) =>
@@ -44,10 +53,20 @@ export default function Media({
   const image = useImage(media);
   const imageRef = useRef(null);
   const setPhoto = useHugDraft((s) => s.setPhotoUri);
+  const setBackgroundColor = useHugDraft((s) => s.setBackgroundColor);
   const { user } = useCurrentUser();
 
-  const { canvasWidth, canvasHeight, canvasPadding, frameWidth, frameHeight } =
-    usePolaroidFrameCalc();
+  const {
+    canvasWidth,
+    canvasHeight,
+    canvasPadding,
+    frameWidth,
+    frameHeight,
+    frameHorizontalPadding,
+    frameTopPadding,
+    photoWidth,
+    photoHeight,
+  } = usePolaroidFrameCalc();
 
   // ---- filters ---------------------------------------------------------
   const [selected, setSelected] = useState<FilterKey>("normal");
@@ -55,7 +74,28 @@ export default function Media({
   // ---- overlays --------------------------------------------------------
   const [overlays, setOverlays] = useState<Overlay[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // ---- photo framing ---------------------------------------------------
+  // The camera hands back the full frame, which is taller/wider than the
+  // polaroid's square window. Draw it whole and let the user slide it around.
+  const drawn = coverSize(
+    image?.width() ?? 0,
+    image?.height() ?? 0,
+    photoWidth,
+    photoHeight,
+  );
+
+  const { gesture: photoGesture, transform: photoTransform } =
+    usePhotoTransform({
+      windowWidth: photoWidth,
+      windowHeight: photoHeight,
+      photoWidth: drawn.width,
+      photoHeight: drawn.height,
+      onTap: () => setSelectedId(null),
+    });
+
   const [editing, setEditing] = useState<TextDraft | null>(null);
+  const [bgIndex, setBgIndex] = useState(0);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ visible: boolean; message: string }>({
     visible: false,
@@ -220,6 +260,7 @@ export default function Media({
       // const downloadUrl = await getDownloadURL(snapshot.ref);
 
       setPhoto(imgPath);
+      setBackgroundColor(bg);
       router.back();
     } catch (err) {
       console.error("Error adding image to hug:", err);
@@ -230,24 +271,42 @@ export default function Media({
   };
 
   // ---- colours ---------------------------------------------------------
+  // The four swatches the photo yields, deduped. colorThree leads so the
+  // untouched postcard looks the way it always has; tapping the backdrop
+  // walks through the rest.
   const { colors: imageColors } = useImageColors(media);
-  const bg = imageColors?.colorThree?.value ?? "#D7C2B2";
+
+  const bgOptions = useMemo(() => {
+    const candidates = [
+      imageColors?.colorThree?.value,
+      imageColors?.colorOne?.value,
+      imageColors?.colorTwo?.value,
+      imageColors?.colorFour?.value,
+    ].filter((c): c is string => !!c);
+
+    const unique = Array.from(new Set(candidates));
+    return unique.length ? unique : [FALLBACK_BG];
+  }, [imageColors]);
+
+  const bg = bgOptions[bgIndex % bgOptions.length];
+  const cycleBackground = () => setBgIndex((i) => i + 1);
 
   if (!image) return null;
 
   return (
     <View style={[styles.container, { backgroundColor: bg }]}>
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        onPress={cycleBackground}
+        accessibilityLabel="Change postcard background colour"
+      />
+
       {/* Header */}
-      <View style={styles.header}>
+      <View style={styles.header} pointerEvents="box-none">
         <Pressable onPress={onBack} style={styles.headerBtn} hitSlop={8}>
           <Ionicons name="arrow-back" size={24} color={colors.plumInk} />
         </Pressable>
-        <Text
-          style={[
-            styles.headerTitle,
-            { color: imageColors?.colorFour.value || colors.blush },
-          ]}
-        >
+        <Text style={[styles.headerTitle, { color: readableText(bg) }]}>
           Edit
         </Text>
         <Pressable
@@ -261,7 +320,7 @@ export default function Media({
       </View>
 
       {/* Postcard + overlays */}
-      <View style={styles.stage}>
+      <View style={styles.stage} pointerEvents="box-none">
         <View
           ref={imageRef}
           collapsable={false}
@@ -271,13 +330,32 @@ export default function Media({
             overflow: "hidden",
           }}
         >
-          <PostImage media={media} selected={selected} />
+          <PostImage
+            media={media}
+            selected={selected}
+            photoTransform={photoTransform}
+            drawWidth={drawn.width}
+            drawHeight={drawn.height}
+          />
 
           {/* tap empty area to deselect */}
           <Pressable
             style={StyleSheet.absoluteFill}
             onPress={() => setSelectedId(null)}
           />
+
+          {/* drag / pinch / rotate the photo inside its window */}
+          <GestureDetector gesture={photoGesture}>
+            <View
+              style={{
+                position: "absolute",
+                left: canvasPadding + frameHorizontalPadding,
+                top: canvasPadding + frameTopPadding,
+                width: photoWidth,
+                height: photoHeight,
+              }}
+            />
+          </GestureDetector>
 
           {overlays.map((o) => (
             <DraggableOverlay
@@ -294,7 +372,7 @@ export default function Media({
 
       {/* Bottom UI — hidden while the editor is up */}
       {!editing && (
-        <View style={styles.bottom}>
+        <View style={styles.bottom} pointerEvents="box-none">
           <View style={styles.toolRow}>
             <PlushButton
               label="Text"

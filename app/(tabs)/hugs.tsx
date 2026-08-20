@@ -4,6 +4,7 @@ import { HugTimeline } from "@/components/hug/HugTimeline";
 import HugViewOverlay3d from "@/components/hug/HugViewOverlay3d";
 import { colors, font, spacing } from "@/components/ui/squish/theme";
 import { useBlocks } from "@/hooks/useBlocks";
+import { useHugs } from "@/app/context/HugsContext";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useHugTotals } from "@/hooks/useIncomingHugs";
 import { db } from "@/lib/firebaseConfig";
@@ -11,7 +12,7 @@ import { getHugWithId, Hug } from "@/lib/handleHugs";
 import { Direction } from "@/lib/hugs/groups";
 import { useLocalSearchParams } from "expo-router";
 import { doc, Timestamp, updateDoc } from "firebase/firestore";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -25,6 +26,22 @@ export default function HugsListScreen() {
 
   const { user, isHydrating } = useCurrentUser();
   const blockedUids = useBlocks((s) => s.blockedUids);
+
+  // The list hands over the hug it was rendering, which is a snapshot: the
+  // streams keep updating after that (a hug-back landing while the overlay is
+  // open, say). Re-read the live copy by id, falling back to the handed-over
+  // one for a deep-linked hug that hasn't paged into either stream.
+  const incoming = useHugs("incoming");
+  const outgoing = useHugs("outgoing");
+  const selectedHug = useMemo(() => {
+    if (!selection) return undefined;
+    const { id } = selection.hug;
+    return (
+      incoming.hugs.find((h) => h.id === id) ??
+      outgoing.hugs.find((h) => h.id === id) ??
+      selection.hug
+    );
+  }, [selection, incoming.hugs, outgoing.hugs]);
 
   // deep link from a push notification always points at a received hug.
   const { hugId } = useLocalSearchParams();
@@ -73,11 +90,11 @@ export default function HugsListScreen() {
   };
 
   const handleOpen = () => {
-    if (selection) handleMarkHugSeen(selection.hug);
+    if (selectedHug) handleMarkHugSeen(selectedHug);
   };
 
   const handleClose = () => {
-    if (selection) handleMarkHugSeen(selection.hug);
+    if (selectedHug) handleMarkHugSeen(selectedHug);
     setSelection(undefined);
   };
 
@@ -130,9 +147,9 @@ export default function HugsListScreen() {
         </>
       )}
 
-      {selection && (
+      {selection && selectedHug && (
         <HugViewOverlay3d
-          hug={selection.hug}
+          hug={selectedHug}
           isReadOnly={selection.direction === "outgoing"}
           onOpen={handleOpen}
           onClose={handleClose}

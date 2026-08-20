@@ -15,6 +15,7 @@ export default function HomeScreen() {
   const toName = useHugDraft((s) => s.toName);
   const note = useHugDraft((s) => s.note);
   const imagePath = useHugDraft((s) => s.photoUri);
+  const backgroundColor = useHugDraft((s) => s.backgroundColor);
 
   console.log("hello im index: ", { toUid, toName, note, imagePath });
   const [sendableHug, setSendableHug] = useState<SendableHug | undefined>(
@@ -24,9 +25,15 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (toUid && toName) {
-      setSendableHug({ to: toUid, toName: toName, note, imagePath });
+      setSendableHug({
+        to: toUid,
+        toName: toName,
+        note,
+        imagePath,
+        backgroundColor,
+      });
     }
-  }, [imagePath, note, toName, toUid]);
+  }, [backgroundColor, imagePath, note, toName, toUid]);
 
   const handleInitiateHug = () => {
     console.log("send to friends here");
@@ -77,7 +84,7 @@ export default function HomeScreen() {
           <Logo />
         </View>
         <Text style={styles.mainText}>
-          Then click the button, choose a hugging friend and send some luuuvvv
+          Then click the button, choose a hugging friend and send some love!
         </Text>
         {/* Action Buttons */}
         <View style={styles.actionsContainer}>
@@ -96,7 +103,7 @@ const styles = StyleSheet.create({
   // move this to an egen coponent later
   mainText: {
     fontFamily: font.ui,
-    fontSize: 14,
+    fontSize: 16,
     color: colors.plumInk,
     marginTop: 2,
   },

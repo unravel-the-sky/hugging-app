@@ -35,6 +35,8 @@ const HEART =
 // try different svgs here but this seems cute
 // const HEART =
 //   "M32 0 C34 14 38 20 52 22 C38 24 34 30 32 44 C30 30 26 24 12 22 C26 20 30 14 32 0 Z";
+const HEART_COLOR = "rgba(255,184,224,0.9)";
+
 const SPRITE_W = 64;
 const SPRITE_H = 48;
 const SW = SPRITE_W * SCALE;
@@ -52,10 +54,13 @@ export function HeartsGridSkia({
   tiltX,
   tiltY,
   unit = 4,
+  color = HEART_COLOR,
 }: {
   tiltX: SharedValue<number>; // same values driving the card's rotateX
   tiltY: SharedValue<number>;
   unit?: number; // px per world unit — cardH / 4 keeps the original scale
+  /** any Skia-parseable colour; re-rasterises the sprite when it changes */
+  color?: string;
 }) {
   const clock = useClock();
 
@@ -70,14 +75,14 @@ export function HeartsGridSkia({
     const path = Skia.Path.MakeFromSVGString(HEART);
     const paint = Skia.Paint();
     paint.setAntiAlias(true);
-    paint.setColor(Skia.Color("rgba(255,184,224,0.9)"));
+    paint.setColor(Skia.Color(color));
 
     canvas.scale(SCALE, SCALE);
     if (path) canvas.drawPath(path, paint);
     surface.flush();
 
     return surface.makeImageSnapshot().makeNonTextureImage();
-  }, []);
+  }, [color]);
 
   const sprites = useMemo(
     () => new Array(COUNT).fill(0).map(() => rect(0, 0, SW, SH)),

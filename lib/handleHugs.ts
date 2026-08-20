@@ -20,6 +20,8 @@ type HugBase<TTimestamp> = {
   fromName: string;
   toName: string;
   imagePath?: string;
+  /** hex backdrop the sender chose for the postcard in the editor */
+  backgroundColor?: string;
   fromAvatar?: AvatarType;
   note?: string;
   createdAt?: TTimestamp;
@@ -41,7 +43,7 @@ export type Hug = HugBase<Timestamp> & { id: string };
 
 export type SendableHug = Pick<
   HugBase<FieldValue>,
-  "to" | "toName" | "note" | "imagePath"
+  "to" | "toName" | "note" | "imagePath" | "backgroundColor"
 >;
 
 export type HugBackUpdate = Required<
@@ -61,6 +63,7 @@ export async function sendHug(hug: HugCreate) {
       fromAvatar: hug.fromAvatar,
       note: hug.note,
       imagePath: hug.imagePath || "",
+      backgroundColor: hug.backgroundColor || "",
       createdAt: serverTimestamp(),
     });
     console.log("hug is sent to firebase");
