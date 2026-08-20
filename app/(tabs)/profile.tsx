@@ -1,69 +1,47 @@
 import AvatarImage from "@/components/avatar/AvatarImage";
-import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import Loader from "@/components/ui/Loader";
+import { SettingToggleRow } from "@/components/ui/SettingToggleRow";
 import { colors, font, radius, shadow, spacing } from "@/components/ui/squish";
 import { PlushButton } from "@/components/ui/squish/PlushButton";
 import { StatCard, StatCardRow } from "@/components/ui/squish/StatCard";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useHugDraft } from "@/hooks/useHugDraft";
-import { auth } from "@/lib/firebaseConfig";
-import { deleteAccountFn } from "@/lib/handleUser";
+import { updateAutoSavePostcard } from "@/lib/createUser";
 import { Ionicons } from "@expo/vector-icons";
-import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { router } from "expo-router";
-import { signOut } from "firebase/auth";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ProfileScreen() {
-  const [showLogout, setShowLogout] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [showDelete, setShowDelete] = useState(false);
-
   const { user, isHydrating } = useCurrentUser();
+  // the user doc streams in over a snapshot, so the write is what persists —
+  // this only keeps the checkbox responsive until it comes back
+  const [pendingAutoSave, setPendingAutoSave] = useState<boolean>();
 
-  // anonymous users have no recovery path — logging out is destructive
-  const isAnonymous = auth.currentUser?.isAnonymous ?? false;
+  const autoSavePostcard = pendingAutoSave ?? user?.autoSavePostcard ?? false;
+
+  // once the write lands, stop overriding — otherwise a change made on another
+  // device would stay masked by our stale optimistic value
+  useEffect(() => {
+    if (
+      pendingAutoSave !== undefined &&
+      user?.autoSavePostcard === pendingAutoSave
+    ) {
+      setPendingAutoSave(undefined);
+    }
+  }, [pendingAutoSave, user?.autoSavePostcard]);
+
+  const handleAutoSaveChange = async (next: boolean) => {
+    setPendingAutoSave(next);
+    try {
+      await updateAutoSavePostcard(next);
+    } catch (err) {
+      console.error("Could not save the postcard preference:", err);
+      setPendingAutoSave(undefined);
+    }
+  };
 
   const openAvatarSheet = () => router.push("/change-avatar");
-
-  const handleLogout = async () => {
-    setLoggingOut(true);
-    try {
-      // end the Google session too, so next sign-in shows the account picker
-      try {
-        if (GoogleSignin.hasPreviousSignIn()) {
-          await GoogleSignin.signOut();
-        }
-      } catch {
-        // not a Google user / module unavailable — fine to ignore
-      }
-
-      useHugDraft.getState().resetAll();
-      await signOut(auth);
-      router.replace("/");
-    } catch (error) {
-      console.error("Error logging out:", error);
-      setLoggingOut(false);
-    }
-  };
-
-  const handleDeleteAccount = async () => {
-    setDeleting(true);
-    try {
-      await deleteAccountFn();
-      try {
-        if (GoogleSignin.hasPreviousSignIn()) await GoogleSignin.signOut();
-      } catch {}
-      await signOut(auth).catch(() => {});
-      router.replace("/");
-    } catch (e) {
-      console.error("Delete failed:", e);
-      setDeleting(false);
-    }
-  };
 
   if (isHydrating || !user) {
     return <Loader />;
@@ -112,72 +90,28 @@ export default function ProfileScreen() {
         {/* pushes the account actions to the bottom, per the design */}
         <View style={styles.spacer} />
 
-        <PlushButton
-          label="blocked people"
-          variant="soft"
-          fullWidth
-          onPress={() => router.push("/blocked-people")}
+        <View style={styles.separator}>
+          <View style={styles.rule} />
+          <Text style={styles.separatorLabel}>settings</Text>
+          <View style={styles.rule} />
+        </View>
+
+        <SettingToggleRow
+          icon="save-outline"
+          title="auto-save postcards"
+          subtitle="keep a copy in your photos when you send"
+          value={autoSavePostcard}
+          onChange={handleAutoSaveChange}
         />
-        <PlushButton
-          label="log out"
-          variant="blush"
-          fullWidth
-          onPress={() => setShowLogout(true)}
-        />
-        <PlushButton
-          label="delete account"
-          variant="blush"
-          fullWidth
-          onPress={() => setShowDelete(true)}
-        />
+
+        <Pressable
+          style={({ pressed }) => [styles.flatRow, pressed && styles.flatRowOn]}
+          onPress={() => router.push("/account")}
+        >
+          <Text style={styles.flatRowLabel}>account</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.softInk} />
+        </Pressable>
       </ScrollView>
-
-      {/* logout confirm */}
-      <ConfirmationModal
-        isVisible={showLogout}
-        onRequestClose={() => !loggingOut && setShowLogout(false)}
-        title="Log out?"
-        confirmButtonLabel={loggingOut ? "logging out…" : "log out"}
-        cancelButtonLabel="stay"
-        onConfirm={handleLogout}
-        onCancel={() => setShowLogout(false)}
-      >
-        {isAnonymous ? (
-          <Text style={styles.sheetBody}>
-            You are using a guest account. Logging out erases it for good — your
-            hugs and friends cannot be recovered. Connect Google first if you
-            want to keep them.
-          </Text>
-        ) : (
-          <Text style={styles.sheetBody}>
-            You will need to sign in again to get back to your hugs.
-          </Text>
-        )}
-      </ConfirmationModal>
-
-      {/* delete account confirm */}
-      <ConfirmationModal
-        isVisible={showDelete}
-        onRequestClose={() => !deleting && setShowDelete(false)}
-        title="Delete account?"
-        confirmButtonLabel={deleting ? "deleting…" : "delete"}
-        cancelButtonLabel="stay"
-        onConfirm={handleDeleteAccount}
-        onCancel={() => setShowDelete(false)}
-      >
-        {isAnonymous ? (
-          <Text style={styles.sheetBody}>
-            You are using a guest account. Deleting it removes your hugs and
-            friends for good — they cannot be recovered.
-          </Text>
-        ) : (
-          <Text style={styles.sheetBody}>
-            So, that is it, huh? Thanks for using my app. This action is
-            irreversible and will remove your user from the database, and all
-            the relevant information. Thank you!
-          </Text>
-        )}
-      </ConfirmationModal>
     </SafeAreaView>
   );
 }
@@ -204,6 +138,42 @@ const styles = StyleSheet.create({
   },
   spacer: { flex: 1 },
 
+  separator: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingTop: spacing.md,
+  },
+  rule: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.soft,
+  },
+  separatorLabel: {
+    fontFamily: font.ui,
+    fontSize: 12,
+    color: colors.softInk,
+    textTransform: "uppercase",
+  },
+
+  // deliberately flat: the plush buttons read as "act now", and this row is
+  // just a door to the account actions
+  flatRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md + 2,
+  },
+  flatRowOn: { backgroundColor: colors.mistBg },
+  flatRowLabel: {
+    fontFamily: font.uiBold,
+    fontSize: 16,
+    color: colors.plumInk,
+  },
+
   profileSection: {
     alignItems: "center",
     gap: spacing.lg,
@@ -228,13 +198,5 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontFamily: font.displayBold,
     color: colors.plumInk,
-  },
-
-  sheetBody: {
-    fontSize: 16,
-    fontFamily: font.ui,
-    color: colors.softInk,
-    textAlign: "center",
-    lineHeight: 22,
   },
 });

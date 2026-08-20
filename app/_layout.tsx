@@ -116,6 +116,17 @@ export default function RootLayout() {
             }}
           />
           <Stack.Screen
+            name="account"
+            options={{
+              presentation: "formSheet",
+              sheetAllowedDetents: "fitToContents",
+              sheetGrabberVisible: true,
+              sheetCornerRadius: 28,
+              headerShown: false,
+              contentStyle: { backgroundColor: "#FFFFFF" },
+            }}
+          />
+          <Stack.Screen
             name="hug-back"
             options={{
               presentation: "formSheet",

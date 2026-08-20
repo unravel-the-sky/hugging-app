@@ -28,6 +28,8 @@ export type UserDoc = {
 
   createdAt?: FieldValue;
   pushToken?: string;
+  /** Keep a copy of the postcard in the device photo library. Defaults to off. */
+  autoSavePostcard?: boolean;
   stats: {
     hugsSent: number;
     hugsReceived: number;
@@ -121,6 +123,18 @@ export async function updateUserAvatar(avatar: AvatarType) {
   if (!currentUserRef) return;
 
   await updateDoc(currentUserRef, { avatar });
+
+  return true;
+}
+
+export async function updateAutoSavePostcard(autoSavePostcard: boolean) {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    console.log("no currentUser, cannot save the postcard preference");
+    return;
+  }
+
+  await updateDoc(doc(db, "users", currentUser.uid), { autoSavePostcard });
 
   return true;
 }
