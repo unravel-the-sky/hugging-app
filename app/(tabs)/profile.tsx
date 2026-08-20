@@ -4,6 +4,7 @@ import { SettingToggleRow } from "@/components/ui/SettingToggleRow";
 import { colors, font, radius, shadow, spacing } from "@/components/ui/squish";
 import { PlushButton } from "@/components/ui/squish/PlushButton";
 import { StatCard, StatCardRow } from "@/components/ui/squish/StatCard";
+import Toast from "@/components/ui/squish/Toast";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { updateAutoSavePostcard } from "@/lib/createUser";
 import { Ionicons } from "@expo/vector-icons";
@@ -14,9 +15,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ProfileScreen() {
   const { user, isHydrating } = useCurrentUser();
-  // the user doc streams in over a snapshot, so the write is what persists —
-  // this only keeps the checkbox responsive until it comes back
   const [pendingAutoSave, setPendingAutoSave] = useState<boolean>();
+  const [toast, setToast] = useState<{ visible: boolean; message: string }>({
+    visible: false,
+    message: "",
+  });
 
   const autoSavePostcard = pendingAutoSave ?? user?.autoSavePostcard ?? false;
 
@@ -35,6 +38,7 @@ export default function ProfileScreen() {
     setPendingAutoSave(next);
     try {
       await updateAutoSavePostcard(next);
+      setToast({ message: "changes saved!", visible: true });
     } catch (err) {
       console.error("Could not save the postcard preference:", err);
       setPendingAutoSave(undefined);
@@ -111,6 +115,13 @@ export default function ProfileScreen() {
           <Text style={styles.flatRowLabel}>account</Text>
           <Ionicons name="chevron-forward" size={20} color={colors.softInk} />
         </Pressable>
+
+        {/* Save toast */}
+        <Toast
+          visible={toast.visible}
+          message={toast.message}
+          onHide={() => setToast((t) => ({ ...t, visible: false }))}
+        />
       </ScrollView>
     </SafeAreaView>
   );
