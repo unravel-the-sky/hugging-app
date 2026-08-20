@@ -11,12 +11,14 @@ import {
   Group,
   Image,
   Rect,
+  Transforms3d,
   useCanvasRef,
   useImage,
 } from "@shopify/react-native-skia";
 import React, { useEffect } from "react";
 import {
   Easing,
+  SharedValue,
   useDerivedValue,
   useSharedValue,
   withDelay,
@@ -26,9 +28,20 @@ import {
 export default function PostImage({
   media,
   selected,
+  photoTransform,
+  drawWidth,
+  drawHeight,
 }: {
   media: string;
   selected: FilterKey;
+  /** pan/pinch/rotate applied to the photo inside the polaroid window */
+  photoTransform?: SharedValue<Transforms3d>;
+  /**
+   * Size to draw the photo at, from `coverSize`. Bigger than the window on one
+   * axis so there is something to pan across; the clip group hides the rest.
+   */
+  drawWidth?: number;
+  drawHeight?: number;
 }) {
   const image = useImage(media);
 
@@ -69,6 +82,12 @@ export default function PostImage({
 
   const centerXLocal = canvasWidth / 2;
   const centerYLocal = canvasHeight / 2;
+
+  const windowCenterX = photoXLocal + photoWidth / 2;
+  const windowCenterY = photoYLocal + photoHeight / 2;
+
+  const drawnWidth = drawWidth ?? photoWidth;
+  const drawnHeight = drawHeight ?? photoHeight;
 
   // Inert for now — kept so the drop can be re-enabled later.
   const polaroidTransform = useDerivedValue(() => {
@@ -120,17 +139,34 @@ export default function PostImage({
           height={frameHeight}
           color="white"
         />
-        {/* Photo */}
-        <Image
-          x={photoXLocal}
-          y={photoYLocal}
-          width={photoWidth}
-          height={photoHeight}
-          image={image}
-          fit="cover"
+        {/* Photo — clipped to the window so it can be panned/zoomed/rotated */}
+        <Group
+          clip={{
+            x: photoXLocal,
+            y: photoYLocal,
+            width: photoWidth,
+            height: photoHeight,
+          }}
         >
-          <ColorMatrix matrix={animatedMatrix} />
-        </Image>
+          <Group
+            origin={{ x: windowCenterX, y: windowCenterY }}
+            transform={photoTransform}
+          >
+            {/* Drawn at its full aspect ratio and centred on the window;
+                fit="cover" would crop the overflow away and leave nothing
+                to pan to. */}
+            <Image
+              x={windowCenterX - drawnWidth / 2}
+              y={windowCenterY - drawnHeight / 2}
+              width={drawnWidth}
+              height={drawnHeight}
+              image={image}
+              fit="fill"
+            >
+              <ColorMatrix matrix={animatedMatrix} />
+            </Image>
+          </Group>
+        </Group>
       </Group>
     </Canvas>
   );

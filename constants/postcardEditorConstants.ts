@@ -68,3 +68,26 @@ export const SWATCHES: string[] = [
   colors.sky, // blue
   colors.primary, // purple
 ];
+
+/* ------------------------------------------------------------------ */
+/*  Photo geometry                                                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Size the photo has to be drawn at so it covers `boxWidth × boxHeight`
+ * without distortion. The overflowing axis is what the user gets to pan
+ * across, so we draw at this size and clip rather than letting Skia's
+ * fit="cover" discard the overflow.
+ */
+export const coverSize = (
+  imageWidth: number,
+  imageHeight: number,
+  boxWidth: number,
+  boxHeight: number,
+) => {
+  if (!imageWidth || !imageHeight) {
+    return { width: boxWidth, height: boxHeight };
+  }
+  const ratio = Math.max(boxWidth / imageWidth, boxHeight / imageHeight);
+  return { width: imageWidth * ratio, height: imageHeight * ratio };
+};
