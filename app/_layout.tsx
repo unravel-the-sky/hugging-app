@@ -116,6 +116,17 @@ export default function RootLayout() {
             }}
           />
           <Stack.Screen
+            name="account"
+            options={{
+              presentation: "formSheet",
+              sheetAllowedDetents: "fitToContents",
+              sheetGrabberVisible: true,
+              sheetCornerRadius: 28,
+              headerShown: false,
+              contentStyle: { backgroundColor: "#FFFFFF" },
+            }}
+          />
+          <Stack.Screen
             name="hug-back"
             options={{
               presentation: "formSheet",
@@ -142,16 +153,6 @@ export default function RootLayout() {
             options={{ headerShown: false, presentation: "fullScreenModal" }}
           />
           <Stack.Screen name="media" />
-          <Stack.Screen
-            name="profile"
-            options={{
-              presentation: "modal",
-              sheetGrabberVisible: true,
-              headerTransparent: false,
-              headerShadowVisible: true,
-              headerLargeTitleShadowVisible: true,
-            }}
-          />
           <Stack.Screen
             name="send-hug"
             options={{

@@ -58,7 +58,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView edges={["bottom"]} style={styles.overlay}>
+    <SafeAreaView edges={["top", "bottom"]} style={styles.overlay}>
       <DriftingAvatars count={5} intensity={90} />
       <View style={styles.container}>
         <AppText variant="title">Hugging app</AppText>

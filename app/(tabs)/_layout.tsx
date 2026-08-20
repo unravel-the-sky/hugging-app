@@ -1,4 +1,3 @@
-import AvatarImage from "@/components/avatar/AvatarImage";
 import Loader from "@/components/ui/Loader";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useFriends } from "@/hooks/useFriends";
@@ -8,37 +7,16 @@ import {
   DefaultTheme,
   ThemeProvider,
 } from "@react-navigation/native";
-import { Label, router, useSegments } from "expo-router";
+import { Label, useSegments } from "expo-router";
 import { NativeTabs } from "expo-router/unstable-native-tabs";
 import { useEffect, useState } from "react";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { StyleSheet, useColorScheme, View } from "react-native";
+import { useAvatarTabIcon } from "@/components/avatar/AvatarTabIcon";
 import { colors } from "../../components/ui/squish/theme";
 import { TabBarContext } from "../context/TabBarContext";
 import SetupScreen from "../setup";
 import SignInScreen from "../sign-in";
 import ChangeAvatarSheet from "../change-avatar";
-
-const getGreetingMessage = (): string => {
-  const currentHour = new Date().getHours();
-  let timeOfDay = "";
-
-  if (currentHour >= 5 && currentHour < 12) {
-    timeOfDay = "morning";
-  } else if (currentHour >= 12 && currentHour < 18) {
-    timeOfDay = "afternoon";
-  } else {
-    timeOfDay = "night"; // orEvening, depending on your preference
-  }
-
-  return `good ${timeOfDay},`;
-};
 
 export default function TabsLayout() {
   const { authUser, user, isHydrating } = useCurrentUser();
@@ -53,6 +31,11 @@ export default function TabsLayout() {
   const isOnSetup = segments[0] === "setup";
 
   const colorScheme = useColorScheme();
+
+  // the profile tab wears the user's own avatar, rendered off-screen and
+  // snapshotted because iOS tab items only accept images
+  const { source: avatarIconSource, snapshotView } =
+    useAvatarTabIcon(user ?? undefined);
 
   console.log(
     `TabsLayout is called, isHydaring: ${isHydrating} and userId: ${user?.uid}`,
@@ -88,25 +71,9 @@ export default function TabsLayout() {
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        {/* Shared Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={{ fontFamily: "Fredoka_600SemiBold", fontSize: 16 }}>
-              {getGreetingMessage()}
-            </Text>
-            <Text style={styles.usernameText}>{user?.displayName || ""}</Text>
-          </View>
-          <Pressable onPress={() => router.push("/profile")}>
-            {user && <AvatarImage isDrawn user={user} size="s" />}
-            {/* <FriendAvatar
-              name={"asdf"}
-              photoUri={user.photoThumbPath ?? undefined}
-            /> */}
-          </Pressable>
-        </View>
+      <View style={styles.container}>
+        {snapshotView}
 
-        {/* Tab Content */}
         <TabBarContext value={{ setIsTabBarHidden }}>
           <NativeTabs
             blurEffect="light"
@@ -148,9 +115,25 @@ export default function TabsLayout() {
                 md="settings"
               />
             </NativeTabs.Trigger>
+            <NativeTabs.Trigger name="profile">
+              <Label>You</Label>
+              {avatarIconSource ? (
+                // `original` keeps the photo's own colours — a templated
+                // avatar would just be a purple blob
+                <NativeTabs.Trigger.Icon
+                  src={avatarIconSource}
+                  renderingMode="original"
+                />
+              ) : (
+                <NativeTabs.Trigger.Icon
+                  sf="person.crop.circle"
+                  md="settings"
+                />
+              )}
+            </NativeTabs.Trigger>
           </NativeTabs>
         </TabBarContext>
-      </SafeAreaView>
+      </View>
     </ThemeProvider>
   );
 }
@@ -159,26 +142,5 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.lilac,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: colors.lilac,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 24,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
-    backgroundColor: colors.lilac,
-  },
-  usernameText: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#1A1A1A",
   },
 });

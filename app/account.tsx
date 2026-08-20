@@ -1,32 +1,27 @@
-import AvatarImage from "@/components/avatar/AvatarImage";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
-import Loader from "@/components/ui/Loader";
-import { colors, font, radius, shadow, spacing } from "@/components/ui/squish";
+import { colors, font, spacing } from "@/components/ui/squish";
 import { PlushButton } from "@/components/ui/squish/PlushButton";
-import { StatCard, StatCardRow } from "@/components/ui/squish/StatCard";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useHugDraft } from "@/hooks/useHugDraft";
 import { auth } from "@/lib/firebaseConfig";
 import { deleteAccountFn } from "@/lib/handleUser";
-import { Ionicons } from "@expo/vector-icons";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { router } from "expo-router";
 import { signOut } from "firebase/auth";
 import React, { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
-export default function ProfileScreen() {
+/**
+ * The account actions, kept off the profile screen so they cannot be tapped by
+ * accident. Presented as a sheet from the root stack — see app/_layout.tsx.
+ */
+export default function AccountScreen() {
   const [showLogout, setShowLogout] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
-
-  const { user, isHydrating } = useCurrentUser();
+  const [deleting, setDeleting] = useState(false);
 
   // anonymous users have no recovery path — logging out is destructive
   const isAnonymous = auth.currentUser?.isAnonymous ?? false;
-
-  const openAvatarSheet = () => router.push("/change-avatar");
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -64,76 +59,31 @@ export default function ProfileScreen() {
     }
   };
 
-  if (isHydrating || !user) {
-    return <Loader />;
-  }
-
-  const totalSent = user.stats.hugsSent ?? 0;
-  const totalReceived = user.stats.hugsReceived ?? 0;
-
   return (
-    <View style={styles.screen}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
-      </View>
+    <View style={styles.sheet}>
+      <Text style={styles.title}>account</Text>
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* identity */}
-        <View style={styles.profileSection}>
-          <Pressable onPress={openAvatarSheet} style={styles.avatarWrap}>
-            <AvatarImage isDrawn user={user} size="l" />
-            <View style={styles.cameraBadge}>
-              <Ionicons name="camera" size={18} color={colors.surface} />
-            </View>
-          </Pressable>
-          <Text style={styles.username}>{user?.displayName}</Text>
-          <PlushButton
-            label="change avatar"
-            variant="soft"
-            height={48}
-            onPress={openAvatarSheet}
-          />
-        </View>
-
-        <StatCardRow>
-          <StatCard
-            icon="paper-plane"
-            value={totalSent}
-            label="total hugs sent"
-          />
-          <StatCard
-            tone="blush"
-            icon="gift"
-            value={totalReceived}
-            label="total hugs received"
-          />
-        </StatCardRow>
-
-        {/* pushes the account actions to the bottom, per the design */}
-        <View style={styles.spacer} />
-
-        <PlushButton
-          label="blocked people"
-          variant="soft"
-          fullWidth
-          onPress={() => router.push("/blocked-people")}
-        />
-        <PlushButton
-          label="log out"
-          variant="blush"
-          fullWidth
-          onPress={() => setShowLogout(true)}
-        />
-        <PlushButton
-          label="delete account"
-          variant="blush"
-          fullWidth
-          onPress={() => setShowDelete(true)}
-        />
-      </ScrollView>
+      <PlushButton
+        label="blocked people"
+        variant="soft"
+        fullWidth
+        onPress={() => {
+          router.back();
+          router.push("/blocked-people");
+        }}
+      />
+      <PlushButton
+        label="log out"
+        variant="blush"
+        fullWidth
+        onPress={() => setShowLogout(true)}
+      />
+      <PlushButton
+        label="delete account"
+        variant="blush"
+        fullWidth
+        onPress={() => setShowDelete(true)}
+      />
 
       {/* logout confirm */}
       <ConfirmationModal
@@ -186,52 +136,20 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.mistBg },
-
-  header: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontFamily: font.displayBold,
-    color: colors.plumInk,
-  },
-
-  content: {
-    flexGrow: 1,
+  // the sheet sizes itself to this content, so the padding here is what sets
+  // how tall it comes up
+  sheet: {
     padding: spacing.xl,
+    paddingBottom: spacing.xl * 2,
     gap: spacing.md,
   },
-  spacer: { flex: 1 },
-
-  profileSection: {
-    alignItems: "center",
-    gap: spacing.lg,
-    paddingVertical: spacing.lg,
-  },
-  avatarWrap: { position: "relative" },
-  cameraBadge: {
-    position: "absolute",
-    bottom: spacing.sm,
-    right: -spacing.xs,
-    width: 40,
-    height: 40,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primary,
-    borderWidth: 3,
-    borderColor: colors.surface,
-    justifyContent: "center",
-    alignItems: "center",
-    ...shadow,
-  },
-  username: {
-    fontSize: 24,
+  title: {
+    fontSize: 22,
     fontFamily: font.displayBold,
     color: colors.plumInk,
+    textAlign: "center",
+    paddingBottom: spacing.sm,
   },
-
   sheetBody: {
     fontSize: 16,
     fontFamily: font.ui,

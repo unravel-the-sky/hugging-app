@@ -20,6 +20,7 @@ import { colors, font } from "@/components/ui/squish/theme";
 import { FilterKey, filterKeys, FILTERS } from "@/constants/postcardConstants";
 import { newOverlayId, Overlay } from "@/constants/postcardEditorConstants";
 
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useImageColors } from "@/hooks/useImageColors";
 import { useHugDraft } from "@/hooks/useHugDraft";
 import usePolaroidFrameCalc from "@/hooks/usePolaroidFrameCalc";
@@ -43,6 +44,7 @@ export default function Media({
   const image = useImage(media);
   const imageRef = useRef(null);
   const setPhoto = useHugDraft((s) => s.setPhotoUri);
+  const { user } = useCurrentUser();
 
   const { canvasWidth, canvasHeight, canvasPadding, frameWidth, frameHeight } =
     usePolaroidFrameCalc();
@@ -185,11 +187,22 @@ export default function Media({
     }
   };
 
-  // "add it!": upload and attach to the hug (no auto device-save).
+  // "add it!": upload and attach to the hug. A device copy is kept only if the
+  // user turned on auto-save in their profile.
   const handleAddToHug = async () => {
     try {
       setSaving(true);
       const uri = await captureCropped();
+
+      if (user?.autoSavePostcard) {
+        // best effort: a refused permission must not cost them the postcard
+        try {
+          const { status } = await MediaLibrary.requestPermissionsAsync();
+          if (status === "granted") await MediaLibrary.saveToLibraryAsync(uri);
+        } catch (err) {
+          console.error("Auto-save of the postcard failed:", err);
+        }
+      }
 
       const response = await fetch(uri);
       const blob = await response.blob();
