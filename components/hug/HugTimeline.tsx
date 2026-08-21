@@ -4,9 +4,9 @@ import { DayGroup, Direction, groupByDay } from "@/lib/hugs/groups";
 import { useScrollToTop } from "@react-navigation/native";
 import React, { useMemo, useRef } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
+import { ListRowGroup } from "../ui/squish/ListRow";
 import { PlushButton } from "../ui/squish/PlushButton";
 import { DayHeader, TimelineHugRow } from "./HugListComponents";
-import { RowCard } from "./HugRowCard";
 import { HugsEmptyState } from "./HugsEmptyState";
 import { HugFilter, useAllHugs } from "@/hooks/useAllHugs";
 import { useCollapsibleDays } from "@/hooks/useCollapsibleDays";
@@ -58,7 +58,7 @@ export const HugTimeline = ({
       <View>
         <DayHeader title={item.title} />
         {expanded && (
-          <RowCard>
+          <ListRowGroup>
             {item.hugs.map((hug, i) => {
               const direction = directions.get(hug.id) ?? "incoming";
               return (
@@ -72,7 +72,7 @@ export const HugTimeline = ({
                 />
               );
             })}
-          </RowCard>
+          </ListRowGroup>
         )}
       </View>
     );

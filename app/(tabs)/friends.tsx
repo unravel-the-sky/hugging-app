@@ -1,4 +1,4 @@
-import { IconButton, iconButtonTint } from "@/components/ui/squish";
+import { IconButton, iconButtonTint, ListRow } from "@/components/ui/squish";
 import { FriendAvatar } from "@/components/ui/squish/FriendAvatar";
 import { PlushButton } from "@/components/ui/squish/PlushButton";
 import useCreateHugWithNote from "@/hooks/useCreateHugWithNote";
@@ -71,7 +71,11 @@ export const FriendRow = ({
   const photoUri = useAvatarThumb(friend.id);
 
   return (
-    <Pressable
+    <ListRow
+      isFirst={isFirst}
+      isLast={isLast}
+      standalone={isTop}
+      style={isTop ? styles.cardItemTop : undefined}
       onPress={() => {
         router.push({
           pathname: "/friend-memory-lane",
@@ -79,42 +83,25 @@ export const FriendRow = ({
         });
       }}
     >
-      <View
-        style={[
-          styles.cardItem,
-          isFirst && !isTop && styles.cardItemFirst,
-          isLast && styles.cardItemLast,
-          isTop && styles.cardItemTop,
-        ]}
-      >
-        <View style={styles.row}>
-          <FriendAvatar
-            name={friend.displayName}
-            online={friend.online}
-            photoUri={photoUri ?? undefined}
-          />
+      <FriendAvatar
+        name={friend.displayName}
+        online={friend.online}
+        photoUri={photoUri ?? undefined}
+      />
 
-          <View style={styles.rowBody}>
-            <View style={styles.nameRow}>
-              {isTop && <TopHuggerBadge />}
-              <Text style={styles.name} numberOfLines={1}>
-                {friend.displayName}
-              </Text>
-            </View>
-            <Text style={styles.subText} numberOfLines={1}>
-              {lastHugLabel(friend)}
-            </Text>
-          </View>
-          <PlushButton
-            label="hug!"
-            variant="primary"
-            height={40}
-            onPress={onHug}
-          />
+      <View style={styles.rowBody}>
+        <View style={styles.nameRow}>
+          {isTop && <TopHuggerBadge />}
+          <Text style={styles.name} numberOfLines={1}>
+            {friend.displayName}
+          </Text>
         </View>
-        {!isLast && !isTop && <View style={styles.rowDivider} />}
+        <Text style={styles.subText} numberOfLines={1}>
+          {lastHugLabel(friend)}
+        </Text>
       </View>
-    </Pressable>
+      <PlushButton label="hug!" variant="primary" height={40} onPress={onHug} />
+    </ListRow>
   );
 };
 
@@ -136,63 +123,43 @@ const FriendRequestRow = ({
   const photoUri = useAvatarThumb(friendRequest.from);
 
   return (
-    <View
-      style={[
-        styles.cardItem,
-        isFirst && styles.cardItemFirst,
-        isLast && styles.cardItemLast,
-      ]}
-    >
-      <View style={styles.row}>
-        <FriendAvatar
-          name={friendRequest.fromName}
-          photoUri={photoUri || undefined}
-        />
+    <ListRow isFirst={isFirst} isLast={isLast}>
+      <FriendAvatar
+        name={friendRequest.fromName}
+        photoUri={photoUri || undefined}
+      />
 
-        <View style={styles.rowBody}>
-          <Text style={styles.name} numberOfLines={1}>
-            {friendRequest.fromName}
-          </Text>
-        </View>
-
-        <View
-          style={{
-            flex: 1,
-            justifyContent: "center",
-            flexDirection: "row",
-            gap: 8,
-          }}
-        >
-          {isBusy ? (
-            <ActivityIndicator color={colors.primary} />
-          ) : (
-            <>
-              <IconButton
-                variant="surface"
-                size={44}
-                accessibilityLabel="decline friend"
-                icon={<Ionicons name="close-outline" size={24} />}
-                onPress={onDecline}
-              />
-              <IconButton
-                variant="primary"
-                onPress={onAccept}
-                size={44}
-                accessibilityLabel="accept friend"
-                icon={
-                  <Ionicons
-                    name="checkmark-outline"
-                    color={"white"}
-                    size={24}
-                  />
-                }
-              />
-            </>
-          )}
-        </View>
+      <View style={styles.rowBody}>
+        <Text style={styles.name} numberOfLines={1}>
+          {friendRequest.fromName}
+        </Text>
       </View>
-      {!isLast && <View style={styles.rowDivider} />}
-    </View>
+
+      <View style={styles.requestActions}>
+        {isBusy ? (
+          <ActivityIndicator color={colors.primary} />
+        ) : (
+          <>
+            <IconButton
+              variant="surface"
+              size={44}
+              accessibilityLabel="decline friend"
+              icon={<Ionicons name="close-outline" size={24} />}
+              onPress={onDecline}
+            />
+            <IconButton
+              variant="primary"
+              onPress={onAccept}
+              size={44}
+              accessibilityLabel="accept friend"
+              icon={
+                <Ionicons name="checkmark-outline" color={"white"} size={24} />
+              }
+            />
+          </>
+        )}
+      </View>
+    </ListRow>
   );
 };
 
@@ -411,30 +378,13 @@ const styles = StyleSheet.create({
   listContent: { paddingHorizontal: spacing.xl, paddingBottom: 120 },
   listContentRequests: { paddingHorizontal: spacing.xl, paddingBottom: 20 },
 
-  // these mirror hugs.tsx — see note below about extracting them
-  cardItem: { backgroundColor: colors.surface, overflow: "hidden" },
-  cardItemFirst: {
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    ...shadow,
-  },
-  cardItemLast: {
-    borderBottomLeftRadius: radius.lg,
-    borderBottomRightRadius: radius.lg,
-    ...shadow,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-  },
-  rowDivider: {
-    height: StyleSheet.hairlineWidth * 2,
-    backgroundColor: colors.lilac,
-    marginHorizontal: spacing.lg,
-  },
   rowBody: { flex: 1, marginLeft: spacing.md },
+  requestActions: {
+    flex: 1,
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
   name: { fontFamily: font.uiBold, fontSize: 16, color: colors.plumInk },
   subText: {
     fontFamily: font.ui,
@@ -450,14 +400,11 @@ const styles = StyleSheet.create({
     color: colors.plumInk,
   },
 
-  // top hugger greieieieiei
+  // top hugger greieieieiei — ListRow's `standalone` handles the corners
   cardItemTop: {
     backgroundColor: tint(colors.butter, 0.65),
     borderWidth: 1,
     borderColor: colors.butter,
-    borderRadius: radius.lg, // stands alone visually even mid-list
-    // borderTopRightRadius: radius.lg, // stands alone visually even mid-list
-    marginBottom: 12,
   },
   nameRow: { gap: spacing.xs },
   topBadge: {

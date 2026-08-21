@@ -1,11 +1,10 @@
 export * from "./theme";
-export {
-  default as PlushButton,
-  PlushButton as PlushButtonNamed,
-} from "./PlushButton";
+export { PlushButton as PlushButtonNamed } from "./PlushButton";
 export type { PlushButtonProps, PlushButtonVariant } from "./PlushButton";
 export { IconButton, iconButtonTint } from "./IconButton";
 export { LabeledDivider } from "./LabeledDivider";
+export { ListRow, ListRowGroup } from "./ListRow";
+export type { ListRowProps } from "./ListRow";
 export type { LabeledDividerProps } from "./LabeledDivider";
 export type { IconButtonProps, IconButtonVariant } from "./IconButton";
 
