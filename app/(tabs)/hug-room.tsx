@@ -235,7 +235,7 @@ export default function HugRoom() {
           <PlushButton
             variant="blush"
             label="invite"
-            onPress={() => router.push("/friend-picker")}
+            onPress={() => console.log("fix later, TODO")}
           />
         ))}
 

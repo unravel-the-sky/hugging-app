@@ -170,16 +170,7 @@ export default function RootLayout() {
               headerLargeTitleShadowVisible: true,
             }}
           />
-          <Stack.Screen
-            name="friend-picker"
-            options={{
-              presentation: "formSheet",
-              sheetAllowedDetents: [0.5, 0.9], // half-screen and almost-full
-              sheetInitialDetentIndex: 0, // open at 0.5
-              sheetGrabberVisible: true, // adds the drag handle for free!
-              headerShown: false, // cleaner look in a sheet
-            }}
-          />
+
           <Stack.Screen
             name="change-avatar"
             options={{

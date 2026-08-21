@@ -6,8 +6,8 @@ import React, { useMemo } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
 import { HugRow, SectionHeader } from "./HugListComponents";
 import { HugsEmptyState } from "./HugsEmptyState";
-import { RowCard } from "./HugRowCard";
 import { useHugs } from "@/app/context/HugsContext";
+import { ListRowGroup } from "../ui/squish/ListRow";
 import { PlushButton } from "../ui/squish/PlushButton";
 
 export const SentHugsList = ({
@@ -41,7 +41,7 @@ export const SentHugsList = ({
         />
 
         {expanded && (
-          <RowCard>
+          <ListRowGroup>
             {item.hugs.map((hug, i) => (
               <HugRow
                 key={hug.id}
@@ -51,7 +51,7 @@ export const SentHugsList = ({
                 onPress={() => onSelectHug(hug)}
               />
             ))}
-          </RowCard>
+          </ListRowGroup>
         )}
       </View>
     );

@@ -9,6 +9,7 @@ import { Timestamp } from "firebase/firestore";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { FriendAvatar } from "../ui/squish/FriendAvatar";
+import { ListRow } from "../ui/squish/ListRow";
 import {
   colors,
   darken,
@@ -152,15 +153,7 @@ export const HugRow = ({
   const isOutgoing = direction === "outgoing";
 
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={!onPress}
-      style={({ pressed }) => [
-        styles.row,
-        showDivider && styles.rowDivider,
-        { backgroundColor: pressed ? colors.lilac : colors.surface },
-      ]}
-    >
+    <ListRow onPress={onPress} showDivider={showDivider}>
       <FriendAvatar name={other.name} photoUri={photoUri ?? undefined} />
 
       <View style={styles.rowBody}>
@@ -176,7 +169,7 @@ export const HugRow = ({
       <Text style={styles.rowTime}>
         {hug.createdAt ? formatTimestamp(hug.createdAt.toDate()) : "sending…"}
       </Text>
-    </Pressable>
+    </ListRow>
   );
 };
 
@@ -297,15 +290,7 @@ export const TimelineHugRow = ({
   const isNew = isHugUnread(hug, userId);
 
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={!onPress}
-      style={({ pressed }) => [
-        styles.timelineRow,
-        showDivider && styles.rowDivider,
-        { backgroundColor: pressed ? colors.lilac : colors.surface },
-      ]}
-    >
+    <ListRow onPress={onPress} showDivider={showDivider} dense>
       <View>
         <FriendAvatar name={other.name} photoUri={photoUri ?? undefined} />
         <DirectionBadge direction={direction} hug={hug} />
@@ -325,7 +310,7 @@ export const TimelineHugRow = ({
       </View>
 
       <StatusStack hug={hug} direction={direction} />
-    </Pressable>
+    </ListRow>
   );
 };
 
@@ -339,17 +324,6 @@ export const DayHeader = ({ title }: { title: string }) => (
 
 const styles = StyleSheet.create({
   /* rows */
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    overflow: "hidden",
-  },
-  rowDivider: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.soft,
-  },
   rowBody: {
     flex: 1,
     marginLeft: spacing.md,
@@ -488,13 +462,6 @@ const styles = StyleSheet.create({
   },
 
   // timeline stuf here
-  timelineRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: spacing.sm, // was md — this is most of the compaction
-    paddingHorizontal: spacing.lg,
-    overflow: "hidden",
-  },
   dirBadge: {
     position: "absolute",
     right: -2,
