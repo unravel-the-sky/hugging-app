@@ -7,8 +7,22 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import { use, useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { scheduleOnRN } from "react-native-worklets";
 import { ConfirmationModal } from "../ui/ConfirmationModal";
 import { colors, font, radius, shadow, spacing } from "../ui/squish";
 import { FriendAvatar } from "../ui/squish/FriendAvatar";
@@ -25,6 +39,19 @@ const SEALED_BG = ["#ddd6ef", "#d3cfdb"] as const;
 const FOOTER_HEIGHT = 260;
 /** With no thread to show, the card can drop back down over the button row. */
 const BARE_FOOTER_HEIGHT = 150;
+
+/**
+ * Swipe-to-dismiss, standing in for the native stack's back gesture — the hug
+ * view is state inside the hugs tab, not a pushed route, so there is no
+ * navigator to inherit that from.
+ *
+ * Started from the left edge only, like iOS: the card in the middle owns its
+ * own pan for tilt and flip, and the stage's 32px inset keeps the two apart.
+ */
+const EDGE_WIDTH = 32;
+/** Drag past this, or flick faster than the velocity, and the hug closes. */
+const DISMISS_DISTANCE = 90;
+const DISMISS_VELOCITY = 600;
 
 interface HugViewOverlayProps {
   hug: Hug;
@@ -121,6 +148,47 @@ export default function HugViewOverlay({
     });
   };
 
+  const { width: screenW } = useWindowDimensions();
+  const dragX = useSharedValue(0);
+  /** Only a drag that began at the screen edge dismisses. */
+  const fromEdge = useSharedValue(false);
+
+  // A different hug reuses this component, so the last drag must not linger.
+  useEffect(() => {
+    dragX.value = 0;
+  }, [hug.id, dragX]);
+
+  const swipeBack = Gesture.Pan()
+    // Rightward intent only, so vertical scrolling in the thread still works.
+    .activeOffsetX([15, 9999])
+    .failOffsetY([-25, 25])
+    .onBegin((e) => {
+      fromEdge.value = e.absoluteX <= EDGE_WIDTH;
+    })
+    .onUpdate((e) => {
+      if (!fromEdge.value) return;
+      dragX.value = Math.max(0, e.translationX);
+    })
+    .onEnd((e) => {
+      if (!fromEdge.value) return;
+
+      const leaving =
+        e.translationX > DISMISS_DISTANCE || e.velocityX > DISMISS_VELOCITY;
+
+      if (leaving) {
+        // Closing unmounts this component, so it waits for the slide to land.
+        dragX.value = withTiming(screenW, { duration: 120 }, (finished) => {
+          if (finished) scheduleOnRN(onClose);
+        });
+      } else {
+        dragX.value = withSpring(0);
+      }
+    });
+
+  const swipeStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: dragX.value }],
+  }));
+
   if (!hug) return null;
 
   console.log("HUGVIEWOVERLAY fromId: ", hug.from);
@@ -129,118 +197,120 @@ export default function HugViewOverlay({
 
   if (opened || startsOpen) {
     return (
-      <>
-        <HugRevealerImage
-          imageUri={hug.imagePath}
-          message={hug.note}
-          backgroundColor={hug.backgroundColor}
-          loading={false}
-          // The card yields room, and drops onto the thread, the moment there
-          // is one to read.
-          bottomInset={thread.length > 0 ? FOOTER_HEIGHT : BARE_FOOTER_HEIGHT}
-          cardAnchor={thread.length > 0 ? "bottom" : "center"}
-        />
-
-        {/* Who sent it, when, and the way out. Sits above the card rather
-            than inside the revealer, which owns only the card itself. */}
-        <View
-          style={[styles.header, { paddingTop: insets.top + spacing.lg }]}
-          pointerEvents="box-none"
-        >
-          <FriendAvatar
-            name={isSender ? recipientName : senderName}
-            uid={isSender ? hug.to : hug.from}
-            size={56}
+      <GestureDetector gesture={swipeBack}>
+        <Animated.View style={[styles.fill, swipeStyle]}>
+          <HugRevealerImage
+            imageUri={hug.imagePath}
+            message={hug.note}
+            backgroundColor={hug.backgroundColor}
+            loading={false}
+            // The card yields room, and drops onto the thread, the moment there
+            // is one to read.
+            bottomInset={thread.length > 0 ? FOOTER_HEIGHT : BARE_FOOTER_HEIGHT}
+            cardAnchor={thread.length > 0 ? "bottom" : "center"}
           />
 
-          <View style={styles.headerText}>
-            <Text style={[styles.headerTitle, { color: headerInk }]}>
-              {isSender
-                ? `you hugged ${recipientName}`
-                : `${senderName} hugged you`}
-            </Text>
-            {sentAt && (
-              <Text style={[styles.headerTime, { color: headerInk }]}>
-                {formatTimestamp(sentAt)}
+          {/* Who sent it, when, and the way out. Sits above the card rather
+            than inside the revealer, which owns only the card itself. */}
+          <View
+            style={[styles.header, { paddingTop: insets.top + spacing.lg }]}
+            pointerEvents="box-none"
+          >
+            <FriendAvatar
+              name={isSender ? recipientName : senderName}
+              uid={isSender ? hug.to : hug.from}
+              size={56}
+            />
+
+            <View style={styles.headerText}>
+              <Text style={[styles.headerTitle, { color: headerInk }]}>
+                {isSender
+                  ? `you hugged ${recipientName}`
+                  : `${senderName} hugged you`}
               </Text>
+              {sentAt && (
+                <Text style={[styles.headerTime, { color: headerInk }]}>
+                  {formatTimestamp(sentAt)}
+                </Text>
+              )}
+            </View>
+
+            <Pressable onPress={onClose} style={styles.headerBtn} hitSlop={8}>
+              <Ionicons name="close" size={24} color={colors.plumInk} />
+            </Pressable>
+          </View>
+
+          {/* Everything below the card: the note stacks on the buttons rather
+            than floating over them at its own absolute offset. */}
+          <View style={styles.footer} pointerEvents="box-none">
+            <LinearGradient
+              colors={[
+                "rgba(246,243,251,0.85)",
+                "rgba(246,243,251,0)",
+                colors.mistBg,
+              ]}
+              locations={[0, 1]}
+              pointerEvents="none"
+            />
+            <HugBackThread hug={hug} myUid={myUid} />
+
+            {/* Whose move it is. A button on my turn; otherwise a line saying
+              why there isn't one, so a closed thread doesn't just go blank. */}
+            {myTurn ? (
+              <View style={styles.buttonRow}>
+                <PlushButton
+                  variant="blush"
+                  label={thread.length === 0 ? "hug back" : "answer"}
+                  onPress={handleHugBack}
+                />
+                <Pressable onPress={() => setInfoTopic("limit")} hitSlop={8}>
+                  <Text style={styles.turnsLeft}>
+                    {turnsLeft === 1 ? "1 left" : `${turnsLeft} left`}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : (
+              thread.length > 0 &&
+              turnsLeft !== 0 && (
+                <Pressable
+                  onPress={() => setInfoTopic("turn")}
+                  hitSlop={8}
+                  style={styles.turnHintPress}
+                >
+                  <Text style={[styles.turnsLeft, styles.turnHint]}>
+                    {`${otherName}'s turn`}
+                  </Text>
+                </Pressable>
+              )
             )}
           </View>
 
-          <Pressable onPress={onClose} style={styles.headerBtn} hitSlop={8}>
-            <Ionicons name="close" size={24} color={colors.plumInk} />
-          </Pressable>
-        </View>
+          <ConfirmationModal
+            isVisible={infoTopic !== null}
+            title="hug backs"
+            confirmButtonLabel="ok"
+            onConfirm={() => setInfoTopic(null)}
+            onRequestClose={() => setInfoTopic(null)}
+          >
+            <Text style={styles.modalBody}>
+              {infoTopic === "turn"
+                ? `you can only write back when ${otherName} writes you`
+                : "you can hug back each other 3 times inside a hug!"}
+            </Text>
+          </ConfirmationModal>
 
-        {/* Everything below the card: the note stacks on the buttons rather
-            than floating over them at its own absolute offset. */}
-        <View style={styles.footer} pointerEvents="box-none">
-          <LinearGradient
-            colors={[
-              "rgba(246,243,251,0.85)",
-              "rgba(246,243,251,0)",
-              colors.mistBg,
-            ]}
-            locations={[0, 1]}
-            pointerEvents="none"
+          <Toast
+            visible={confirmVisible}
+            message={
+              latest?.from === myUid
+                ? `you hugged ${otherName} back`
+                : `${otherName} hugged you back`
+            }
+            onHide={() => setConfirmVisible(false)}
+            icon="heart-circle-outline"
           />
-          <HugBackThread hug={hug} myUid={myUid} />
-
-          {/* Whose move it is. A button on my turn; otherwise a line saying
-              why there isn't one, so a closed thread doesn't just go blank. */}
-          {myTurn ? (
-            <View style={styles.buttonRow}>
-              <PlushButton
-                variant="blush"
-                label={thread.length === 0 ? "hug back" : "answer"}
-                onPress={handleHugBack}
-              />
-              <Pressable onPress={() => setInfoTopic("limit")} hitSlop={8}>
-                <Text style={styles.turnsLeft}>
-                  {turnsLeft === 1 ? "1 left" : `${turnsLeft} left`}
-                </Text>
-              </Pressable>
-            </View>
-          ) : (
-            thread.length > 0 &&
-            turnsLeft !== 0 && (
-              <Pressable
-                onPress={() => setInfoTopic("turn")}
-                hitSlop={8}
-                style={styles.turnHintPress}
-              >
-                <Text style={[styles.turnsLeft, styles.turnHint]}>
-                  {`${otherName}'s turn`}
-                </Text>
-              </Pressable>
-            )
-          )}
-        </View>
-
-        <ConfirmationModal
-          isVisible={infoTopic !== null}
-          title="hug backs"
-          confirmButtonLabel="ok"
-          onConfirm={() => setInfoTopic(null)}
-          onRequestClose={() => setInfoTopic(null)}
-        >
-          <Text style={styles.modalBody}>
-            {infoTopic === "turn"
-              ? `you can only write back when ${otherName} writes you`
-              : "you can hug back each other 3 times inside a hug!"}
-          </Text>
-        </ConfirmationModal>
-
-        <Toast
-          visible={confirmVisible}
-          message={
-            latest?.from === myUid
-              ? `you hugged ${otherName} back`
-              : `${otherName} hugged you back`
-          }
-          onHide={() => setConfirmVisible(false)}
-          icon="heart-circle-outline"
-        />
-      </>
+        </Animated.View>
+      </GestureDetector>
     );
   }
 
