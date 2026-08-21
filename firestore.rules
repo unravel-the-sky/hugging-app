@@ -1,0 +1,132 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      // Anyone signed in can read any user profile
+      // tighten it when friend request thingy is implemented)
+      allow read: if request.auth != null;
+
+      allow create: if request.auth != null
+                    && request.auth.uid == userId
+                    && request.resource.data.keys().hasAll(['displayName', 'friends', 'stats']);
+
+      // TODO(security): currently any signed-in user can update any user doc.
+      // Tighten when friend-request flow is implemented.
+      allow update: if request.auth != null;
+
+      allow delete: if request.auth != null && request.auth.uid == userId;
+
+      // NEW — the subcollection needs its own rule
+      match /friends/{friendId} {
+        allow read:  if request.auth != null && request.auth.uid == userId;
+        allow write: if false;   // only Cloud Functions (admin SDK) write here
+      }
+    }
+
+    match /usernames/{username} {
+      // Any signed-in user can look up usernames
+      allow read: if request.auth != null;
+
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid;
+
+      // Usernames are immutable once claimed
+      allow update: if false;
+
+      // No deletes for now (revisit with account deletion)
+      allow delete: if false;
+    }
+
+    match /blocks/{blockId} {
+      allow read, write: if false;   // server-only; clients go through callables
+    }
+
+    match /hugs/{hugId} {
+      function isParticipant() {
+        return request.auth != null && (
+          resource.data.from == request.auth.uid ||
+          resource.data.to == request.auth.uid
+        );
+      }
+
+      function changedKeys() {
+        return request.resource.data.diff(resource.data).affectedKeys();
+      }
+
+      // The recipient opening the hug itself, once.
+      function isSeenUpdate() {
+        return changedKeys().hasOnly(['seenAt'])
+          && resource.data.to == request.auth.uid;
+      }
+
+      // Either side marking the thread read. Each may only touch its own key,
+      // so marking read can never overwrite the other side's marker.
+      function isThreadSeenUpdate() {
+        return changedKeys().hasOnly(['seenAtBy'])
+          && request.resource.data.seenAtBy
+               .diff(resource.data.get('seenAtBy', {}))
+               .affectedKeys()
+               .hasOnly([request.auth.uid])
+          && request.resource.data.seenAtBy[request.auth.uid] is timestamp;
+      }
+
+      // Appending one turn to the thread. The hug is the sender's first turn,
+      // so the thread opens with `to` and strictly alternates from there,
+      // capped at 3 each. Legacy one-shot hug backs (hugBackNote, never
+      // backfilled) are closed: `hugBacks` may not start on a hug that has one.
+      function isThreadAppend() {
+        let before = resource.data.get('hugBacks', []);
+        let after = request.resource.data.hugBacks;
+        let added = after[after.size() - 1];
+
+        return changedKeys().hasOnly(['hugBacks'])
+          && after.size() == before.size() + 1
+          && after.size() <= 6
+          // Existing turns are immutable. The empty-thread guard is load
+          // bearing, not defensive: an empty slice range (`after[0:0]`) is an
+          // out-of-bounds error in this language, not an empty list, and an
+          // erroring condition denies the write.
+          && (before.size() == 0 || after[0:before.size()] == before)
+          && (before.size() > 0 || !('hugBackNote' in resource.data))
+          && added.keys().hasOnly(['from', 'note', 'createdAt'])
+          && added.keys().hasAll(['from', 'note', 'createdAt'])
+          && added.from == request.auth.uid
+          && added.note is string
+          && added.note.size() > 0
+          && added.note.size() <= 140
+          && added.createdAt is timestamp
+          && added.createdAt <= request.time
+          && added.createdAt > request.time - duration.value(10, 'm')
+          // Whose turn: the recipient opens, then never twice in a row.
+          && (before.size() == 0
+                ? request.auth.uid == resource.data.to
+                : before[before.size() - 1].from != request.auth.uid);
+      }
+
+      // Sender or recipient can read
+      allow read: if isParticipant();
+
+      // Caller must be the sender
+      allow create: if request.auth != null
+                    && request.resource.data.from == request.auth.uid
+                    && request.resource.data.keys().hasAll(['from', 'to', 'fromName', 'toName', 'createdAt']);
+
+      allow update: if isParticipant()
+                    && (isSeenUpdate() || isThreadSeenUpdate() || isThreadAppend());
+
+      allow delete: if false;
+    }
+
+    match /friendshipRequests/{id} {
+      allow get: if request.auth != null;
+      allow create: if request.auth.uid == request.resource.data.from
+                    && request.resource.data.from != request.resource.data.to
+                    && request.resource.data.status == "pending";
+      allow update, delete: if false;
+      allow list: if request.auth != null
+            && (request.auth.uid == resource.data.to
+                || request.auth.uid == resource.data.from);
+    }
+  }
+}

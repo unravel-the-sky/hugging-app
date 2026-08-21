@@ -1,5 +1,12 @@
 import AvatarImage from "@/components/avatar/AvatarImage";
-import { colors, font, radius, shadow, spacing } from "@/components/ui/squish";
+import {
+  colors,
+  font,
+  LabeledDivider,
+  radius,
+  shadow,
+  spacing,
+} from "@/components/ui/squish";
 import { FriendAvatar } from "@/components/ui/squish/FriendAvatar";
 import { PlushButton } from "@/components/ui/squish/PlushButton";
 import RoundIconButton from "@/components/ui/squish/RountIconButton";
@@ -10,6 +17,7 @@ import { useGetDownloadUrl } from "@/hooks/useGetDownloadUrl";
 import { auth, db } from "@/lib/firebaseConfig";
 import { UserFriend } from "@/lib/handleFriends";
 import { getHugsWith, Hug } from "@/lib/handleHugs";
+import { threadOf } from "@/lib/hugs/thread";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
@@ -150,16 +158,14 @@ export default function FriendMemoryLane() {
         >
           {hugs.map((h) => {
             const senderIsMe = h.from === user?.uid;
-            const recipientIsMe = h.to === user?.uid;
-            const hasBack = !!h.hugBackNote;
-
-            const backAuthorName = recipientIsMe ? "You" : h.toName;
+            const thread = threadOf(h);
             const createdAt = h.createdAt?.toDate();
 
             return (
               <View key={h.id}>
-                <MemDivider
+                <LabeledDivider
                   label={createdAt ? formatMemoryDate(createdAt) : "—"}
+                  style={styles.divider}
                 />
 
                 <MemRow
@@ -190,32 +196,42 @@ export default function FriendMemoryLane() {
                   ) : null}
                 </MemRow>
 
-                {hasBack ? (
-                  <MemRow
-                    side={recipientIsMe ? "right" : "left"}
-                    avatar={
-                      <AvatarImage
-                        avatar={
-                          h.from === user?.uid
-                            ? user.avatar
-                            : h.fromAvatar || undefined
-                        }
-                        photoURL={
-                          h.from === user?.uid ? friendPhotoUrl : myPhotoUrl
-                        }
-                        name={h.fromName}
-                        size="s"
+                {thread.map((back, i) => {
+                  const backIsMine = back.from === user?.uid;
+                  const backAuthorName = backIsMine
+                    ? "You"
+                    : back.from === h.from
+                      ? h.fromName
+                      : h.toName;
+
+                  return (
+                    <MemRow
+                      key={`${back.from}-${back.createdAt.toMillis()}-${i}`}
+                      side={backIsMine ? "right" : "left"}
+                      avatar={
+                        <AvatarImage
+                          avatar={
+                            backIsMine
+                              ? user?.avatar
+                              : h.from === user?.uid
+                                ? undefined
+                                : h.fromAvatar || undefined
+                          }
+                          photoURL={backIsMine ? myPhotoUrl : friendPhotoUrl}
+                          name={backAuthorName}
+                          size="s"
+                        />
+                      }
+                      caption={`${backAuthorName} hugged back 🫂`}
+                    >
+                      <MemNote
+                        text={back.note}
+                        side="right"
+                        mine={backIsMine}
                       />
-                    }
-                    caption={`${backAuthorName} hugged back 🫂`}
-                  >
-                    <MemNote
-                      text={h.hugBackNote!}
-                      side="right"
-                      mine={recipientIsMe}
-                    />
-                  </MemRow>
-                ) : null}
+                    </MemRow>
+                  );
+                })}
               </View>
             );
           })}
@@ -269,16 +285,6 @@ export default function FriendMemoryLane() {
 }
 
 /* ── pieces ──────────────────────────────────────────────────────────── */
-
-function MemDivider({ label }: { label: string }) {
-  return (
-    <View style={styles.divider}>
-      <View style={styles.dividerLine} />
-      <Text style={styles.dividerLabel}>{label}</Text>
-      <View style={styles.dividerLine} />
-    </View>
-  );
-}
 
 function MemRow({
   side,
@@ -524,18 +530,8 @@ const styles = StyleSheet.create({
   },
   /* divider */
   divider: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
     paddingTop: spacing.xl,
     paddingBottom: spacing.sm,
-  },
-  dividerLine: { flex: 1, height: 1.5, backgroundColor: "#E7E0F4" },
-  dividerLabel: {
-    fontFamily: font.uiBold,
-    fontSize: 11.5,
-    letterSpacing: 0.2,
-    color: colors.softInk,
   },
 
   /* row */

@@ -28,7 +28,7 @@ import * as MediaLibrary from "expo-media-library";
 import { useFocusEffect } from "expo-router";
 import { scheduleOnRN } from "react-native-worklets";
 import { contrastingTint } from "@/lib/util";
-import { colors, font } from "../ui/squish";
+import { colors, font, spacing } from "../ui/squish";
 import Toast from "../ui/squish/Toast";
 import { HeartsGridSkia } from "./HeartGridSkia";
 
@@ -49,12 +49,23 @@ const BORDER = 6; // the cream postcard border FACE_INSET never gave you
 const INK = "#270865";
 const PAPER = "#FFFFFF";
 
+/** Card shape before the photo reports its own, and the fallback if it never does. */
 const PHOTO_RATIO = 1038 / 1224; // 0.848
+/** Keeps a panorama or a very tall photo from turning the card into a strip. */
+const MIN_RATIO = 0.5;
+const MAX_RATIO = 1.9;
 
 const clamp = (v: number, lo: number, hi: number) => {
   "worklet";
   return Math.max(lo, Math.min(hi, v));
 };
+
+/** Room the sender header needs above the card. */
+const TOP_INSET = 96;
+/** Room below the card when nothing but the hug-back button sits there. */
+const DEFAULT_BOTTOM_INSET = 150;
+/** Breathing room so the card never touches either inset. */
+const SLACK = 74;
 
 interface HugRevealerImageProps {
   imageUri?: string;
@@ -63,6 +74,21 @@ interface HugRevealerImageProps {
   loading?: boolean;
   /** hex the sender picked in the editor; falls back to the stock lavender */
   backgroundColor?: string;
+  /**
+   * Space to keep clear below the card. The parent owns everything down there
+   * — the thread and the button — so it decides how much room the card gives
+   * up; a hug with hug-backs to show wants the card sitting higher.
+   */
+  bottomInset?: number;
+  /**
+   * Where the card sits in the space left over after the insets.
+   *
+   * "center" splits that slack above and below the card. "bottom" gives it
+   * all to the top, dropping the card onto the inset — which is what you want
+   * when a thread starts right below it, so the two read as one column
+   * instead of being pushed apart by half the slack.
+   */
+  cardAnchor?: "center" | "bottom";
 }
 
 /**
@@ -74,6 +100,8 @@ export default function HugRevealerImage({
   message,
   aspect = 3 / 4,
   backgroundColor,
+  bottomInset = DEFAULT_BOTTOM_INSET,
+  cardAnchor = "center",
 }: HugRevealerImageProps) {
   // The sender's backdrop carries over, and the hearts take the far end of it
   // so they stay legible whichever way the photo leaned.
@@ -102,6 +130,16 @@ export default function HugRevealerImage({
   const { ref: tiltRef, x: tiltX, y: tiltY } = useTiltNew();
 
   const [imgLoaded, setImgLoaded] = useState(false);
+  /**
+   * The photo's own width/height, once it loads. The card was a fixed portrait
+   * regardless of what was inside it, so any photo that wasn't 1038×1224 got
+   * letterboxed — a landscape shot left a band of blank paper under it. The
+   * card now takes the photo's shape, so `contain` has nothing to letterbox.
+   *
+   * Measured rather than stored on the hug: it works for hugs sent before
+   * this change too, with no field to backfill.
+   */
+  const [photoRatio, setPhotoRatio] = useState<number | null>(null);
 
   // opacity swap instead of backfaceVisibility — Android stays predictable
   const showBack = useDerivedValue(() => flip.value < -90);
@@ -245,12 +283,15 @@ export default function HugRevealerImage({
   }));
 
   const { width: winW, height: winH } = useWindowDimensions();
+  const ratio = photoRatio ?? PHOTO_RATIO;
+  // The photo box; BORDER is added back on for the paper frame around it.
+  const available = winH - TOP_INSET - bottomInset - SLACK;
   const photoW = Math.min(
     winW - 64 - BORDER * 2,
-    (winH - 320 - BORDER * 2) * PHOTO_RATIO,
+    (available - BORDER * 2) * ratio,
   );
   const cardW = photoW + BORDER * 2;
-  const cardH = photoW / PHOTO_RATIO + BORDER * 2;
+  const cardH = photoW / ratio + BORDER * 2;
 
   const [perm, requestPerm] = MediaLibrary.usePermissions({ writeOnly: true });
   const [toast, setToast] = useState<{ visible: boolean; message: string }>({
@@ -268,7 +309,16 @@ export default function HugRevealerImage({
       />
 
       {hasImage && (
-        <View style={styles.stage} pointerEvents="box-none">
+        <View
+          style={[
+            styles.stage,
+            {
+              paddingBottom: bottomInset + spacing.md,
+              justifyContent: cardAnchor === "bottom" ? "flex-end" : "center",
+            },
+          ]}
+          pointerEvents="box-none"
+        >
           <GestureDetector gesture={gesture}>
             <View style={[styles.flipWrap, { width: cardW, height: cardH }]}>
               <Animated.View style={[styles.face, frontStyle]}>
@@ -276,7 +326,15 @@ export default function HugRevealerImage({
                   source={downloadUrl}
                   style={styles.photo}
                   contentFit="contain"
-                  onLoad={() => setImgLoaded(true)}
+                  onLoad={(e) => {
+                    setImgLoaded(true);
+                    const { width, height } = e.source ?? {};
+                    if (width && height) {
+                      setPhotoRatio(
+                        clamp(width / height, MIN_RATIO, MAX_RATIO),
+                      );
+                    }
+                  }}
                   transition={200}
                   cachePolicy="memory-disk"
                 />
@@ -293,7 +351,16 @@ export default function HugRevealerImage({
       )}
 
       {!hasImage && (
-        <View style={styles.stage} pointerEvents="none">
+        <View
+          style={[
+            styles.stage,
+            {
+              paddingBottom: bottomInset,
+              justifyContent: cardAnchor === "bottom" ? "flex-end" : "center",
+            },
+          ]}
+          pointerEvents="none"
+        >
           <View style={styles.noteOnly}>
             <Text style={styles.noteOnlyText}>
               {message?.trim() ? message : "Sending you a hug 💜"}
@@ -324,13 +391,17 @@ const styles = StyleSheet.create({
     // Leaves room for the sender header above and the hug-back button below,
     // so the card centres in what's left rather than under the header.
     paddingTop: 96,
-    paddingBottom: 150,
+    paddingBottom: 180,
   },
   flipWrap: {
     // width: "100%",
   },
   face: {
     ...StyleSheet.absoluteFill,
+    // The paper frame. Without this the photo filled the card edge to edge and
+    // BORDER only inflated the card, so the "border" you saw was whatever
+    // letterboxing happened to be left over.
+    padding: BORDER,
     backgroundColor: PAPER,
     shadowColor: colors.primary,
     shadowOpacity: 0.18,
@@ -340,7 +411,6 @@ const styles = StyleSheet.create({
   },
   photo: {
     flex: 1,
-    // backgroundColor: "green",
   },
   back: {
     alignItems: "center",

@@ -36,18 +36,33 @@ const isStoredTimestamp = (value: unknown): value is StoredTimestamp =>
   typeof (value as StoredTimestamp).seconds === "number" &&
   typeof (value as StoredTimestamp).nanoseconds === "number";
 
+const store = (value: Timestamp): StoredTimestamp => ({
+  seconds: value.seconds,
+  nanoseconds: value.nanoseconds,
+});
+
 function serialize(hugs: Hug[]) {
   return hugs.map((hug) => {
     const out: Record<string, unknown> = { ...hug };
     for (const field of TIMESTAMP_FIELDS) {
       const value = hug[field];
-      if (value) {
-        out[field] = {
-          seconds: value.seconds,
-          nanoseconds: value.nanoseconds,
-        };
-      }
+      if (value) out[field] = store(value);
     }
+
+    // The thread carries timestamps one and two levels down, so they need
+    // the same treatment as the top-level fields.
+    if (hug.hugBacks) {
+      out.hugBacks = hug.hugBacks.map((item) => ({
+        ...item,
+        createdAt: store(item.createdAt),
+      }));
+    }
+    if (hug.seenAtBy) {
+      out.seenAtBy = Object.fromEntries(
+        Object.entries(hug.seenAtBy).map(([uid, at]) => [uid, store(at)]),
+      );
+    }
+
     return out;
   });
 }
@@ -69,6 +84,39 @@ function revive(raw: unknown): Hug[] {
         // that looks like a Timestamp but has no toDate().
         delete hug[field];
       }
+    }
+
+    // A thread item without a usable createdAt can't be ordered or compared
+    // against a seen marker, so the whole thread is dropped rather than
+    // rendered half-broken; the live snapshot restores it moments later.
+    if (Array.isArray(hug.hugBacks)) {
+      const items = hug.hugBacks as Record<string, unknown>[];
+      hug.hugBacks = items.every(
+        (item) => item && isStoredTimestamp(item.createdAt),
+      )
+        ? items.map((item) => ({
+            ...item,
+            createdAt: new Timestamp(
+              (item.createdAt as StoredTimestamp).seconds,
+              (item.createdAt as StoredTimestamp).nanoseconds,
+            ),
+          }))
+        : undefined;
+    } else if (hug.hugBacks !== undefined) {
+      delete hug.hugBacks;
+    }
+
+    if (typeof hug.seenAtBy === "object" && hug.seenAtBy !== null) {
+      hug.seenAtBy = Object.fromEntries(
+        Object.entries(hug.seenAtBy as Record<string, unknown>).flatMap(
+          ([uid, at]) =>
+            isStoredTimestamp(at)
+              ? [[uid, new Timestamp(at.seconds, at.nanoseconds)]]
+              : [],
+        ),
+      );
+    } else if (hug.seenAtBy !== undefined) {
+      delete hug.seenAtBy;
     }
 
     return [hug as unknown as Hug];
