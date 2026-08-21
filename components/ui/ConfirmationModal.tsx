@@ -7,11 +7,12 @@ type ConfirmationModalProps = {
   isVisible: boolean;
   title: string;
   confirmButtonLabel: string;
-  cancelButtonLabel: string;
+
+  cancelButtonLabel?: string;
   children: React.ReactNode;
   disabled?: boolean;
   onConfirm: () => void;
-  onCancel: () => void;
+  onCancel?: () => void;
   onRequestClose: () => void;
 };
 
@@ -40,13 +41,15 @@ export const ConfirmationModal = ({
           <>{children}</>
 
           <View style={styles.actions}>
-            <PlushButton
-              label={cancelButtonLabel}
-              variant="soft"
-              onPress={onCancel}
-              disabled={disabled}
-              style={styles.actionBtn}
-            />
+            {!!cancelButtonLabel && (
+              <PlushButton
+                label={cancelButtonLabel}
+                variant="soft"
+                onPress={onCancel}
+                disabled={disabled}
+                style={styles.actionBtn}
+              />
+            )}
             <PlushButton
               label={confirmButtonLabel}
               variant="blush"
@@ -64,7 +67,7 @@ export const ConfirmationModal = ({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(74, 66, 104, 0.45)",
+    backgroundColor: "rgba(26, 24, 36, 0.55)",
     justifyContent: "center",
     paddingHorizontal: spacing.xl,
   },
@@ -81,6 +84,7 @@ const styles = StyleSheet.create({
     color: colors.plumInk,
     textAlign: "center",
   },
+  /** Shared body copy for children passed into the sheet. */
   sheetBody: {
     fontSize: 16,
     fontFamily: font.ui,

@@ -189,18 +189,35 @@ export const onHugCreated = onDocumentCreated("hugs/{hugId}", async (event) => {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** Keep in sync with lib/hugs/thread.ts. */
+const MAX_HUG_BACKS = 6;
+
+type HugBackItem = {
+  from: string;
+  note: string;
+  createdAt: FirebaseFirestore.Timestamp;
+};
+
+const threadOf = (data: FirebaseFirestore.DocumentData): HugBackItem[] =>
+  Array.isArray(data.hugBacks) ? (data.hugBacks as HugBackItem[]) : [];
+
 export const onHugBack = onDocumentUpdated("hugs/{hugId}", async (event) => {
   const before = event.data?.before.data();
   const after = event.data?.after.data();
   if (!before || !after) return;
 
-  // this fires on every hug write — markSeen alone will hit it constantly.
-  // only proceed on the transition from no-hug-back to hug-back.
-  if (before.hugBackAt || !after.hugBackAt) return;
+  // this fires on every hug write — marking seen alone will hit it
+  // constantly. Only proceed when a turn was actually appended.
+  const beforeThread = threadOf(before);
+  const afterThread = threadOf(after);
+  if (afterThread.length <= beforeThread.length) return;
+  if (afterThread.length > MAX_HUG_BACKS) return;
   if (!after.from || !after.to) return;
 
-  const backFrom = after.to; // the original recipient hugged back
-  const backTo = after.from;
+  const latest = afterThread[afterThread.length - 1];
+  const backFrom = latest.from;
+  const backTo = backFrom === after.from ? after.to : after.from;
+  const isFirstBack = afterThread.length === 1;
 
   // Blocking deletes the hugs between the pair, so there should be nothing
   // left to hug back — but a client holding a stale copy can still write one,
@@ -211,9 +228,13 @@ export const onHugBack = onDocumentUpdated("hugs/{hugId}", async (event) => {
   }
 
   try {
-    const basis = after.seenAt ?? after.createdAt;
+    // How long this turn took: measured from the turn it answers, or from
+    // the hug itself for the first one.
+    const basis = isFirstBack
+      ? (after.seenAt ?? after.createdAt)
+      : afterThread[afterThread.length - 2].createdAt;
     const ms = basis
-      ? Math.min(after.hugBackAt.toMillis() - basis.toMillis(), DAY_MS)
+      ? Math.min(latest.createdAt.toMillis() - basis.toMillis(), DAY_MS)
       : null;
 
     const batch = db.batch();
@@ -239,7 +260,7 @@ export const onHugBack = onDocumentUpdated("hugs/{hugId}", async (event) => {
         {
           hugBackCount: FieldValue.increment(1),
           ...(ms !== null && { hugBackTotalMs: FieldValue.increment(ms) }),
-          lastHugBackAt: after.hugBackAt,
+          lastHugBackAt: latest.createdAt,
         },
         { merge: true },
       );
@@ -254,9 +275,15 @@ export const onHugBack = onDocumentUpdated("hugs/{hugId}", async (event) => {
   const token = userSnap.get("pushToken");
   if (!token) return;
 
+  // Names live on the hug, keyed by direction, not by who is speaking now.
+  const backFromName =
+    (backFrom === after.from ? after.fromName : after.toName) ?? "Someone";
+
   await sendExpoPush(token, {
     title: "Hugged back 🫂",
-    body: `${after.toName ?? "Someone"} hugged you back!`,
+    body: isFirstBack
+      ? `${backFromName} hugged you back!`
+      : `${backFromName} answered: ${latest.note}`,
     data: { type: "hug_back", hugId: event.params.hugId },
   });
 });

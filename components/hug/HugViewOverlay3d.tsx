@@ -1,33 +1,42 @@
+import { TabBarContext } from "@/app/context/TabBarContext";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Hug } from "@/lib/handleHugs";
+import { canHugBack, hugBacksLeft, threadOf } from "@/lib/hugs/thread";
+import { formatTimestamp, readableText } from "@/lib/util";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import { use, useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Ionicons from "@expo/vector-icons/Ionicons";
-import { formatTimestamp, readableText } from "@/lib/util";
-import {
-  colors,
-  font,
-  IconButton,
-  radius,
-  shadow,
-  spacing,
-} from "../ui/squish";
+import { ConfirmationModal } from "../ui/ConfirmationModal";
+import { colors, font, radius, shadow, spacing } from "../ui/squish";
 import { FriendAvatar } from "../ui/squish/FriendAvatar";
 import { PlushButton } from "../ui/squish/PlushButton";
 import Toast from "../ui/squish/Toast";
+import { HugBackThread } from "./HugBackThread";
 import { HugFaceSeal } from "./HugFaceSeal";
 import HugRevealerImage from "./HugRevealerImage";
-import { TabBarContext } from "@/app/context/TabBarContext";
 
 // Lavender gradient from the "Sealed (before)" screen.
 const SEALED_BG = ["#ddd6ef", "#d3cfdb"] as const;
 
+/** Height of the band below the card. Shared with the card, which sits above it. */
+const FOOTER_HEIGHT = 260;
+/** With no thread to show, the card can drop back down over the button row. */
+const BARE_FOOTER_HEIGHT = 150;
+
 interface HugViewOverlayProps {
   hug: Hug;
-  isReadOnly?: boolean;
+  /**
+   * Skip the sealed-envelope ceremony and show the card straight away, for a
+   * hug you sent yourself — there is nothing to reveal.
+   *
+   * This used to be `isReadOnly` and also gated the hug-back button, which
+   * was fine while only the recipient could answer. Now both sides take
+   * turns, so who may act is `canHugBack`'s call alone.
+   */
+  startsOpen?: boolean;
   onHugBack?: (hug: Hug) => void;
   onOpen: () => void;
   onClose: () => void;
@@ -36,7 +45,7 @@ interface HugViewOverlayProps {
 
 export default function HugViewOverlay({
   hug,
-  isReadOnly,
+  startsOpen,
   onHugBack,
   onOpen,
   onClose,
@@ -52,12 +61,16 @@ export default function HugViewOverlay({
   });
 
   const [confirmVisible, setConfirmVisible] = useState(false);
-  const [alreadyHugged, setAlreadyHugged] = useState(false);
+  /** Which hint the reader tapped, and so which explanation the modal shows. */
+  const [infoTopic, setInfoTopic] = useState<"limit" | "turn" | null>(null);
 
   const { user } = useCurrentUser();
+  const myUid = user?.uid;
 
   const senderName = hug.fromName ?? "Someone";
   const recipientName = hug.toName ?? "Someone";
+  /** The person on the other end, whichever side of the hug I'm on. */
+  const otherName = hug.from === user?.uid ? recipientName : senderName;
 
   const insets = useSafeAreaInsets();
 
@@ -68,47 +81,53 @@ export default function HugViewOverlay({
 
   // The hug arrives live from the hugs stream, so a hug-back written on the
   // /hug-back screen shows up here as a prop change.
-  const hugBackNote = hug.hugBackNote ?? null;
+  const thread = threadOf(hug);
+  const latest = thread[thread.length - 1];
+  // Identifies a turn without needing a stable id: two turns by the same
+  // person can't share a millisecond.
+  const latestKey = latest
+    ? `${latest.from}-${latest.createdAt.toMillis()}`
+    : null;
 
-  // Whatever the note was when this hug was first shown; anything past that is
-  // a hug-back that landed while the overlay was open, and gets confirmed once.
-  const seenNote = useRef(hugBackNote);
+  const myTurn = myUid ? canHugBack(hug, myUid) : false;
+  const turnsLeft = myUid ? hugBacksLeft(hug, myUid) : 0;
+
+  // Whatever the thread ended with when this hug was first shown; anything
+  // past that landed while the overlay was open, and gets confirmed once.
+  const seenTurn = useRef(latestKey);
 
   // Reset to sealed whenever a different hug is opened. Declared before the
-  // effect below so the new hug's note counts as already seen, not as new.
+  // effect below so the new hug's thread counts as already seen, not as new.
   useEffect(() => {
     setOpened(false);
-    seenNote.current = hug?.hugBackNote ?? null;
+    seenTurn.current = latestKey;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hug.id]);
 
   useEffect(() => {
-    const isNew = !!hugBackNote && !seenNote.current;
-    seenNote.current = hugBackNote;
+    const isNew = !!latestKey && latestKey !== seenTurn.current;
+    seenTurn.current = latestKey;
     if (!isNew) return;
 
     setConfirmVisible(true);
     const timer = setTimeout(() => setConfirmVisible(false), 25000);
     return () => clearTimeout(timer);
-  }, [hugBackNote]);
+  }, [latestKey]);
 
   const handleHugBack = () => {
-    if (hugBackNote) {
-      setAlreadyHugged(true);
-      return;
-    }
     router.push({
       pathname: "/hug-back",
-      params: { hugId: hug.id, toName: senderName },
+      params: { hugId: hug.id, toName: otherName },
     });
   };
 
   if (!hug) return null;
 
   console.log("HUGVIEWOVERLAY fromId: ", hug.from);
+  console.log("HUGVIEWOVERLAY hugId: ", hug.id);
   const isSender = hug.from === user?.uid;
 
-  if (opened || isReadOnly) {
+  if (opened || startsOpen) {
     return (
       <>
         <HugRevealerImage
@@ -116,6 +135,10 @@ export default function HugViewOverlay({
           message={hug.note}
           backgroundColor={hug.backgroundColor}
           loading={false}
+          // The card yields room, and drops onto the thread, the moment there
+          // is one to read.
+          bottomInset={thread.length > 0 ? FOOTER_HEIGHT : BARE_FOOTER_HEIGHT}
+          cardAnchor={thread.length > 0 ? "bottom" : "center"}
         />
 
         {/* Who sent it, when, and the way out. Sits above the card rather
@@ -151,49 +174,71 @@ export default function HugViewOverlay({
         {/* Everything below the card: the note stacks on the buttons rather
             than floating over them at its own absolute offset. */}
         <View style={styles.footer} pointerEvents="box-none">
-          {hugBackNote && (
-            <View
-              style={[
-                styles.hugBackMessage,
-                {
-                  alignSelf: isSender ? "flex-start" : "flex-end",
-                  flexDirection: isSender ? "row-reverse" : "row",
-                },
-              ]}
-            >
-              <Text style={styles.hugBackMessageText}>{hugBackNote}</Text>
-              <FriendAvatar
-                name={isSender ? recipientName : senderName}
-                uid={isSender ? hug.to : user?.uid}
-                size={40}
-              />
-            </View>
-          )}
+          <LinearGradient
+            colors={[
+              "rgba(246,243,251,0.85)",
+              "rgba(246,243,251,0)",
+              colors.mistBg,
+            ]}
+            locations={[0, 1]}
+            pointerEvents="none"
+          />
+          <HugBackThread hug={hug} myUid={myUid} />
 
-          {!hugBackNote && !isReadOnly && (
+          {/* Whose move it is. A button on my turn; otherwise a line saying
+              why there isn't one, so a closed thread doesn't just go blank. */}
+          {myTurn ? (
             <View style={styles.buttonRow}>
               <PlushButton
                 variant="blush"
-                label="hug back"
+                label={thread.length === 0 ? "hug back" : "answer"}
                 onPress={handleHugBack}
               />
+              <Pressable onPress={() => setInfoTopic("limit")} hitSlop={8}>
+                <Text style={styles.turnsLeft}>
+                  {turnsLeft === 1 ? "1 left" : `${turnsLeft} left`}
+                </Text>
+              </Pressable>
             </View>
+          ) : (
+            thread.length > 0 &&
+            turnsLeft !== 0 && (
+              <Pressable
+                onPress={() => setInfoTopic("turn")}
+                hitSlop={8}
+                style={styles.turnHintPress}
+              >
+                <Text style={[styles.turnsLeft, styles.turnHint]}>
+                  {`${otherName}'s turn`}
+                </Text>
+              </Pressable>
+            )
           )}
         </View>
 
-        {!isReadOnly && (
-          <Toast
-            visible={confirmVisible}
-            message={`you hugged ${senderName} back`}
-            onHide={() => console.log("ha deeet")}
-            icon="heart-circle-outline"
-          />
-        )}
+        <ConfirmationModal
+          isVisible={infoTopic !== null}
+          title="hug backs"
+          confirmButtonLabel="ok"
+          onConfirm={() => setInfoTopic(null)}
+          onRequestClose={() => setInfoTopic(null)}
+        >
+          <Text style={styles.modalBody}>
+            {infoTopic === "turn"
+              ? `you can only write back when ${otherName} writes you`
+              : "you can hug back each other 3 times inside a hug!"}
+          </Text>
+        </ConfirmationModal>
 
         <Toast
-          visible={alreadyHugged}
-          message={`you already hugged ${senderName} back`!}
-          onHide={() => setAlreadyHugged(false)}
+          visible={confirmVisible}
+          message={
+            latest?.from === myUid
+              ? `you hugged ${otherName} back`
+              : `${otherName} hugged you back`
+          }
+          onHide={() => setConfirmVisible(false)}
+          icon="heart-circle-outline"
         />
       </>
     );
@@ -232,13 +277,22 @@ export default function HugViewOverlay({
 
 const styles = StyleSheet.create({
   fill: { ...StyleSheet.absoluteFill },
+  // A fixed band pinned to the bottom. The thread fills everything above the
+  // action row — starting under the postcard, growing downward, scrolling once
+  // full — so the button keeps its place however many turns a hug collects.
   footer: {
     position: "absolute",
+    height: FOOTER_HEIGHT,
     left: 0,
     right: 0,
-    bottom: 100,
+    bottom: 0,
+    paddingBottom: spacing.xl,
     gap: spacing.md,
     zIndex: 30,
+    flexDirection: "column",
+    // Only matters when there is no thread yet: the lone button stays at the
+    // bottom instead of floating in the middle of the band.
+    justifyContent: "flex-end",
   },
   header: {
     position: "absolute",
@@ -276,9 +330,37 @@ const styles = StyleSheet.create({
   },
   buttonRow: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 20,
     gap: 12,
+  },
+  // Both hints sit on the sender's backdrop and its heart pattern, so they
+  // carry their own surface rather than relying on whatever is behind them.
+  turnsLeft: {
+    fontFamily: font.ui,
+    fontSize: 13,
+    color: colors.plumInk,
+    backgroundColor: "rgba(255,255,255,0.85)",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.pill,
+    // iOS clips a Text background to the border radius only with this set.
+    overflow: "hidden",
+  },
+  turnHint: {
+    textAlign: "center",
+  },
+  // The pill sizes to its text; the Pressable centres it in the footer row.
+  turnHintPress: {
+    alignSelf: "center",
+  },
+  modalBody: {
+    fontFamily: font.ui,
+    fontSize: 16,
+    lineHeight: 22,
+    color: colors.softInk,
+    textAlign: "center",
   },
   hugBackMessage: {
     marginHorizontal: 35,

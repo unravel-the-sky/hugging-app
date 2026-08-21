@@ -1,5 +1,6 @@
 import { useAvatarThumb } from "@/hooks/useAvatarThumbnail";
 import { Hug } from "@/lib/handleHugs";
+import { threadOf } from "@/lib/hugs/thread";
 import { isHugUnread } from "@/lib/hugs/features";
 import { counterpartyOf, Direction } from "@/lib/hugs/groups";
 import { formatTimestamp, getNote } from "@/lib/util";
@@ -66,7 +67,7 @@ const DeliveryIcons = ({ hug }: { hug: Hug }) => (
       color={hug.seenAt ? colors.deep : colors.plumInk}
       size={16}
     />
-    {hug.hugBackAt && (
+    {threadOf(hug).length > 0 && (
       <Ionicons name="people-outline" color={colors.plumInk} size={16} />
     )}
   </View>
@@ -249,7 +250,8 @@ const StatusStack = ({
   hug: Hug;
   direction: Direction;
 }) => {
-  const hasStatus = !!hug.seenAt || !!hug.hugBackAt;
+  const hugBackCount = threadOf(hug).length;
+  const hasStatus = !!hug.seenAt || hugBackCount > 0;
 
   return (
     <View style={styles.statusStack}>
@@ -260,7 +262,14 @@ const StatusStack = ({
           {!!hug.seenAt && direction === "incoming" && (
             <Ionicons name="checkmark-done" size={14} color={SEEN} />
           )}
-          {!!hug.hugBackAt && <Ionicons name="people" size={14} color={BACK} />}
+          {hugBackCount > 0 && (
+            <>
+              <Ionicons name="people" size={14} color={BACK} />
+              {hugBackCount > 1 && (
+                <Text style={styles.backCount}>{hugBackCount}</Text>
+              )}
+            </>
+          )}
         </View>
       )}
     </View>
@@ -512,6 +521,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
+  },
+  /** Turn count next to the hug-back icon, once a thread has more than one. */
+  backCount: {
+    fontFamily: font.uiBold,
+    fontSize: 12,
+    color: BACK,
   },
   timeSent: {
     fontFamily: font.uiBold,

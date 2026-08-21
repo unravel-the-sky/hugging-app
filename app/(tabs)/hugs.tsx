@@ -8,7 +8,8 @@ import { useHugs } from "@/app/context/HugsContext";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useHugTotals } from "@/hooks/useIncomingHugs";
 import { db } from "@/lib/firebaseConfig";
-import { getHugWithId, Hug } from "@/lib/handleHugs";
+import { getHugWithId, Hug, markThreadSeen } from "@/lib/handleHugs";
+import { isThreadUnread } from "@/lib/hugs/thread";
 import { Direction } from "@/lib/hugs/groups";
 import { useLocalSearchParams } from "expo-router";
 import { doc, Timestamp, updateDoc } from "firebase/firestore";
@@ -67,25 +68,22 @@ export default function HugsListScreen() {
     }
   };
 
-  const markHugBackSeen = async (hugId: string) => {
-    try {
-      await updateDoc(doc(db, "hugs", hugId), {
-        hugBackSeenAt: Timestamp.now(),
-      });
-    } catch (err) {
-      console.error(`Error while validating hugBack with id: ${hugId}`, err);
-    }
-  };
-
+  /**
+   * Two independent markers, and both sides can owe both: opening the hug
+   * itself, and catching up on the thread. The rules take one shape per
+   * write, so these stay separate calls.
+   */
   const handleMarkHugSeen = async (hug: Hug) => {
     if (!user) return;
 
-    if (hug.from === user.uid) {
-      if (!hug.hugBackAt || hug.hugBackSeenAt) return;
-      await markHugBackSeen(hug.id);
-    } else {
-      if (hug.seenAt) return;
-      await markHugSeen(hug.id);
+    if (hug.to === user.uid && !hug.seenAt) await markHugSeen(hug.id);
+
+    if (isThreadUnread(hug, user.uid)) {
+      try {
+        await markThreadSeen(hug.id);
+      } catch (err) {
+        console.error(`Error while marking thread seen for ${hug.id}`, err);
+      }
     }
   };
 
@@ -150,7 +148,7 @@ export default function HugsListScreen() {
       {selection && selectedHug && (
         <HugViewOverlay3d
           hug={selectedHug}
-          isReadOnly={selection.direction === "outgoing"}
+          startsOpen={selection.direction === "outgoing"}
           onOpen={handleOpen}
           onClose={handleClose}
           onIgnore={() => setSelection(undefined)}

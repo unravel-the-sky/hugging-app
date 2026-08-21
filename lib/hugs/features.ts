@@ -1,4 +1,5 @@
 import { Hug } from "../handleHugs";
+import { isThreadUnread } from "./thread";
 
 /**
  * Hug list feature flags.
@@ -14,7 +15,10 @@ export const TOP_HUGGER = {
   minHugs: 10,
 } as const;
 
+/**
+ * Unread means either the hug itself was never opened, or the other person
+ * has added a turn to the thread since I last read it. Both sides can be
+ * behind on a thread now, so this no longer branches on who sent the hug.
+ */
 export const isHugUnread = (hug: Hug, myUid: string) =>
-  hug.from === myUid
-    ? !!hug.hugBackAt && !hug.hugBackSeenAt // my hug came back, I haven't looked
-    : !hug.seenAt; // sent to me, I haven't opened it
+  isThreadUnread(hug, myUid) || (hug.to === myUid && !hug.seenAt);

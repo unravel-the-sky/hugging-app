@@ -6,6 +6,7 @@ import {
   getDoc,
   getDocs,
   query,
+  runTransaction,
   serverTimestamp,
   Timestamp,
   updateDoc,
@@ -13,6 +14,24 @@ import {
 } from "firebase/firestore";
 import { auth, db } from "./firebaseConfig";
 import { AvatarType } from "./createUser";
+import { canHugBack } from "./hugs/thread";
+
+/**
+ * One turn in a hug's back-and-forth. Deliberately thinner than a Hug: the
+ * two participants and their names already live on the parent hug, so an
+ * item only carries who spoke and what they said.
+ *
+ * `createdAt` is a *client* timestamp — Firestore rejects `serverTimestamp()`
+ * inside an array element. The rules bound it against `request.time` so it
+ * can't drift far from the truth.
+ */
+type HugBackBase<TTimestamp> = {
+  from: string;
+  note: string;
+  createdAt: TTimestamp;
+};
+
+export type HugBack = HugBackBase<Timestamp>;
 
 type HugBase<TTimestamp> = {
   from: string;
@@ -27,9 +46,24 @@ type HugBase<TTimestamp> = {
   createdAt?: TTimestamp;
   /** `to` opened the hug. */
   seenAt?: TTimestamp;
+  /**
+   * The thread, oldest first, alternating authors and starting with `to`.
+   * An array rather than a subcollection: it is capped at MAX_HUG_BACKS
+   * short notes and is never read apart from its hug, so it rides along with
+   * the streams and caches that already carry the hug document.
+   */
+  hugBacks?: HugBackBase<TTimestamp>[];
+  /**
+   * When each participant last read the thread, keyed by uid. A map so each
+   * side writes only its own key — marking read can't clobber a reply landing
+   * at the same moment, the way rewriting the array would.
+   */
+  seenAtBy?: Record<string, TTimestamp>;
+  /** @deprecated pre-thread hug backs. Read for old hugs, never written. */
   hugBackNote?: string;
+  /** @deprecated see `hugBackNote`. */
   hugBackAt?: TTimestamp;
-  /** `from` opened the hug back. */
+  /** @deprecated `from` opened the hug back. Superseded by `seenAtBy`. */
   hugBackSeenAt?: TTimestamp;
   /**
    * Set by the server when the pair is blocked: the hug exists for the
@@ -44,10 +78,6 @@ export type Hug = HugBase<Timestamp> & { id: string };
 export type SendableHug = Pick<
   HugBase<FieldValue>,
   "to" | "toName" | "note" | "imagePath" | "backgroundColor"
->;
-
-export type HugBackUpdate = Required<
-  Pick<HugBase<FieldValue>, "hugBackNote" | "hugBackAt">
 >;
 
 const MAX_LEN = 140;
@@ -72,17 +102,47 @@ export async function sendHug(hug: HugCreate) {
   }
 }
 
+/**
+ * Appends a turn to a hug's thread.
+ *
+ * Read-modify-write in a transaction rather than `arrayUnion`, so the rules
+ * see the resulting array and can check the cap and whose turn it is. The
+ * two participants alternate, so contention here is close to theoretical.
+ */
 export async function sendHugBack(hugId: string, note: string): Promise<void> {
   const trimmed = note.trim();
   if (!trimmed) throw new Error("empty hug-back note");
 
-  const update: HugBackUpdate = {
-    hugBackNote: trimmed.slice(0, MAX_LEN),
-    hugBackAt: serverTimestamp(),
-  };
+  const me = auth.currentUser;
+  if (!me) throw new Error("not signed in");
 
-  // adjust the collection path to match yours (top-level `hugs` vs a subcollection)
-  await updateDoc(doc(db, "hugs", hugId), update);
+  const ref = doc(db, "hugs", hugId);
+
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) throw new Error(`no hug with id ${hugId}`);
+
+    const hug = { id: snap.id, ...(snap.data() as HugBase<Timestamp>) };
+    if (!canHugBack(hug, me.uid)) throw new Error("not your turn to hug back");
+
+    const item: HugBack = {
+      from: me.uid,
+      note: trimmed.slice(0, MAX_LEN),
+      createdAt: Timestamp.now(),
+    };
+
+    tx.update(ref, { hugBacks: [...(hug.hugBacks ?? []), item] });
+  });
+}
+
+/** Marks the thread read up to now for the signed-in user. */
+export async function markThreadSeen(hugId: string): Promise<void> {
+  const me = auth.currentUser;
+  if (!me) return;
+
+  await updateDoc(doc(db, "hugs", hugId), {
+    [`seenAtBy.${me.uid}`]: Timestamp.now(),
+  });
 }
 
 export async function getHugs() {
