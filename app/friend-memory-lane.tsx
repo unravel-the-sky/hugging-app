@@ -1,5 +1,12 @@
 import AvatarImage from "@/components/avatar/AvatarImage";
-import { colors, font, radius, shadow, spacing } from "@/components/ui/squish";
+import {
+  colors,
+  font,
+  LabeledDivider,
+  radius,
+  shadow,
+  spacing,
+} from "@/components/ui/squish";
 import { FriendAvatar } from "@/components/ui/squish/FriendAvatar";
 import { PlushButton } from "@/components/ui/squish/PlushButton";
 import RoundIconButton from "@/components/ui/squish/RountIconButton";
@@ -156,8 +163,9 @@ export default function FriendMemoryLane() {
 
             return (
               <View key={h.id}>
-                <MemDivider
+                <LabeledDivider
                   label={createdAt ? formatMemoryDate(createdAt) : "—"}
+                  style={styles.divider}
                 />
 
                 <MemRow
@@ -277,16 +285,6 @@ export default function FriendMemoryLane() {
 }
 
 /* ── pieces ──────────────────────────────────────────────────────────── */
-
-function MemDivider({ label }: { label: string }) {
-  return (
-    <View style={styles.divider}>
-      <View style={styles.dividerLine} />
-      <Text style={styles.dividerLabel}>{label}</Text>
-      <View style={styles.dividerLine} />
-    </View>
-  );
-}
 
 function MemRow({
   side,
@@ -532,18 +530,8 @@ const styles = StyleSheet.create({
   },
   /* divider */
   divider: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
     paddingTop: spacing.xl,
     paddingBottom: spacing.sm,
-  },
-  dividerLine: { flex: 1, height: 1.5, backgroundColor: "#E7E0F4" },
-  dividerLabel: {
-    fontFamily: font.uiBold,
-    fontSize: 11.5,
-    letterSpacing: 0.2,
-    color: colors.softInk,
   },
 
   /* row */

@@ -1,9 +1,17 @@
 import { Hug } from "@/lib/handleHugs";
 import { relTime } from "@/lib/hugs/time";
 import { threadOf } from "@/lib/hugs/thread";
+import { readableText } from "@/lib/util";
 import { useEffect, useRef } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { colors, font, radius, shadow, spacing } from "../ui/squish";
+import {
+  colors,
+  font,
+  LabeledDivider,
+  radius,
+  shadow,
+  spacing,
+} from "../ui/squish";
 import { FriendAvatar } from "../ui/squish/FriendAvatar";
 
 /**
@@ -37,44 +45,61 @@ export function HugBackThread({ hug, myUid }: { hug: Hug; myUid?: string }) {
   const thread = threadOf(hug);
   if (thread.length === 0) return null;
 
+  // The backdrop is the sender's pick, so the rule takes its ink from the same
+  // helper the header uses rather than assuming a light or dark ground.
+  const ink = readableText(hug.backgroundColor || colors.mistBg);
+
   return (
-    <ScrollView
-      ref={scrollRef}
-      onContentSizeChange={stickToEnd}
-      style={styles.scroll}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      {thread.map((item, index) => {
-        const mine = item.from === myUid;
-        const authorName =
-          (item.from === hug.from ? hug.fromName : hug.toName) ?? "someone";
+    <View style={styles.wrap}>
+      {/* Labels the band under the postcard, and stays put while the turns
+          below it scroll. */}
+      <LabeledDivider label="hug backs" tint={ink} style={styles.divider} />
 
-        return (
-          <View
-            key={`${item.from}-${item.createdAt.toMillis()}-${index}`}
-            style={[styles.turn, mine ? styles.turnMine : styles.turnTheirs]}
-          >
-            <FriendAvatar name={authorName} uid={item.from} size={40} />
+      <ScrollView
+        ref={scrollRef}
+        onContentSizeChange={stickToEnd}
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {thread.map((item, index) => {
+          const mine = item.from === myUid;
+          const authorName =
+            (item.from === hug.from ? hug.fromName : hug.toName) ?? "someone";
 
-            <View style={styles.card}>
-              <Text style={styles.note}>{item.note}</Text>
-              <Text
-                style={[styles.byline, mine && styles.bylineMine]}
-                numberOfLines={1}
-              >
-                {authorName.toLowerCase()} -{" "}
-                {relTime(item.createdAt.toMillis())}
-              </Text>
+          return (
+            <View
+              key={`${item.from}-${item.createdAt.toMillis()}-${index}`}
+              style={[styles.turn, mine ? styles.turnMine : styles.turnTheirs]}
+            >
+              <FriendAvatar name={authorName} uid={item.from} size={40} />
+
+              <View style={styles.card}>
+                <Text style={styles.note}>{item.note}</Text>
+                <Text
+                  style={[styles.byline, mine && styles.bylineMine]}
+                  numberOfLines={1}
+                >
+                  {authorName.toLowerCase()} -{" "}
+                  {relTime(item.createdAt.toMillis())}
+                </Text>
+              </View>
             </View>
-          </View>
-        );
-      })}
-    </ScrollView>
+          );
+        })}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrap: {
+    flex: 1,
+  },
+  divider: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.sm,
+  },
   // Takes all the room the action row below it doesn't need, so the turns
   // start directly under the postcard and grow down toward the button, which
   // keeps its place at the bottom of the fixed footer either way.
