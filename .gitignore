@@ -44,3 +44,5 @@ app-example
 
 service-account*.json
 *-firebase-adminsdk-*.json
+# agent skills (installed via skills-lock.json)
+.claude/skills
