@@ -587,6 +587,7 @@ async function linkFriends(a: string, b: string) {
     totalHugsSent: totals.aSent,
     totalHugsReceived: totals.aReceived,
     lastSentHug: totals.lastSentByA, // may be null
+    lastReceivedHug: totals.lastSentByB, // A received what B sent
     numStreakDays: 0,
   };
 
@@ -599,6 +600,7 @@ async function linkFriends(a: string, b: string) {
     totalHugsSent: totals.aReceived, // B sent what A received
     totalHugsReceived: totals.aSent, // B received what A sent
     lastSentHug: totals.lastSentByB, // last hug B sent to A
+    lastReceivedHug: totals.lastSentByA, // B received what A sent
     numStreakDays: 0,
   };
 

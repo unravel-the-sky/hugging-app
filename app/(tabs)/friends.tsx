@@ -10,7 +10,9 @@ import {
   onDecline,
   UserFriend,
 } from "@/lib/handleFriends";
+import { relTime } from "@/lib/hugs/time";
 import { Ionicons } from "@expo/vector-icons";
+import { Timestamp } from "firebase/firestore";
 import { router } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
@@ -33,20 +35,29 @@ import {
 } from "../../components/ui/squish/theme";
 import { useAvatarThumb } from "@/hooks/useAvatarThumbnail";
 
+const millis = (ts?: Timestamp | null) => ts?.toDate().getTime() ?? 0;
+
+/**
+ * The most recent hug either way. The row used to read `lastSentHug` alone,
+ * so a friend who hugs you constantly but never gets one back looked cold and
+ * sank to the bottom of the list.
+ */
+const lastInteraction = (
+  friend: UserFriend,
+): { ms: number; direction: "sent" | "received" } => {
+  const sent = millis(friend.lastSentHug);
+  const received = millis(friend.lastReceivedHug);
+  return received > sent
+    ? { ms: received, direction: "received" }
+    : { ms: sent, direction: "sent" };
+};
+
 const lastHugLabel = (friend: UserFriend): string => {
-  if (!friend.lastSentHug) return "no hugs yet";
-
-  const mins = Math.floor(
-    (Date.now() - friend.lastSentHug.toDate().getTime()) / 60000,
-  );
-
-  if (mins < 1) return "hugged just now";
-  if (mins < 60) return `hugged ${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `hugged ${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days === 1) return "hugged yesterday";
-  return `hugged ${days}d ago`;
+  const { ms, direction } = lastInteraction(friend);
+  if (!ms) return "no hugs yet";
+  return direction === "received"
+    ? `hugged you ${relTime(ms)}`
+    : `hugged ${relTime(ms)}`;
 };
 
 const TopHuggerBadge = () => (
@@ -177,15 +188,17 @@ export default function FriendsListScreen() {
       ? friends.filter((f) => f.displayName.toLowerCase().includes(q))
       : friends;
 
-    const hugSentTime = (f: UserFriend) =>
-      f.lastSentHug ? f.lastSentHug.toDate().getTime() : -Infinity;
+    const lastHugTime = (f: UserFriend) => {
+      const { ms } = lastInteraction(f);
+      return ms || -Infinity; // never hugged sorts below everyone
+    };
 
     return [...base].sort((a, b) => {
       if (topHuggerUid) {
         if (a.id === topHuggerUid) return -1;
         if (b.id === topHuggerUid) return 1;
       }
-      return hugSentTime(b) - hugSentTime(a); // most recent first
+      return lastHugTime(b) - lastHugTime(a); // most recent first
     });
   }, [friends, search, topHuggerUid]);
 

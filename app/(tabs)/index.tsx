@@ -57,12 +57,12 @@ const RELEASE = {
       body: "Pull the hugs list down and it fetches the fresh ones!",
     },
     {
-      title: "A logo that tilts",
-      body: "Tilt your phone on the home screen and watch it lean along, just for fun :)",
+      title: "Postcard background",
+      body: "Tap on the background when making postcard to change background and hearts' color",
     },
     {
-      title: "Contact",
-      body: "For bugs, suggestions and praises, you can contact me on sekdemir@gmail.com",
+      title: "A logo that tilts",
+      body: "Touch and drag the logo to strech it, just for fun",
     },
   ],
 };
@@ -186,7 +186,7 @@ export default function HomeScreen() {
           <Text style={styles.mainText}>
             Then click the button, choose a hugging friend and send some love!
           </Text>
-          {showRelease && (
+          {showRelease && RELEASE && RELEASE.notes.length > 0 && (
             <ReleaseNotes onClose={() => setShowRelease(false)} />
           )}
         </View>

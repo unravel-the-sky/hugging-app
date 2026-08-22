@@ -8,9 +8,9 @@ import * as ImageManipulator from "expo-image-manipulator";
 import * as MediaLibrary from "expo-media-library";
 import { captureRef } from "react-native-view-shot";
 
+import DraggableOverlay from "@/components/postcard/DraggableOverlay";
 import FilterPreview from "@/components/postcard/FilterPreview";
 import PostImage from "@/components/postcard/PostImage";
-import DraggableOverlay from "@/components/postcard/DraggableOverlay";
 import TextEditorOverlay, {
   TextDraft,
 } from "@/components/postcard/TexteditorOverlay";
@@ -26,15 +26,17 @@ import {
 } from "@/constants/postcardEditorConstants";
 
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useImageColors } from "@/hooks/useImageColors";
 import { useHugDraft } from "@/hooks/useHugDraft";
+import { useImageColors } from "@/hooks/useImageColors";
 import usePhotoTransform from "@/hooks/usePhotoTransform";
 import usePolaroidFrameCalc from "@/hooks/usePolaroidFrameCalc";
 
+import { HeartsGridSkia } from "@/components/hug/HeartGridSkia";
+import { useTiltNew } from "@/hooks/useTilt";
 import { auth, storage } from "@/lib/firebaseConfig";
-import { readableText } from "@/lib/util";
+import { contrastingTint, readableText } from "@/lib/util";
 import { useImage } from "@shopify/react-native-skia";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { ref, uploadBytes } from "firebase/storage";
 
 const FALLBACK_BG = "#D7C2B2";
 
@@ -291,6 +293,8 @@ export default function Media({
   const bg = bgOptions[bgIndex % bgOptions.length];
   const cycleBackground = () => setBgIndex((i) => i + 1);
 
+  const { ref: tiltRef, x: tiltX, y: tiltY } = useTiltNew();
+
   if (!image) return null;
 
   return (
@@ -299,6 +303,13 @@ export default function Media({
         style={StyleSheet.absoluteFill}
         onPress={cycleBackground}
         accessibilityLabel="Change postcard background colour"
+      />
+
+      <HeartsGridSkia
+        tiltX={tiltX}
+        tiltY={tiltY}
+        unit={385 * 0.25}
+        color={bg ? contrastingTint(bg) : undefined}
       />
 
       {/* Header */}
