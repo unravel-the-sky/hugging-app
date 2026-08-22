@@ -150,6 +150,8 @@ function useHugStream(
       setLiveHugs(next);
       setIsLoading(false);
 
+      if (next.length < LIMIT_SIZE) setHasMore(false);
+
       // Only persist server-confirmed snapshots. Firestore also emits from its
       // own in-memory cache, and launching offline can yield an empty one --
       // writing that would clobber a good cache with nothing.
