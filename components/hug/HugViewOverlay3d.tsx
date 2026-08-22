@@ -159,6 +159,13 @@ export default function HugViewOverlay({
   }, [hug.id, dragX]);
 
   const swipeBack = Gesture.Pan()
+    // Only touches that start in the left edge strip can begin this gesture.
+    // This detector wraps the whole overlay, and `fromEdge` below is only
+    // consulted in onBegin — by which point the gesture has already joined the
+    // arena and is competing with the card's pan and the thread's scrolling,
+    // which it wins. Restricting where it can start keeps it out of that
+    // contest entirely for every touch that isn't an edge swipe.
+    .hitSlop({ left: 0, width: EDGE_WIDTH })
     // Rightward intent only, so vertical scrolling in the thread still works.
     .activeOffsetX([15, 9999])
     .failOffsetY([-25, 25])

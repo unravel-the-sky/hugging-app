@@ -2,13 +2,34 @@ import { DriftingAvatars } from "@/components/landing/DriftingAvatars";
 import { AppText } from "@/components/ui/AppText";
 import { Logo } from "@/components/ui/Logo";
 import { PlushButton } from "@/components/ui/squish/PlushButton";
+import { Tiltable } from "@/components/ui/Tiltable";
 import { useHugDraft } from "@/hooks/useHugDraft";
 import { SendableHug } from "@/lib/handleHugs";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  initialWindowMetrics,
+} from "react-native-safe-area-context";
 import { colors, font } from "../../components/ui/squish/theme";
+
+/**
+ * The floating tab bar's own height.
+ *
+ * iOS derives a bottom safe-area inset from the tab bar and hands it down, but
+ * it arrives a frame or more after the first layout — which is what threw the
+ * button behind the tab bar on cold start and then snapped it up. There is no
+ * hook to ask for it either: useBottomTabBarHeight belongs to
+ * @react-navigation/bottom-tabs and throws under NativeTabs, which exposes no
+ * equivalent. So the bottom edge is laid out from constants instead, and is
+ * identical on the first frame and the last.
+ *
+ * If the button sits too high or clips the bar, this is the number to nudge.
+ */
+const TAB_BAR_HEIGHT = 52;
+/** Home indicator. Read once at startup, so it is available synchronously. */
+const BOTTOM_INSET = initialWindowMetrics?.insets.bottom ?? 0;
 
 export default function HomeScreen() {
   const toUid = useHugDraft((s) => s.to);
@@ -65,7 +86,9 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView edges={["top", "bottom"]} style={styles.overlay}>
+    // `bottom` is deliberately not an edge here: that inset is the one that
+    // lands late. actionsContainer clears the tab bar with constants instead.
+    <SafeAreaView edges={["top"]} style={styles.overlay}>
       <DriftingAvatars count={5} intensity={90} />
       <View style={styles.container}>
         <AppText variant="title">Hugging app</AppText>
@@ -81,7 +104,9 @@ export default function HomeScreen() {
             alignItems: "center",
           }}
         >
-          <Logo />
+          <Tiltable>
+            <Logo />
+          </Tiltable>
         </View>
         <Text style={styles.mainText}>
           Then click the button, choose a hugging friend and send some love!
@@ -160,5 +185,6 @@ const styles = StyleSheet.create({
   },
   actionsContainer: {
     width: "100%",
+    paddingBottom: TAB_BAR_HEIGHT + BOTTOM_INSET,
   },
 });

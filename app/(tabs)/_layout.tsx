@@ -53,6 +53,13 @@ export default function TabsLayout() {
     return <Loader />;
   }
 
+  // Auth has confirmed someone, but their doc has not landed yet. Every branch
+  // below reads `!user` as "no account", so without this the sign-in hand-off
+  // falls through to SetupScreen for a frame.
+  if (authUser && user === undefined) {
+    return <Loader />;
+  }
+
   if (user && !user.avatar) {
     return <ChangeAvatarSheet />;
   }

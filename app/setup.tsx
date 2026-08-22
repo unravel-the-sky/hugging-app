@@ -1,4 +1,5 @@
 import AvatarPicker from "@/components/avatar/AvatarPicker";
+import Loader from "@/components/ui/Loader";
 import UsernameSetup from "@/components/user/UsernameSetup";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -19,14 +20,21 @@ export default function SetupScreen() {
     }
   };
 
-  const { user } = useCurrentUser();
+  const { user, authUser, isHydrating } = useCurrentUser();
+
+  // Signed in but the user doc is still in flight — `undefined` rather than
+  // `null`. Asking for a username here would be asking someone who may well
+  // already have one, so wait the moment out.
+  if (isHydrating || (authUser && user === undefined)) {
+    return <Loader />;
+  }
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
-      {!user ? (
+      {user === null ? (
         <UsernameSetup onUsernameSet={handleUsernameSet} />
       ) : (
         <AvatarPicker
