@@ -11,6 +11,12 @@ import {
   UserFriend,
 } from "@/lib/handleFriends";
 import { relTime } from "@/lib/hugs/time";
+import {
+  ResolvedStreak,
+  resolveStreak,
+  streakTimeLeft,
+} from "@/lib/hugs/streaks";
+import { StreakFlame } from "@/components/friend/StreakFlame";
 import { Ionicons } from "@expo/vector-icons";
 import { Timestamp } from "firebase/firestore";
 import { router } from "expo-router";
@@ -60,6 +66,21 @@ const lastHugLabel = (friend: UserFriend): string => {
     : `hugged ${relTime(ms)}`;
 };
 
+/**
+ * What the row says instead of "hugged 3h ago" while a streak is running.
+ * Only speaks up when it has something actionable — the streak is about to
+ * lapse, or it is this friend's turn — so a healthy streak leaves the usual
+ * last-hug line alone and the flame carries it.
+ */
+const streakLabel = (streak: ResolvedStreak): string | null => {
+  if (!streak.days) return null;
+  if (streak.isExpiring && streak.expiresAt)
+    return `streak ends soon — ${streakTimeLeft(streak.expiresAt)}`;
+  if (streak.waitingOn === "me" || streak.waitingOn === "both")
+    return "your turn to keep the streak";
+  return null;
+};
+
 const TopHuggerBadge = () => (
   <View style={styles.topBadge}>
     <Text style={styles.topBadgeText}>TOP HUGGER</Text>
@@ -80,6 +101,7 @@ export const FriendRow = ({
   onHug?: () => void;
 }) => {
   const photoUri = useAvatarThumb(friend.id);
+  const streak = resolveStreak(friend);
 
   return (
     <ListRow
@@ -106,9 +128,10 @@ export const FriendRow = ({
           <Text style={styles.name} numberOfLines={1}>
             {friend.displayName}
           </Text>
+          <StreakFlame streak={streak} />
         </View>
         <Text style={styles.subText} numberOfLines={1}>
-          {lastHugLabel(friend)}
+          {streakLabel(streak) ?? lastHugLabel(friend)}
         </Text>
       </View>
       <PlushButton label="hug!" variant="primary" height={40} onPress={onHug} />

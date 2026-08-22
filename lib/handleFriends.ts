@@ -39,7 +39,15 @@ export type UserFriend = {
   hugBackCount?: number;
   hugBackTotalMs?: number;
   lastHugBackAt?: number;
+  /**
+   * Streak, mirrored on both friend docs. Stale between hugs — nothing
+   * sweeps expired streaks, so read these through `resolveStreak`.
+   * @see lib/hugs/streaks.ts
+   */
   numStreakDays?: number;
+  longestStreakDays?: number;
+  streakLastMutualAt?: Timestamp | null;
+  streakStartedAt?: Timestamp | null;
   addedAt?: Timestamp;
   online?: boolean;
   photoThumbPath?: string;

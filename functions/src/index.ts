@@ -25,6 +25,12 @@ import {
 import fetch from "node-fetch";
 import { getAuth } from "firebase-admin/auth";
 import { getStorage } from "firebase-admin/storage";
+import {
+  advanceStreak,
+  expireStreak,
+  HUG_BACKS_COUNT_TOWARD_STREAK,
+  StreakState,
+} from "./streaks";
 
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
@@ -105,6 +111,69 @@ async function clearFriendshipRequests(a: string, b: string) {
   await Promise.all(refs.map((ref) => ref.delete()));
 }
 
+/* ------------------------------------------------------------------ */
+/* Streaks                                                             */
+/* ------------------------------------------------------------------ */
+
+const toMillis = (value: unknown): number | null =>
+  value instanceof Timestamp ? value.toMillis() : null;
+
+/** The streak as stored on a friend doc. Missing fields read as "no streak". */
+const readStreak = (
+  snap: FirebaseFirestore.DocumentSnapshot | undefined,
+): StreakState => ({
+  days: (snap?.get("numStreakDays") as number) ?? 0,
+  longest: (snap?.get("longestStreakDays") as number) ?? 0,
+  lastMutualAt: toMillis(snap?.get("streakLastMutualAt")),
+  startedAt: toMillis(snap?.get("streakStartedAt")),
+});
+
+/** The same shape on the way back out. Written identically to both sides. */
+const streakFields = (state: StreakState) => ({
+  numStreakDays: state.days,
+  longestStreakDays: state.longest,
+  streakLastMutualAt:
+    state.lastMutualAt == null ? null : Timestamp.fromMillis(state.lastMutualAt),
+  streakStartedAt:
+    state.startedAt == null ? null : Timestamp.fromMillis(state.startedAt),
+});
+
+/**
+ * Recomputes the pair's streak after `from` has just hugged `to` at `atMs`.
+ *
+ * Both friend docs hold the same streak, so it is read from whichever exists
+ * and written to both. The two "last hug" legs come from the docs' existing
+ * `lastSentHug`/`lastReceivedHug` — the hug being processed *is* the sender's
+ * leg, so it is passed as `atMs` rather than read back.
+ *
+ * Queued onto the caller's batch; returns the new state so the push can
+ * mention a day that just completed.
+ */
+function applyStreak(
+  batch: FirebaseFirestore.WriteBatch,
+  from: string,
+  to: string,
+  fromDoc: FirebaseFirestore.DocumentSnapshot,
+  toDoc: FirebaseFirestore.DocumentSnapshot,
+  atMs: number,
+): { before: StreakState; after: StreakState } {
+  // `fromDoc` is the sender's doc about the recipient, so its "received" leg
+  // is the recipient's last hug; `toDoc` is the mirror. Either may be absent
+  // (unfriended, blocked), hence the fallback.
+  const lastFromRecipient =
+    toMillis(fromDoc.get("lastReceivedHug")) ??
+    toMillis(toDoc.get("lastSentHug"));
+
+  const before = readStreak(fromDoc.exists ? fromDoc : toDoc);
+  const after = advanceStreak(before, atMs, lastFromRecipient, atMs);
+  const fields = streakFields(after);
+
+  if (fromDoc.exists) batch.set(fromDoc.ref, fields, { merge: true });
+  if (toDoc.exists) batch.set(toDoc.ref, fields, { merge: true });
+
+  return { before: expireStreak(before, atMs), after };
+}
+
 export const onHugCreated = onDocumentCreated("hugs/{hugId}", async (event) => {
   console.log("🔥🔥🔥 onHugCreated FIRED");
   console.log("hugId:", event.params.hugId);
@@ -131,6 +200,9 @@ export const onHugCreated = onDocumentCreated("hugs/{hugId}", async (event) => {
     console.log("Hug not delivered, pair is blocked", snap.id);
     return;
   }
+
+  /** Set when this hug completed a streak day, so the push can say so. */
+  let streakDays: number | null = null;
 
   // update stats here
   try {
@@ -178,13 +250,28 @@ export const onHugCreated = onDocumentCreated("hugs/{hugId}", async (event) => {
       { merge: true },
     );
 
+    // The hug's own timestamp, not the trigger's — a cold start can be
+    // seconds late, and the streak windows are measured off this.
+    const atMs = (hug.createdAt as Timestamp | undefined)?.toMillis?.() ??
+      Date.now();
+    const streak = applyStreak(
+      batch,
+      hug.from,
+      hug.to,
+      sentDoc,
+      receivedDoc,
+      atMs,
+    );
+    streakDays =
+      streak.after.days > streak.before.days ? streak.after.days : null;
+
     await batch.commit();
   } catch (err) {
     console.error("Stats update failed for hug", snap.id, err);
   }
 
   // send notification
-  await sendPushNotification(hug, snap.id);
+  await sendPushNotification(hug, snap.id, streakDays);
 });
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -254,7 +341,10 @@ export const onHugBack = onDocumentUpdated("hugs/{hugId}", async (event) => {
     // skipped when they're no longer friends, so the write can't recreate a
     // friend doc that was removed (see onHugCreated).
     const friendRef = db.doc(`users/${backTo}/friends/${backFrom}`);
-    if ((await friendRef.get()).exists) {
+    const senderRef = db.doc(`users/${backFrom}/friends/${backTo}`);
+    const [friendDoc, senderDoc] = await db.getAll(friendRef, senderRef);
+
+    if (friendDoc.exists) {
       batch.set(
         friendRef,
         {
@@ -263,6 +353,19 @@ export const onHugBack = onDocumentUpdated("hugs/{hugId}", async (event) => {
           lastHugBackAt: latest.createdAt,
         },
         { merge: true },
+      );
+    }
+
+    // Off by default: a hug back is a reply inside someone else's hug, too
+    // cheap to hold up a mutual streak on its own. See lib/hugs/streaks.ts.
+    if (HUG_BACKS_COUNT_TOWARD_STREAK) {
+      applyStreak(
+        batch,
+        backFrom,
+        backTo,
+        senderDoc,
+        friendDoc,
+        latest.createdAt.toMillis(),
       );
     }
 
@@ -317,6 +420,8 @@ const sendBotReply = async (originalHug: FirebaseFirestore.DocumentData) => {
 const sendPushNotification = async (
   hug: FirebaseFirestore.DocumentData,
   hugId: string,
+  /** Days, when this hug completed a streak day. Null otherwise. */
+  streakDays: number | null = null,
 ) => {
   // get user
   const userSnap = await db.doc(`users/${hug.to}`).get();
@@ -331,10 +436,11 @@ const sendPushNotification = async (
   const message = {
     to: user.pushToken,
     sound: "default",
-    title: "You got a hug 🥹",
+    title: streakDays ? `${streakDays}-day hug streak 🔥` : "You got a hug 🥹",
     body: `${hug.fromName ?? "Someone"} sent you a ${hug.imagePath ? "postcard" : "hug"}`,
     data: {
       hugId,
+      ...(streakDays && { streakDays }),
     },
   };
 
@@ -577,6 +683,17 @@ async function linkFriends(a: string, b: string) {
 
   const now = FieldValue.serverTimestamp();
 
+  // A re-added B (or accepted late) with hugs already between them: if those
+  // still make a live exchange, hand the pair the streak they earned rather
+  // than starting them at zero.
+  const streak = streakFields(
+    advanceStreak(
+      { days: 0, longest: 0, lastMutualAt: null, startedAt: null },
+      toMillis(totals.lastSentByA),
+      toMillis(totals.lastSentByB),
+    ),
+  );
+
   // A's doc about B: A's "sent" is aSent, A's "received" is aReceived,
   // A's lastSentHug is the last hug A sent to B.
   const aFriendDoc = {
@@ -588,7 +705,7 @@ async function linkFriends(a: string, b: string) {
     totalHugsReceived: totals.aReceived,
     lastSentHug: totals.lastSentByA, // may be null
     lastReceivedHug: totals.lastSentByB, // A received what B sent
-    numStreakDays: 0,
+    ...streak,
   };
 
   // B's doc about A is the mirror: B's "sent" == A's "received", and vice versa.
@@ -601,7 +718,7 @@ async function linkFriends(a: string, b: string) {
     totalHugsReceived: totals.aSent, // B received what A sent
     lastSentHug: totals.lastSentByB, // last hug B sent to A
     lastReceivedHug: totals.lastSentByA, // B received what A sent
-    numStreakDays: 0,
+    ...streak,
   };
 
   const batch = db.batch();

@@ -17,6 +17,11 @@ import { useBlocks } from "@/hooks/useBlocks";
 import { auth, db } from "@/lib/firebaseConfig";
 import { blockUser } from "@/lib/handleBlocks";
 import { onRemoveFriend, UserFriend } from "@/lib/handleFriends";
+import {
+  resolveStreak,
+  streakTimeLeft,
+  type ResolvedStreak,
+} from "@/lib/hugs/streaks";
 import { formatTimestamp } from "@/lib/util";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -32,8 +37,31 @@ import {
   View,
 } from "react-native";
 
-const showStreak = false;
 const showDeleteHistory = false;
+
+/**
+ * Streak copy. The card is always on screen, so it has to read well with no
+ * streak at all — it explains the rule in that state instead of scolding.
+ */
+const streakSubtitle = (streak: ResolvedStreak, name: string): string => {
+  if (!streak.days) {
+    return streak.waitingOn === "them"
+      ? `hug sent — ${name} hugs back and you're on`
+      : "hug each other in a day to start one";
+  }
+  if (streak.isExpiring && streak.expiresAt)
+    return `about to lapse — ${streakTimeLeft(streak.expiresAt)}`;
+  if (streak.waitingOn === "me" || streak.waitingOn === "both")
+    return "your turn today";
+  if (streak.waitingOn === "them") return `waiting on ${name} today`;
+  if (streak.isRecord) return "your best run yet";
+  return `best together: ${streak.longest} days`;
+};
+
+const streakIcon = (streak: ResolvedStreak) => {
+  if (!streak.days) return "sparkles" as const;
+  return streak.isExpiring ? ("hourglass" as const) : ("flame" as const);
+};
 
 type RemoveState = "idle" | "confirming" | "removing" | "done" | "error";
 type BlockState = "idle" | "confirming" | "blocking" | "error";
@@ -117,7 +145,7 @@ export default function FriendStatsModal() {
   const sent = friend.totalHugsSent ?? 0;
   const received = friend.totalHugsReceived ?? 0;
   const together = sent + received;
-  const streak = friend.numStreakDays ?? 0;
+  const streak = resolveStreak(friend);
 
   return (
     <View
@@ -180,19 +208,28 @@ export default function FriendStatsModal() {
         </StatCardRow>
 
         {/* streak */}
-        {showStreak && (
-          <View style={styles.streakCard}>
-            <View style={styles.streakIcon}>
-              <Ionicons name="sparkles" size={20} color={colors.butter} />
-            </View>
-            <View>
-              <Text style={styles.streakNumber}>{streak}-day streak</Text>
-              <Text style={styles.streakSub}>
-                {streak > 0 ? "hugged every day" : "no streak yet"}
-              </Text>
-            </View>
+        <View
+          style={[
+            styles.streakCard,
+            streak.isExpiring && styles.streakCardUrgent,
+          ]}
+        >
+          <View style={styles.streakIcon}>
+            <Ionicons
+              name={streakIcon(streak)}
+              size={20}
+              color={streak.days ? colors.peach : colors.butter}
+            />
           </View>
-        )}
+          <View style={styles.streakTextWrap}>
+            <Text style={styles.streakNumber}>
+              {streak.days ? `${streak.days}-day streak` : "no streak yet"}
+            </Text>
+            <Text style={styles.streakSub}>
+              {streakSubtitle(streak, friend.displayName)}
+            </Text>
+          </View>
+        </View>
 
         {/* timestamp rows */}
         <View style={styles.infoCard}>
@@ -438,6 +475,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  streakCardUrgent: { backgroundColor: tint(colors.peach, 0.8) },
+  streakTextWrap: { flex: 1 },
   streakNumber: {
     fontSize: 19,
     fontFamily: font.displayBold,
