@@ -127,21 +127,6 @@ export default function HugsListScreen() {
             }
             onSelectHug={(hug, direction) => setSelection({ hug, direction })}
           />
-          {/* <FilterTabs value={tab} onChange={setTab} /> */}
-
-          {/* {tab === "received" ? (
-            <ReceivedHugsList
-              onSelectHug={(hug) =>
-                setSelection({ hug, direction: "incoming" })
-              }
-            />
-          ) : (
-            <SentHugsList
-              onSelectHug={(hug) =>
-                setSelection({ hug, direction: "outgoing" })
-              }
-            />
-          )} */}
         </>
       )}
 
@@ -180,8 +165,9 @@ const styles = StyleSheet.create({
     fontSize: 34,
     color: colors.plumInk,
   },
-  // the pill has side margins of its own, so the sticky band has to reach past
-  // the list's horizontal padding — otherwise rows show through beside it
+  // the pills carry the horizontal inset themselves so they can scroll out to
+  // the edge, so the sticky band has to reach past the list's padding —
+  // otherwise rows show through beside it
   stickyTabs: {
     marginHorizontal: -spacing.xl,
     paddingTop: spacing.xs,

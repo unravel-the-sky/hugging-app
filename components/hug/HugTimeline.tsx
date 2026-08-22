@@ -2,13 +2,20 @@ import { colors, spacing } from "@/components/ui/squish/theme";
 import { Hug } from "@/lib/handleHugs";
 import { DayGroup, Direction, groupByDay } from "@/lib/hugs/groups";
 import { useScrollToTop } from "@react-navigation/native";
-import React, { useMemo, useRef } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  View,
+} from "react-native";
 import { ListRowGroup } from "../ui/squish/ListRow";
 import { PlushButton } from "../ui/squish/PlushButton";
 import { DayHeader, TimelineHugRow } from "./HugListComponents";
 import { HugsEmptyState } from "./HugsEmptyState";
 import { HugFilter, useAllHugs } from "@/hooks/useAllHugs";
+import { useRefreshHugs } from "@/app/context/HugsContext";
 import { useCollapsibleDays } from "@/hooks/useCollapsibleDays";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
@@ -48,6 +55,17 @@ export const HugTimeline = ({
 
   const listRef = useRef<FlatList<DayGroup>>(null);
   useScrollToTop(listRef);
+
+  const refreshHugs = useRefreshHugs();
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refreshHugs();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshHugs]);
 
   const renderDay = ({ item }: { item: DayGroup }) => {
     // `data` is empty until the user is loaded, so this is belt and braces
@@ -91,6 +109,14 @@ export const HugTimeline = ({
       // own inset on top would double up
       contentInsetAdjustmentBehavior="never"
       contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={colors.primary}
+          colors={[colors.primary]}
+        />
+      }
       ListHeaderComponent={listHeader}
       stickyHeaderIndices={listHeader ? [0] : undefined}
       ListEmptyComponent={

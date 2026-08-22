@@ -13,6 +13,7 @@ import {
   getDocs,
   limit,
   onSnapshot,
+  onSnapshotsInSync,
   orderBy,
   query,
   startAfter,
@@ -48,9 +49,22 @@ const EMPTY_STREAM: HugStream = {
   loadMore: () => {},
 };
 
-const HugsContext = createContext<Record<HugDirection, HugStream>>({
+/**
+ * Longest we leave a pull-to-refresh spinner up waiting for the sync ping,
+ * and the shortest we show it — resolving instantly reads as a dropped
+ * gesture rather than a finished one.
+ */
+const REFRESH_TIMEOUT_MS = 4000;
+const REFRESH_MIN_MS = 500;
+
+type HugsContextValue = Record<HugDirection, HugStream> & {
+  refresh: () => Promise<void>;
+};
+
+const HugsContext = createContext<HugsContextValue>({
   incoming: EMPTY_STREAM,
   outgoing: EMPTY_STREAM,
+  refresh: async () => {},
 });
 
 const counterpartyUid = (hug: Hug, direction: HugDirection) =>
@@ -220,11 +234,52 @@ export function HugsProvider({ children }: { children: React.ReactNode }) {
     lastUid.current = uid;
   }, [uid]);
 
-  const value = useMemo(() => ({ incoming, outgoing }), [incoming, outgoing]);
+  /**
+   * Pull-to-refresh. Both streams are live listeners, so there is nothing to
+   * refetch — re-reading would cost a full page of documents per stream per
+   * pull and hand back data we already have. Instead we wait for Firestore to
+   * report the listeners in sync with the server, which costs no reads and is
+   * a real answer to the question the gesture asks ("am I up to date?") —
+   * most of all just after a reconnect.
+   */
+  const refresh = useCallback(
+    () =>
+      new Promise<void>((resolve) => {
+        const startedAt = Date.now();
+        let unsubscribe: (() => void) | undefined;
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        let settled = false;
+
+        const finish = () => {
+          if (settled) return;
+          settled = true;
+          unsubscribe?.();
+          if (timer) clearTimeout(timer);
+          const elapsed = Date.now() - startedAt;
+          setTimeout(resolve, Math.max(0, REFRESH_MIN_MS - elapsed));
+        };
+
+        unsubscribe = onSnapshotsInSync(db, finish);
+        timer = setTimeout(finish, REFRESH_TIMEOUT_MS);
+        // onSnapshotsInSync can fire before the assignment above lands
+        if (settled) unsubscribe();
+      }),
+    [],
+  );
+
+  const value = useMemo(
+    () => ({ incoming, outgoing, refresh }),
+    [incoming, outgoing, refresh],
+  );
 
   return <HugsContext.Provider value={value}>{children}</HugsContext.Provider>;
 }
 
 export function useHugs(direction: HugDirection = "incoming"): HugStream {
   return useContext(HugsContext)[direction];
+}
+
+/** Resolves once the live listeners are confirmed in sync with the server. */
+export function useRefreshHugs(): () => Promise<void> {
+  return useContext(HugsContext).refresh;
 }

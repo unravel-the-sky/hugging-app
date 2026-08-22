@@ -1,4 +1,5 @@
 import { useAvatarThumb } from "@/hooks/useAvatarThumbnail";
+import { HugFilter } from "@/hooks/useAllHugs";
 import { Hug } from "@/lib/handleHugs";
 import { threadOf } from "@/lib/hugs/thread";
 import { isHugUnread } from "@/lib/hugs/features";
@@ -7,7 +8,7 @@ import { formatTimestamp, getNote } from "@/lib/util";
 import { Ionicons } from "@expo/vector-icons";
 import { Timestamp } from "firebase/firestore";
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { FriendAvatar } from "../ui/squish/FriendAvatar";
 import { ListRow } from "../ui/squish/ListRow";
 import {
@@ -28,11 +29,13 @@ const clock = (t?: Timestamp) =>
 const SEEN = colors.primary;
 const BACK = darken(colors.mint, 0.38);
 
-export type Tab = "all" | "pending";
+export type Tab = HugFilter;
 
 export const TABS: { key: Tab; label: string }[] = [
-  { key: "all", label: "all" },
-  { key: "pending", label: "pending" },
+  { key: "all", label: "All" },
+  { key: "received", label: "Received" },
+  { key: "sent", label: "Sent" },
+  { key: "pending", label: "Pending" },
 ] as const;
 
 /* ------------------------------------------------------------------ */
@@ -177,6 +180,10 @@ export const HugRow = ({
 /* Tabs                                                                */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Standalone pills rather than a segmented track: four labels don't divide
+ * evenly into a fixed width, so they scroll instead of squeezing.
+ */
 export const FilterTabs = ({
   value,
   onChange,
@@ -184,7 +191,11 @@ export const FilterTabs = ({
   value: Tab;
   onChange: (t: Tab) => void;
 }) => (
-  <View style={styles.tabsTrack}>
+  <ScrollView
+    horizontal
+    showsHorizontalScrollIndicator={false}
+    contentContainerStyle={styles.tabsTrack}
+  >
     {TABS.map((t) => {
       const active = value === t.key;
       return (
@@ -199,7 +210,7 @@ export const FilterTabs = ({
         </Pressable>
       );
     })}
-  </View>
+  </ScrollView>
 );
 
 const DirectionBadge = ({
@@ -386,26 +397,28 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
 
-  /* segmented tabs */
+  /* filter pills */
   tabsTrack: {
     flexDirection: "row",
-    marginHorizontal: spacing.xl,
-    backgroundColor: colors.mistBg,
-    borderRadius: radius.pill,
-    padding: spacing.xs,
-    marginBottom: spacing.lg,
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.lg,
   },
   tabItem: {
-    flex: 1,
     paddingVertical: 10,
+    paddingHorizontal: spacing.lg,
     borderRadius: radius.pill,
     alignItems: "center",
-  },
-  tabItemActive: {
+    justifyContent: "center",
     backgroundColor: colors.surface,
     ...shadow,
-    shadowOpacity: 0.16,
+    shadowOpacity: 0.1,
     shadowRadius: 6,
+  },
+  tabItemActive: {
+    backgroundColor: colors.primary,
+    shadowOpacity: 0.24,
   },
   tabLabel: {
     fontFamily: font.uiBold,
@@ -413,7 +426,7 @@ const styles = StyleSheet.create({
     color: colors.softInk,
   },
   tabLabelActive: {
-    color: colors.deep,
+    color: colors.surface,
   },
 
   /* section headers */
