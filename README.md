@@ -53,7 +53,7 @@ it needs a development build — Expo Go won't run it.
 
 ```bash
 npm install
-npx expo run:ios      # or: npx expo run:android
+npx expo run:ios --device     # or: npx expo run:android
 ```
 
 After the first native build, `npx expo start` is enough for day-to-day work.
