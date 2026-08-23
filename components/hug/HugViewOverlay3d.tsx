@@ -94,6 +94,7 @@ export default function HugViewOverlay({
   const { user } = useCurrentUser();
   const myUid = user?.uid;
 
+  const isSender = hug.from === user?.uid;
   const senderName = hug.fromName ?? "Someone";
   const recipientName = hug.toName ?? "Someone";
   /** The person on the other end, whichever side of the hug I'm on. */
@@ -140,6 +141,14 @@ export default function HugViewOverlay({
     const timer = setTimeout(() => setConfirmVisible(false), 25000);
     return () => clearTimeout(timer);
   }, [latestKey]);
+
+  /** The hug is a window onto a friendship; the header is the way into it. */
+  const openMemoryLane = () => {
+    router.push({
+      pathname: "/friend-memory-lane",
+      params: { friendId: isSender ? hug.to : hug.from },
+    });
+  };
 
   const handleHugBack = () => {
     router.push({
@@ -200,7 +209,6 @@ export default function HugViewOverlay({
 
   console.log("HUGVIEWOVERLAY fromId: ", hug.from);
   console.log("HUGVIEWOVERLAY hugId: ", hug.id);
-  const isSender = hug.from === user?.uid;
 
   if (opened || startsOpen) {
     return (
@@ -223,27 +231,36 @@ export default function HugViewOverlay({
             style={[styles.header, { paddingTop: insets.top + spacing.lg }]}
             pointerEvents="box-none"
           >
-            <FriendAvatar
-              name={isSender ? recipientName : senderName}
-              uid={isSender ? hug.to : hug.from}
-              size={56}
-            />
-
-            <View style={styles.headerText}>
-              <Text style={[styles.headerTitle, { color: headerInk }]}>
-                {isSender
-                  ? `you hugged ${recipientName}`
-                  : `${senderName} hugged you`}
-              </Text>
-              {sentAt && (
-                <Text style={[styles.headerTime, { color: headerInk }]}>
-                  {formatTimestamp(sentAt)}
-                </Text>
-              )}
-            </View>
-
             <Pressable onPress={onClose} style={styles.headerBtn} hitSlop={8}>
-              <Ionicons name="close" size={24} color={colors.plumInk} />
+              <Ionicons name="chevron-back" size={24} color={colors.plumInk} />
+            </Pressable>
+
+            <Pressable
+              onPress={openMemoryLane}
+              style={({ pressed }) => [
+                styles.headerIdentity,
+                pressed && styles.headerIdentityPressed,
+              ]}
+              hitSlop={8}
+            >
+              <FriendAvatar
+                name={isSender ? recipientName : senderName}
+                uid={isSender ? hug.to : hug.from}
+                size={56}
+              />
+
+              <View style={styles.headerText}>
+                <Text style={[styles.headerTitle, { color: headerInk }]}>
+                  {isSender
+                    ? `you hugged ${recipientName}`
+                    : `${senderName} hugged you`}
+                </Text>
+                {sentAt && (
+                  <Text style={[styles.headerTime, { color: headerInk }]}>
+                    {formatTimestamp(sentAt)}
+                  </Text>
+                )}
+              </View>
             </Pressable>
           </View>
 
@@ -392,6 +409,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  // Avatar and title are one target: tapping either opens the memory lane
+  // with whoever is on the other end of this hug.
+  headerIdentity: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  headerIdentityPressed: { opacity: 0.6 },
   headerText: {
     flex: 1,
     gap: 2,

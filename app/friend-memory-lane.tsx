@@ -16,14 +16,14 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useGetDownloadUrl } from "@/hooks/useGetDownloadUrl";
 import { auth, db } from "@/lib/firebaseConfig";
 import { UserFriend } from "@/lib/handleFriends";
-import { getHugsWith, Hug } from "@/lib/handleHugs";
+import { getHugsWith, getHugWithId, Hug } from "@/lib/handleHugs";
 import { threadOf } from "@/lib/hugs/thread";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { router, useLocalSearchParams } from "expo-router";
-import { doc, getDoc } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { doc, getDoc, Timestamp } from "firebase/firestore";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -70,6 +70,9 @@ export default function FriendMemoryLane() {
 
   const [friend, setFriend] = useState<UserFriend | null>(null);
   const [hugs, setHugs] = useState<Hug[]>([]);
+  const [cursor, setCursor] = useState<Timestamp | undefined>();
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -84,13 +87,67 @@ export default function FriendMemoryLane() {
     const friendRef = doc(db, "users", me.uid, "friends", friendId);
 
     Promise.all([getDoc(friendRef), getHugsWith(friendId)])
-      .then(([snap, sharedHugs]) => {
+      .then(([snap, page]) => {
         if (snap.exists()) setFriend(snap.data() as UserFriend);
-        setHugs(sharedHugs.filter((hug) => hug.seenAt));
+        setHugs(page.hugs);
+        setCursor(page.cursor);
+        setHasMore(page.hasMore);
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [friendId]);
+
+  // the placeholders hand off to the hugs screen and this one stays mounted
+  // behind it, so on the way back the opened hugs are re-read — only those,
+  // rather than paging the whole lane again
+  const hugsRef = useRef(hugs);
+  hugsRef.current = hugs;
+
+  useFocusEffect(
+    useCallback(() => {
+      const uid = user?.uid;
+      if (!uid) return;
+
+      const ids = hugsRef.current
+        .filter((h) => h.to === uid && !h.seenAt)
+        .map((h) => h.id);
+      if (ids.length === 0) return;
+
+      let cancelled = false;
+      Promise.all(ids.map(getHugWithId))
+        .then((fresh) => {
+          if (cancelled) return;
+          const opened = new Map(
+            fresh.filter((h): h is Hug => !!h?.seenAt).map((h) => [h.id, h]),
+          );
+          if (opened.size === 0) return;
+          setHugs((prev) => prev.map((h) => opened.get(h.id) ?? h));
+        })
+        .catch(() => {});
+
+      return () => {
+        cancelled = true;
+      };
+    }, [user?.uid]),
+  );
+
+  const loadMore = useCallback(async () => {
+    if (!friendId || !cursor || !hasMore || loadingMore) return;
+
+    setLoadingMore(true);
+    try {
+      const page = await getHugsWith(friendId, { before: cursor });
+      // the lane only ever grows older, so appending is enough — no merge
+      setHugs((prev) => [...prev, ...page.hugs]);
+      setCursor(page.cursor ?? cursor);
+      setHasMore(page.hasMore);
+    } catch {
+      // a failed page shouldn't strand the button in a spinner; the lane keeps
+      // what it has and the reader can tap again
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [friendId, cursor, hasMore, loadingMore]);
 
   const friendPhotoUrl = useAvatarThumb(friend?.id);
   const myPhotoUrl = useAvatarThumb(user?.uid);
@@ -124,8 +181,8 @@ export default function FriendMemoryLane() {
             Memories
           </Text>
           <Text style={styles.headerSub} numberOfLines={1}>
-            with {name} · {hugs.length} hug{hugs.length === 1 ? "" : "s"}{" "}
-            together
+            with {name} · {hugs.length}
+            {hasMore ? "+" : ""} hug{hugs.length === 1 ? "" : "s"} together
           </Text>
         </View>
         <Pressable
@@ -160,6 +217,9 @@ export default function FriendMemoryLane() {
             const senderIsMe = h.from === user?.uid;
             const thread = threadOf(h);
             const createdAt = h.createdAt?.toDate();
+            // a hug is opened from the hugs screen, never here — until then
+            // the lane keeps its place with a wrapped-up placeholder
+            const unopened = h.to === user?.uid && !h.seenAt;
 
             return (
               <View key={h.id}>
@@ -168,82 +228,122 @@ export default function FriendMemoryLane() {
                   style={styles.divider}
                 />
 
-                <MemRow
-                  side={h.from === user?.uid ? "right" : "left"}
-                  avatar={
-                    <AvatarImage
-                      avatar={
-                        h.from === user?.uid
-                          ? user.avatar
-                          : h.fromAvatar || undefined
-                      }
-                      photoURL={
-                        h.from === user?.uid ? myPhotoUrl : friendPhotoUrl
-                      }
-                      name={h.fromName}
-                      size="s"
+                {unopened ? (
+                  <MemRow
+                    side="left"
+                    avatar={
+                      <AvatarImage
+                        avatar={h.fromAvatar || undefined}
+                        photoURL={friendPhotoUrl}
+                        name={h.fromName}
+                        size="s"
+                      />
+                    }
+                  >
+                    <UnopenedHug
+                      fromName={h.fromName}
+                      onPress={() => router.push(`/hugs?hugId=${h.id}`)}
                     />
-                  }
-                >
-                  {h.imagePath ? (
-                    <MemImage imagePath={h.imagePath} caption={h.note} />
-                  ) : null}
-                  {h.note && !h.imagePath ? (
-                    <MemNote text={h.note} side="left" mine={senderIsMe} />
-                  ) : null}
-                  {!h.imagePath && !h.note ? (
-                    <MemPill label="🫂 a hug" />
-                  ) : null}
-                </MemRow>
-
-                {thread.map((back, i) => {
-                  const backIsMine = back.from === user?.uid;
-                  const backAuthorName = backIsMine
-                    ? "You"
-                    : back.from === h.from
-                      ? h.fromName
-                      : h.toName;
-
-                  return (
+                  </MemRow>
+                ) : (
+                  <>
                     <MemRow
-                      key={`${back.from}-${back.createdAt.toMillis()}-${i}`}
-                      side={backIsMine ? "right" : "left"}
+                      side={h.from === user?.uid ? "right" : "left"}
                       avatar={
                         <AvatarImage
                           avatar={
-                            backIsMine
-                              ? user?.avatar
-                              : h.from === user?.uid
-                                ? undefined
-                                : h.fromAvatar || undefined
+                            h.from === user?.uid
+                              ? user.avatar
+                              : h.fromAvatar || undefined
                           }
-                          photoURL={backIsMine ? myPhotoUrl : friendPhotoUrl}
-                          name={backAuthorName}
+                          photoURL={
+                            h.from === user?.uid ? myPhotoUrl : friendPhotoUrl
+                          }
+                          name={h.fromName}
                           size="s"
                         />
                       }
-                      caption={`${backAuthorName} hugged back 🫂`}
                     >
-                      <MemNote
-                        text={back.note}
-                        side="right"
-                        mine={backIsMine}
-                      />
+                      {h.imagePath ? (
+                        <MemImage imagePath={h.imagePath} caption={h.note} />
+                      ) : null}
+                      {h.note && !h.imagePath ? (
+                        <MemNote text={h.note} side="left" mine={senderIsMe} />
+                      ) : null}
+                      {!h.imagePath && !h.note ? (
+                        <MemPill label="🫂 a hug" />
+                      ) : null}
                     </MemRow>
-                  );
-                })}
+
+                    {thread.map((back, i) => {
+                      const backIsMine = back.from === user?.uid;
+                      const backAuthorName = backIsMine
+                        ? "You"
+                        : back.from === h.from
+                          ? h.fromName
+                          : h.toName;
+
+                      return (
+                        <MemRow
+                          key={`${back.from}-${back.createdAt.toMillis()}-${i}`}
+                          side={backIsMine ? "right" : "left"}
+                          avatar={
+                            <AvatarImage
+                              avatar={
+                                backIsMine
+                                  ? user?.avatar
+                                  : h.from === user?.uid
+                                    ? undefined
+                                    : h.fromAvatar || undefined
+                              }
+                              photoURL={
+                                backIsMine ? myPhotoUrl : friendPhotoUrl
+                              }
+                              name={backAuthorName}
+                              size="s"
+                            />
+                          }
+                          caption={`${backAuthorName} hugged back 🫂`}
+                        >
+                          <MemNote
+                            text={back.note}
+                            side="right"
+                            mine={backIsMine}
+                          />
+                        </MemRow>
+                      );
+                    })}
+                  </>
+                )}
               </View>
             );
           })}
 
-          {/* first hug end cap */}
-          <View style={styles.endCap}>
-            <View style={styles.firstHugPill}>
-              <Ionicons name="heart" size={16} color={colors.blush} />
-              <Text style={styles.firstHugText}>first hug</Text>
+          {hasMore ? (
+            <Pressable
+              onPress={loadMore}
+              disabled={loadingMore}
+              style={({ pressed }) => [
+                styles.loadMore,
+                pressed && styles.loadMorePressed,
+              ]}
+            >
+              {loadingMore ? (
+                <ActivityIndicator color={colors.primary} />
+              ) : (
+                <Text style={styles.loadMoreText}>load more hugs</Text>
+              )}
+            </Pressable>
+          ) : (
+            /* first hug end cap */
+            <View style={styles.endCap}>
+              <View style={styles.firstHugPill}>
+                <Ionicons name="heart" size={16} color={colors.blush} />
+                <Text style={styles.firstHugText}>first hug</Text>
+              </View>
+              <Text style={styles.endCapCaption}>where it all began</Text>
             </View>
-            <Text style={styles.endCapCaption}>where it all began</Text>
-          </View>
+          )}
         </ScrollView>
       )}
 
@@ -431,6 +531,40 @@ function MemNote({
     >
       <Text style={styles.noteText}>{text}</Text>
     </View>
+  );
+}
+
+/**
+ * Stand-in for a hug that hasn't been opened yet. Opening happens on the hugs
+ * screen — that's where the wrapping animation and hug-back live — so this
+ * hands off there by id, the same route a push notification takes.
+ */
+function UnopenedHug({
+  fromName,
+  onPress,
+}: {
+  fromName: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.unopened,
+        pressed && styles.unopenedPressed,
+      ]}
+    >
+      <View style={styles.unopenedIcon}>
+        <Text style={styles.unopenedEmoji}>🫂</Text>
+      </View>
+      <View style={styles.unopenedText}>
+        <Text style={styles.unopenedTitle} numberOfLines={1}>
+          unopened hug from {fromName}
+        </Text>
+        <Text style={styles.unopenedHint}>tap to open it</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={colors.softInk} />
+    </Pressable>
   );
 }
 
@@ -652,6 +786,64 @@ const styles = StyleSheet.create({
     backgroundColor: colors.soft,
   },
   memPillText: {
+    fontFamily: font.uiBold,
+    fontSize: 14,
+    color: colors.primary,
+  },
+
+  /* unopened hug placeholder */
+  unopened: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+    borderBottomLeftRadius: 6,
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    borderColor: "#E4D9F7",
+  },
+  unopenedPressed: { opacity: 0.7 },
+  unopenedIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.pill,
+    backgroundColor: colors.soft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  unopenedEmoji: { fontSize: 17 },
+  unopenedText: { flexShrink: 1, gap: 1 },
+  unopenedTitle: {
+    fontFamily: font.uiBold,
+    fontSize: 14,
+    color: colors.plumInk,
+  },
+  unopenedHint: {
+    fontFamily: font.ui,
+    fontSize: 12,
+    color: colors.softInk,
+  },
+
+  /* load more */
+  loadMore: {
+    alignSelf: "center",
+    minWidth: 170,
+    minHeight: 42,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 11,
+    paddingHorizontal: 22,
+    marginTop: spacing.xl,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: "#F0EAFB",
+  },
+  loadMorePressed: { opacity: 0.7 },
+  loadMoreText: {
     fontFamily: font.uiBold,
     fontSize: 14,
     color: colors.primary,
