@@ -5,7 +5,10 @@ import {
   FieldValue,
   getDoc,
   getDocs,
+  limit,
+  orderBy,
   query,
+  startAfter,
   runTransaction,
   serverTimestamp,
   Timestamp,
@@ -185,18 +188,39 @@ export async function getHugWithId(hugId: string): Promise<Hug | null> {
   }
 }
 
-export async function getHugsWith(friendId: string): Promise<Hug[]> {
-  const me = auth.currentUser;
-  if (!me) return [];
+/** A page of the memory lane, small enough that most visits read one page. */
+export const HUGS_WITH_PAGE_SIZE = 10;
 
+export type HugsWithPage = {
+  hugs: Hug[];
+  /** `createdAt` of the oldest hug returned — pass it back as `before`. */
+  cursor?: Timestamp;
+  hasMore: boolean;
+};
+
+export async function getHugsWith(
+  friendId: string,
+  opts: { pageSize?: number; before?: Timestamp } = {},
+): Promise<HugsWithPage> {
+  const me = auth.currentUser;
+  if (!me) return { hugs: [], hasMore: false };
+
+  const pageSize = opts.pageSize ?? HUGS_WITH_PAGE_SIZE;
   const hugsRef = collection(db, "hugs");
+
+  const pageQuery = (from: string, to: string) =>
+    query(
+      hugsRef,
+      where("from", "==", from),
+      where("to", "==", to),
+      orderBy("createdAt", "desc"),
+      ...(opts.before ? [startAfter(opts.before)] : []),
+      limit(pageSize + 1),
+    );
+
   const [sentSnap, recvSnap] = await Promise.all([
-    getDocs(
-      query(hugsRef, where("from", "==", me.uid), where("to", "==", friendId)),
-    ),
-    getDocs(
-      query(hugsRef, where("from", "==", friendId), where("to", "==", me.uid)),
-    ),
+    getDocs(pageQuery(me.uid, friendId)),
+    getDocs(pageQuery(friendId, me.uid)),
   ]);
 
   const toHug = (d: (typeof sentSnap.docs)[number]): Hug => ({
@@ -204,11 +228,19 @@ export async function getHugsWith(friendId: string): Promise<Hug[]> {
     ...(d.data() as Omit<Hug, "id">),
   });
 
-  return [...sentSnap.docs, ...recvSnap.docs]
+  const merged = [...sentSnap.docs, ...recvSnap.docs]
     .map(toHug)
     .sort(
       (a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0),
     );
+
+  const hugs = merged.slice(0, pageSize);
+
+  return {
+    hugs,
+    cursor: hugs.at(-1)?.createdAt,
+    hasMore: merged.length > pageSize,
+  };
 }
 
 // this is some weird workaround for adding %2F instead of / on firebase downloadUrl
