@@ -1,15 +1,18 @@
 import {
   Atlas,
+  BlendMode,
   Canvas,
   Group,
   Skia,
   rect,
   useClock,
+  useImage,
   useRSXformBuffer,
+  type DataSourceParam,
 } from "@shopify/react-native-skia";
 import { useMemo } from "react";
 import { PixelRatio, StyleSheet, useWindowDimensions } from "react-native";
-import type { SharedValue } from "react-native-reanimated";
+import { useDerivedValue, type SharedValue } from "react-native-reanimated";
 
 const SCALE = PixelRatio.get();
 
@@ -39,8 +42,12 @@ const HEART_COLOR = "rgba(255,184,224,0.9)";
 
 const SPRITE_W = 64;
 const SPRITE_H = 48;
-const SW = SPRITE_W * SCALE;
-const SH = SPRITE_H * SCALE;
+
+// Longest edge of the rasterised sprite, in points. Every instance samples this
+// one small texture, so a source image is downscaled into it once up front
+// rather than 600 times per frame — a 1504px logo sampled straight down to
+// ~20px would alias badly and burn texture bandwidth for nothing.
+const SPRITE_MAX = 96;
 
 type Heart = {
   x: number;
@@ -55,38 +62,84 @@ export function HeartsGridSkia({
   tiltY,
   unit = 4,
   color = HEART_COLOR,
+  opacity,
+  source,
+  tint,
 }: {
   tiltX: SharedValue<number>; // same values driving the card's rotateX
   tiltY: SharedValue<number>;
   unit?: number; // px per world unit — cardH / 4 keeps the original scale
   /** any Skia-parseable colour; re-rasterises the sprite when it changes */
   color?: string;
+  /** 0..1 fade for the whole field; omit to keep it fully visible */
+  opacity?: SharedValue<number>;
+  /**
+   * Tile this image instead of the built-in heart — e.g.
+   * `require("@/assets/images/splash-icon-mine-trans.png")`. Any transparent
+   * PNG works; its aspect ratio is preserved and `color` is ignored.
+   */
+  source?: DataSourceParam;
+  /**
+   * Flatten `source` to this single colour, keeping only its silhouette — the
+   * heart's look with your own artwork. Any Skia-parseable colour, alpha
+   * included. Ignored without a `source`; drop it to keep the art full-colour.
+   */
+  tint?: string;
 }) {
   const clock = useClock();
+
+  const sourceImage = useImage(source);
+
+  // Sprite size in points: the heart's own box, or the source image fitted to
+  // SPRITE_MAX along its longest edge.
+  const [spriteW, spriteH] = useMemo(() => {
+    if (!sourceImage) return [SPRITE_W, SPRITE_H];
+    const w = sourceImage.width();
+    const h = sourceImage.height();
+    const fit = SPRITE_MAX / Math.max(w, h);
+    return [w * fit, h * fit];
+  }, [sourceImage]);
+
+  const SW = spriteW * SCALE;
+  const SH = spriteH * SCALE;
 
   // one rasterised sprite, reused by every instance
   const image = useMemo(() => {
     const surface =
-      Skia.Surface.MakeOffscreen(SPRITE_W * SCALE, SPRITE_H * SCALE) ??
-      Skia.Surface.Make(SPRITE_W * SCALE, SPRITE_H * SCALE);
+      Skia.Surface.MakeOffscreen(SW, SH) ?? Skia.Surface.Make(SW, SH);
     if (!surface) return null;
 
     const canvas = surface.getCanvas();
-    const path = Skia.Path.MakeFromSVGString(HEART);
-    const paint = Skia.Paint();
-    paint.setAntiAlias(true);
-    paint.setColor(Skia.Color(color));
 
-    canvas.scale(SCALE, SCALE);
-    if (path) canvas.drawPath(path, paint);
+    if (sourceImage) {
+      // Downscale once, with smoothing, into the sprite.
+      const paint = Skia.Paint();
+      paint.setAntiAlias(true);
+      paint.setAlphaf(0.7);
+      paint.setBlendMode(BlendMode.Darken);
+      canvas.drawImageRect(
+        sourceImage,
+        rect(0, 0, sourceImage.width(), sourceImage.height()),
+        rect(0, 0, SW, SH),
+        paint,
+      );
+    } else {
+      const path = Skia.Path.MakeFromSVGString(HEART);
+      const paint = Skia.Paint();
+      paint.setAntiAlias(true);
+      paint.setColor(Skia.Color(color));
+      canvas.scale(SCALE, SCALE);
+      if (path) canvas.drawPath(path, paint);
+    }
+
     surface.flush();
 
     return surface.makeImageSnapshot().makeNonTextureImage();
-  }, [color]);
+  }, [color, sourceImage, tint, SW, SH]);
 
   const sprites = useMemo(
     () => new Array(COUNT).fill(0).map(() => rect(0, 0, SW, SH)),
-    [],
+    [SW, SH],
   );
 
   // identical layout maths to the three.js version, converted to px
@@ -138,9 +191,14 @@ export function HeartsGridSkia({
 
   const { width: w, height: h } = useWindowDimensions();
 
+  const fade = useDerivedValue(() => opacity?.value ?? 1);
+
   return (
     <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
-      <Group transform={[{ translateX: w * 0.5 }, { translateY: h * 0.5 }]}>
+      <Group
+        transform={[{ translateX: w * 0.5 }, { translateY: h * 0.5 }]}
+        opacity={fade}
+      >
         <Atlas image={image} sprites={sprites} transforms={transforms} />
       </Group>
     </Canvas>
