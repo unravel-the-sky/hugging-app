@@ -1,24 +1,32 @@
 import { useCallback, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import Animated, {
   Extrapolation,
   interpolate,
   interpolateColor,
   useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
   withSpring,
   withTiming,
 } from "react-native-reanimated";
+import { HeartsGridSkia } from "./HeartGridSkia";
 import HugButton from "./HugButton";
 
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useTiltNew } from "@/hooks/useTilt";
 import { auth } from "@/lib/firebaseConfig";
 import { HugCreate, SendableHug, sendHug } from "@/lib/handleHugs";
-import { scheduleOnRN } from "react-native-worklets";
-import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import { scheduleOnRN } from "react-native-worklets";
 import { colors, font, radius } from "../ui/squish";
-import { rotate } from "@shopify/react-native-skia";
 
 export type HugPhase =
   | "idle"
@@ -39,6 +47,14 @@ export default function HugController({ sendableHug, onComplete }: HugProps) {
   const [hugPhase, setHugPhase] = useState<HugPhase>("idle");
 
   const { user } = useCurrentUser();
+
+  // Background heart field: parallaxes with the phone and fades in as the hug
+  // charges, so a full press leaves it fully visible.
+  const tilt = useTiltNew();
+  const { height: windowHeight } = useWindowDimensions();
+  const heartsOpacity = useDerivedValue(() =>
+    interpolate(hugPress.value, [0, 1], [0, 1], Extrapolation.CLAMP),
+  );
 
   const startHug = () => {
     console.log("starting to hugggg");
@@ -134,6 +150,15 @@ export default function HugController({ sendableHug, onComplete }: HugProps) {
 
   return (
     <Animated.View style={[styles.container, bgStyle]}>
+      <HeartsGridSkia
+        source={require("@/assets/images/splash-icon-mine-trans.png")}
+        tint="rgba(255,184,224,0.9)"
+        tiltX={tilt.x}
+        tiltY={tilt.y}
+        unit={windowHeight * 0.15}
+        opacity={heartsOpacity}
+      />
+
       <View
         style={{
           position: "absolute",
@@ -146,7 +171,7 @@ export default function HugController({ sendableHug, onComplete }: HugProps) {
           justifyContent: "space-between",
         }}
       >
-        <Pressable
+        {/* <Pressable
           onPress={() => router.back()}
           style={{
             width: 40,
@@ -163,6 +188,13 @@ export default function HugController({ sendableHug, onComplete }: HugProps) {
             size={38}
             color={colors.plumInk}
           />
+        </Pressable> */}
+        <Pressable
+          onPress={() => router.back()}
+          style={styles.closeBtn}
+          hitSlop={8}
+        >
+          <Ionicons name="close" size={24} color={colors.plumInk} />
         </Pressable>
       </View>
       <View style={styles.progressContainer}>
@@ -189,6 +221,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     height: "100%",
     paddingVertical: 16,
+  },
+  closeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.7)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   statusText: {
     // backgroundColor: colors.peach,

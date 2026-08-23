@@ -138,7 +138,7 @@ export default function HugButton({
         pointerEvents="none"
       >
         <Animated.View style={hugContainerStyle}>
-          <HugArms hugProgress={hugProgress} />
+          <HugArms hugProgress={hugProgress} dragY={translateY} />
           <Animated.View style={faceAnimatedStyle}>
             <Face
               hugProgress={hugProgress}
