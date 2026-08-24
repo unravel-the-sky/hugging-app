@@ -1,4 +1,4 @@
-import { HugsProvider } from "@/app/context/HugsContext";
+import { HugsProvider } from "@/context/HugsContext";
 import { OfflineGate } from "@/components/ui/OfflineGate";
 import { colors } from "@/components/ui/squish";
 import { useBlocks } from "@/hooks/useBlocks";

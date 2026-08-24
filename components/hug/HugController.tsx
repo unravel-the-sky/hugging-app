@@ -171,24 +171,6 @@ export default function HugController({ sendableHug, onComplete }: HugProps) {
           justifyContent: "space-between",
         }}
       >
-        {/* <Pressable
-          onPress={() => router.back()}
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            backgroundColor: "rgba(255,255,255,0.7)",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-          hitSlop={8}
-        >
-          <Ionicons
-            name="close-circle-outline"
-            size={38}
-            color={colors.plumInk}
-          />
-        </Pressable> */}
         <Pressable
           onPress={() => router.back()}
           style={styles.closeBtn}

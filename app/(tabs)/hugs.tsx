@@ -4,7 +4,7 @@ import { HugTimeline } from "@/components/hug/HugTimeline";
 import HugViewOverlay3d from "@/components/hug/HugViewOverlay3d";
 import { colors, font, spacing } from "@/components/ui/squish/theme";
 import { useBlocks } from "@/hooks/useBlocks";
-import { useHugs } from "@/app/context/HugsContext";
+import { useHugs } from "@/context/HugsContext";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useHugTotals } from "@/hooks/useIncomingHugs";
 import { db } from "@/lib/firebaseConfig";
@@ -103,12 +103,6 @@ export default function HugsListScreen() {
       {/* pinned: the list scrolls underneath it, the title stays put */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Hugs</Text>
-        {totalNumHugs && totalNumHugs > 0 ? (
-          <View style={styles.allTime}>
-            <Text style={styles.heart}>♥</Text>
-            <Text style={styles.allTimeText}>{totalNumHugs} all-time</Text>
-          </View>
-        ) : null}
       </View>
 
       {totalNumHugs === 0 ? (
@@ -172,19 +166,5 @@ const styles = StyleSheet.create({
     marginHorizontal: -spacing.xl,
     paddingTop: spacing.xs,
     backgroundColor: colors.soft,
-  },
-  allTime: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-  },
-  heart: {
-    color: colors.blush,
-    fontSize: 16,
-  },
-  allTimeText: {
-    fontFamily: font.ui,
-    fontSize: 15,
-    color: colors.softInk,
   },
 });

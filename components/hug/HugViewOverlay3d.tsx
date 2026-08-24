@@ -1,4 +1,4 @@
-import { TabBarContext } from "@/app/context/TabBarContext";
+import { TabBarContext } from "@/context/TabBarContext";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Hug } from "@/lib/handleHugs";
 import { canHugBack, hugBacksLeft, threadOf } from "@/lib/hugs/thread";

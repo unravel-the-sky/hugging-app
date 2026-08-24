@@ -1,5 +1,5 @@
 import { useAvatarThumb } from "@/hooks/useAvatarThumbnail";
-import { HugFilter } from "@/hooks/useAllHugs";
+import { HugFilter, useUnreadHugsCount } from "@/hooks/useAllHugs";
 import { Hug } from "@/lib/handleHugs";
 import { threadOf } from "@/lib/hugs/thread";
 import { isHugUnread } from "@/lib/hugs/features";
@@ -33,6 +33,7 @@ export type Tab = HugFilter;
 
 export const TABS: { key: Tab; label: string }[] = [
   { key: "all", label: "All" },
+  { key: "new", label: "New" },
   { key: "received", label: "Received" },
   { key: "sent", label: "Sent" },
   { key: "pending", label: "Pending" },
@@ -190,28 +191,34 @@ export const FilterTabs = ({
 }: {
   value: Tab;
   onChange: (t: Tab) => void;
-}) => (
-  <ScrollView
-    horizontal
-    showsHorizontalScrollIndicator={false}
-    contentContainerStyle={styles.tabsTrack}
-  >
-    {TABS.map((t) => {
-      const active = value === t.key;
-      return (
-        <Pressable
-          key={t.key}
-          onPress={() => onChange(t.key)}
-          style={[styles.tabItem, active && styles.tabItemActive]}
-        >
-          <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
-            {t.label}
-          </Text>
-        </Pressable>
-      );
-    })}
-  </ScrollView>
-);
+}) => {
+  const unreadHugsCount = useUnreadHugsCount();
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.tabsTrack}
+    >
+      {TABS.map((t) => {
+        const active = value === t.key;
+        return (
+          <Pressable
+            key={t.key}
+            onPress={() => onChange(t.key)}
+            style={[styles.tabItem, active && styles.tabItemActive]}
+          >
+            <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
+              {t.label}
+              {t.key === "new" &&
+                unreadHugsCount > 0 &&
+                ` (${unreadHugsCount})`}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </ScrollView>
+  );
+};
 
 const DirectionBadge = ({
   hug,
@@ -321,6 +328,58 @@ export const TimelineHugRow = ({
       </View>
 
       <StatusStack hug={hug} direction={direction} />
+    </ListRow>
+  );
+};
+
+/**
+ * A person's run of hugs in one day, folded into a single row. Tapping it
+ * unfolds the run below; the chevron is the only affordance, so the row reads
+ * the same as the hug rows it stands in for.
+ */
+export const PersonClusterRow = ({
+  hugs,
+  uid,
+  name,
+  userId,
+  expanded,
+  showDivider,
+  onPress,
+}: {
+  hugs: Hug[];
+  uid: string;
+  name: string;
+  userId: string;
+  expanded: boolean;
+  showDivider: boolean;
+  onPress: () => void;
+}) => {
+  const photoUri = useAvatarThumb(uid);
+  const unread = hugs.filter((hug) => isHugUnread(hug, userId)).length;
+
+  return (
+    <ListRow onPress={onPress} showDivider={showDivider} dense>
+      <FriendAvatar name={name} photoUri={photoUri ?? undefined} />
+
+      <View style={styles.rowBody}>
+        <View style={styles.nameLine}>
+          <Text style={styles.rowName} numberOfLines={1}>
+            {name}
+          </Text>
+          {unread > 0 && (
+            <View style={styles.newPill}>
+              <Text style={styles.newPillText}>{unread} NEW</Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.subText}>{hugs.length} hugs</Text>
+      </View>
+
+      <Ionicons
+        name={expanded ? "chevron-up" : "chevron-down"}
+        size={18}
+        color={colors.softInk}
+      />
     </ListRow>
   );
 };

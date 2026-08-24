@@ -114,3 +114,64 @@ export const groupByDay = (hugs: Hug[], now: Date = new Date()): DayGroup[] => {
     }))
     .sort((a, b) => Number(b.key) - Number(a.key));
 };
+
+/* ------------------------------------------------------------------ */
+/* Timeline: collapse a run of hugs with one person                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A day's timeline is a mix of one-off hugs and per-person clusters. Twenty
+ * hugs from one friend in an afternoon is one relationship, not twenty rows.
+ */
+export type DayEntry =
+  | { kind: "hug"; key: string; hug: Hug }
+  | { kind: "cluster"; key: string; uid: string; name: string; hugs: Hug[] };
+
+/** Hugs with one person, in one day, before the run collapses into a row. */
+export const CLUSTER_MIN = 3;
+
+/**
+ * Collapses each person's run within a day, leaving everyone below the
+ * threshold as plain rows. Clusters sit where their newest hug sat, so the
+ * day stays in recency order and nothing jumps to the top by being frequent.
+ *
+ * `key` is unique within the day only — the caller prefixes it with the day's
+ * own key, so two days of hugs with the same person collapse independently.
+ */
+export const clusterByPerson = (
+  hugs: Hug[],
+  directionOf: (hug: Hug) => Direction,
+  min: number = CLUSTER_MIN,
+): DayEntry[] => {
+  const buckets = new Map<string, Hug[]>();
+
+  for (const hug of hugs) {
+    const { uid } = counterpartyOf(hug, directionOf(hug));
+    const bucket = buckets.get(uid);
+    if (bucket) bucket.push(hug);
+    else buckets.set(uid, [hug]);
+  }
+
+  const entries: DayEntry[] = [];
+
+  for (const [uid, bucket] of buckets) {
+    if (bucket.length < min) {
+      for (const hug of bucket) entries.push({ kind: "hug", key: hug.id, hug });
+      continue;
+    }
+
+    const sorted = [...bucket].sort(byNewest);
+    entries.push({
+      kind: "cluster",
+      key: `person:${uid}`,
+      uid,
+      name: counterpartyOf(sorted[0], directionOf(sorted[0])).name,
+      hugs: sorted,
+    });
+  }
+
+  const newest = (entry: DayEntry) =>
+    entry.kind === "hug" ? hugMillis(entry.hug) : hugMillis(entry.hugs[0]);
+
+  return entries.sort((a, b) => newest(b) - newest(a));
+};

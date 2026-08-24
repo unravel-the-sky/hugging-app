@@ -1,4 +1,5 @@
 import { getFunctions, httpsCallable } from "firebase/functions";
+import { app } from "./firebaseConfig";
 
 /**
  * Blocking is entirely server-side: the `blocks` collection is not readable
@@ -14,7 +15,7 @@ export type BlockedUser = {
   blockedAt: number | null;
 };
 
-const functions = getFunctions();
+const functions = getFunctions(app);
 
 const blockUserFn = httpsCallable(functions, "blockUser");
 const unblockUserFn = httpsCallable(functions, "unblockUser");

@@ -115,7 +115,7 @@ export function HeartsGridSkia({
       // Downscale once, with smoothing, into the sprite.
       const paint = Skia.Paint();
       paint.setAntiAlias(true);
-      paint.setAlphaf(0.7);
+      paint.setAlphaf(0.4);
       paint.setBlendMode(BlendMode.Darken);
       canvas.drawImageRect(
         sourceImage,
@@ -135,7 +135,7 @@ export function HeartsGridSkia({
     surface.flush();
 
     return surface.makeImageSnapshot().makeNonTextureImage();
-  }, [color, sourceImage, tint, SW, SH]);
+  }, [color, sourceImage, SW, SH]);
 
   const sprites = useMemo(
     () => new Array(COUNT).fill(0).map(() => rect(0, 0, SW, SH)),

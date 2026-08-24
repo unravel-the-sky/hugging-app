@@ -1,4 +1,5 @@
 import { getFunctions, httpsCallable } from "firebase/functions";
+import { app } from "./firebaseConfig";
 import { AvatarType } from "./createUser";
 
 export type UserSearchResult = {
@@ -7,7 +8,7 @@ export type UserSearchResult = {
   avatar?: AvatarType | null;
 };
 
-const searchUsersFn = httpsCallable(getFunctions(), "searchUsers");
+const searchUsersFn = httpsCallable(getFunctions(app), "searchUsers");
 
 /**
  * Prefix search on displayName. Firestore can't do contains/fuzzy —
