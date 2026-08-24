@@ -332,6 +332,58 @@ export const TimelineHugRow = ({
   );
 };
 
+/**
+ * A person's run of hugs in one day, folded into a single row. Tapping it
+ * unfolds the run below; the chevron is the only affordance, so the row reads
+ * the same as the hug rows it stands in for.
+ */
+export const PersonClusterRow = ({
+  hugs,
+  uid,
+  name,
+  userId,
+  expanded,
+  showDivider,
+  onPress,
+}: {
+  hugs: Hug[];
+  uid: string;
+  name: string;
+  userId: string;
+  expanded: boolean;
+  showDivider: boolean;
+  onPress: () => void;
+}) => {
+  const photoUri = useAvatarThumb(uid);
+  const unread = hugs.filter((hug) => isHugUnread(hug, userId)).length;
+
+  return (
+    <ListRow onPress={onPress} showDivider={showDivider} dense>
+      <FriendAvatar name={name} photoUri={photoUri ?? undefined} />
+
+      <View style={styles.rowBody}>
+        <View style={styles.nameLine}>
+          <Text style={styles.rowName} numberOfLines={1}>
+            {name}
+          </Text>
+          {unread > 0 && (
+            <View style={styles.newPill}>
+              <Text style={styles.newPillText}>{unread} NEW</Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.subText}>{hugs.length} hugs</Text>
+      </View>
+
+      <Ionicons
+        name={expanded ? "chevron-up" : "chevron-down"}
+        size={18}
+        color={colors.softInk}
+      />
+    </ListRow>
+  );
+};
+
 /** Day header with the trailing rule from the mockup. */
 export const DayHeader = ({ title }: { title: string }) => (
   <View style={styles.dayHeader}>
