@@ -13,7 +13,7 @@ import {
 } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { AvatarType, getUserFromCollection, User } from "./createUser";
-import { auth, db } from "./firebaseConfig";
+import { app, auth, db } from "./firebaseConfig";
 import { normalizeUsername } from "./util";
 
 export type FriendshipRequest = {
@@ -179,7 +179,7 @@ export async function sendFriendRequest(username: string) {
   }
 }
 
-const functions = getFunctions(); // or getFunctions(app, "your-region") if not us-central1
+const functions = getFunctions(app);
 
 // one callable per function
 const acceptFriendRequestFn = httpsCallable(functions, "acceptFriendRequest");
