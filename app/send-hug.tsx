@@ -44,7 +44,8 @@ export default function SendHug() {
   const handleResetHug = () => {
     setHugIsSent(false);
     setSendableHug(undefined);
-    router.dismissTo("/(tabs)");
+
+    router.dismissTo("/");
   };
 
   if (hugIsSent) {
