@@ -21,6 +21,10 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 const EMPTY: Record<HugFilter, { title: string; hint: string }> = {
   all: { title: "No hugs yet", hint: "Send one and it'll show up here." },
+  new: {
+    title: "All caught up",
+    hint: "Nothing new to open — hugs and hug backs land here.",
+  },
   received: {
     title: "No hugs yet",
     hint: "They'll show up the moment someone sends one.",
@@ -50,6 +54,14 @@ export const HugTimeline = ({
     useAllHugs(filter);
 
   const days = useMemo(() => groupByDay(hugs), [hugs]);
+
+  // `hasMore` answers "are there older *documents*", not "are there older
+  // rows this filter would keep". On New that's nearly always true and
+  // nearly always fruitless — every older hug has been read — so the button
+  // would sit under a single unread hug forever, paging a whole history to
+  // reveal nothing. Anything unread lives at the top of the window we
+  // already hold, which is the same window the tab badge counts.
+  const canLoadMore = hasMore && filter !== "new";
   const { isExpanded, toggle, overrides } = useCollapsibleDays(days);
   const { user } = useCurrentUser();
 
@@ -129,7 +141,7 @@ export const HugTimeline = ({
         )
       }
       ListFooterComponent={
-        hasMore && !loading ? (
+        canLoadMore && !loading ? (
           <PlushButton
             onPress={loadMore}
             disabled={isLoadingMore}

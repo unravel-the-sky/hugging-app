@@ -1,7 +1,8 @@
+import { useAvatarTabIcon } from "@/components/avatar/AvatarTabIcon";
 import Loader from "@/components/ui/Loader";
+import { useUnreadHugsCount } from "@/hooks/useAllHugs";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useFriends } from "@/hooks/useFriends";
-import { useHugs } from "@/app/context/HugsContext";
 import {
   DarkTheme,
   DefaultTheme,
@@ -9,28 +10,26 @@ import {
 } from "@react-navigation/native";
 import { Label, useSegments } from "expo-router";
 import { NativeTabs } from "expo-router/unstable-native-tabs";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { StyleSheet, useColorScheme, View } from "react-native";
-import { useAvatarTabIcon } from "@/components/avatar/AvatarTabIcon";
 import { colors } from "../../components/ui/squish/theme";
+import ChangeAvatarSheet from "../change-avatar";
 import { TabBarContext } from "../context/TabBarContext";
 import SetupScreen from "../setup";
 import SignInScreen from "../sign-in";
-import ChangeAvatarSheet from "../change-avatar";
 
 export default function TabsLayout() {
   const { authUser, user, isHydrating } = useCurrentUser();
-  const [unreadHugsCount, setUnreadHugsCount] = useState<number>(0);
-
   const [isTabBarHidden, setIsTabBarHidden] = useState(false);
 
-  const { hugs, isLoading: isLoadingHugs } = useHugs();
   const { friendRequests } = useFriends();
 
   const segments = useSegments();
   const isOnSetup = segments[0] === "setup";
 
   const colorScheme = useColorScheme();
+
+  const unreadHugsCount = useUnreadHugsCount();
 
   // the profile tab wears the user's own avatar, rendered off-screen and
   // snapshotted because iOS tab items only accept images
@@ -41,13 +40,6 @@ export default function TabsLayout() {
   console.log(
     `TabsLayout is called, isHydaring: ${isHydrating} and userId: ${user?.uid}`,
   );
-
-  useEffect(() => {
-    if (!isLoadingHugs) {
-      const unSeenHugsCount = hugs.filter((item) => !item.seenAt).length;
-      setUnreadHugsCount(unSeenHugsCount);
-    }
-  }, [hugs, isLoadingHugs]);
 
   if (isHydrating) {
     return <Loader />;

@@ -1,5 +1,5 @@
 import { useAvatarThumb } from "@/hooks/useAvatarThumbnail";
-import { HugFilter } from "@/hooks/useAllHugs";
+import { HugFilter, useUnreadHugsCount } from "@/hooks/useAllHugs";
 import { Hug } from "@/lib/handleHugs";
 import { threadOf } from "@/lib/hugs/thread";
 import { isHugUnread } from "@/lib/hugs/features";
@@ -33,6 +33,7 @@ export type Tab = HugFilter;
 
 export const TABS: { key: Tab; label: string }[] = [
   { key: "all", label: "All" },
+  { key: "new", label: "New" },
   { key: "received", label: "Received" },
   { key: "sent", label: "Sent" },
   { key: "pending", label: "Pending" },
@@ -190,28 +191,34 @@ export const FilterTabs = ({
 }: {
   value: Tab;
   onChange: (t: Tab) => void;
-}) => (
-  <ScrollView
-    horizontal
-    showsHorizontalScrollIndicator={false}
-    contentContainerStyle={styles.tabsTrack}
-  >
-    {TABS.map((t) => {
-      const active = value === t.key;
-      return (
-        <Pressable
-          key={t.key}
-          onPress={() => onChange(t.key)}
-          style={[styles.tabItem, active && styles.tabItemActive]}
-        >
-          <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
-            {t.label}
-          </Text>
-        </Pressable>
-      );
-    })}
-  </ScrollView>
-);
+}) => {
+  const unreadHugsCount = useUnreadHugsCount();
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.tabsTrack}
+    >
+      {TABS.map((t) => {
+        const active = value === t.key;
+        return (
+          <Pressable
+            key={t.key}
+            onPress={() => onChange(t.key)}
+            style={[styles.tabItem, active && styles.tabItemActive]}
+          >
+            <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
+              {t.label}
+              {t.key === "new" &&
+                unreadHugsCount > 0 &&
+                ` (${unreadHugsCount})`}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </ScrollView>
+  );
+};
 
 const DirectionBadge = ({
   hug,
