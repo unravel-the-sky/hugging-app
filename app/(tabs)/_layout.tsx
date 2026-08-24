@@ -14,7 +14,7 @@ import { useState } from "react";
 import { StyleSheet, useColorScheme, View } from "react-native";
 import { colors } from "../../components/ui/squish/theme";
 import ChangeAvatarSheet from "../change-avatar";
-import { TabBarContext } from "../context/TabBarContext";
+import { TabBarContext } from "@/context/TabBarContext";
 import SetupScreen from "../setup";
 import SignInScreen from "../sign-in";
 

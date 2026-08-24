@@ -5,7 +5,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import * as THREE from "three";
 
-import { TabBarContext } from "@/app/context/TabBarContext";
+import { TabBarContext } from "@/context/TabBarContext";
 import { TiltRef, useTilt } from "@/hooks/useTilt";
 import { makeMessageTexture } from "@/lib/makeMessageTexture";
 import { Fredoka_700Bold } from "@expo-google-fonts/fredoka";

@@ -20,7 +20,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
-import { TabBarContext } from "@/app/context/TabBarContext";
+import { TabBarContext } from "@/context/TabBarContext";
 import { useGetDownloadUrl } from "@/hooks/useGetDownloadUrl";
 import { useTiltNew } from "@/hooks/useTilt";
 import { File, Paths } from "expo-file-system";

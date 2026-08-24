@@ -4,7 +4,7 @@ import { HugTimeline } from "@/components/hug/HugTimeline";
 import HugViewOverlay3d from "@/components/hug/HugViewOverlay3d";
 import { colors, font, spacing } from "@/components/ui/squish/theme";
 import { useBlocks } from "@/hooks/useBlocks";
-import { useHugs } from "@/app/context/HugsContext";
+import { useHugs } from "@/context/HugsContext";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useHugTotals } from "@/hooks/useIncomingHugs";
 import { db } from "@/lib/firebaseConfig";

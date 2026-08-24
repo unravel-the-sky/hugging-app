@@ -6,7 +6,7 @@ import React, { useMemo } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
 import { HugRow, SectionHeader } from "./HugListComponents";
 import { HugsEmptyState } from "./HugsEmptyState";
-import { useHugs } from "@/app/context/HugsContext";
+import { useHugs } from "@/context/HugsContext";
 import { ListRowGroup } from "../ui/squish/ListRow";
 import { PlushButton } from "../ui/squish/PlushButton";
 

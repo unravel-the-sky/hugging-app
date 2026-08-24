@@ -13,7 +13,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { TabBarContext } from "./context/TabBarContext";
+import { TabBarContext } from "@/context/TabBarContext";
 import { PlushButton } from "@/components/ui/squish/PlushButton";
 
 const QUICK_NOTES = [

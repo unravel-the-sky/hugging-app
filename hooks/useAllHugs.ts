@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { useHugs } from "@/app/context/HugsContext";
+import { useHugs } from "@/context/HugsContext";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Hug } from "@/lib/handleHugs";
 import { isHugUnread } from "@/lib/hugs/features";

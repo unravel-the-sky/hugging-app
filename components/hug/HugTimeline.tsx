@@ -24,7 +24,7 @@ import {
 } from "./HugListComponents";
 import { HugsEmptyState } from "./HugsEmptyState";
 import { HugFilter, useAllHugs } from "@/hooks/useAllHugs";
-import { useRefreshHugs } from "@/app/context/HugsContext";
+import { useRefreshHugs } from "@/context/HugsContext";
 import { useCollapsibleDays } from "@/hooks/useCollapsibleDays";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
