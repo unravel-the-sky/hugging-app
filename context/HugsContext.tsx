@@ -39,7 +39,7 @@ export type HugStream = {
   loadMore: () => void;
 };
 
-const LIMIT_SIZE = 40;
+const LIMIT_SIZE = 25;
 
 const EMPTY_STREAM: HugStream = {
   hugs: [],
