@@ -926,3 +926,56 @@ export const deleteAccount = onCall(async (request) => {
 
   return { ok: true };
 });
+
+/**
+ * Keep the copy of a person that lives in their friends' subcollections in
+ * step with their own user doc.
+ *
+ * `users/{uid}/friends/{friendId}` denormalizes displayName and avatar so a
+ * friends list renders without N user-doc reads. linkFriends() snapshots
+ * those at the moment the friendship forms and nothing has updated them
+ * since, so changing your avatar (or your name) left everyone else looking
+ * at the old one. Clients cannot fix this themselves: that subcollection is
+ * server-write-only by rule.
+ *
+ * Fans out on change only. This trigger sees every write to a user doc —
+ * push tokens, hug counters, presence — so the early return is the hot path.
+ */
+export const onUserProfileChanged = onDocumentUpdated(
+  "users/{uid}",
+  async (event) => {
+    const before = event.data?.before;
+    const after = event.data?.after;
+    if (!before || !after) return;
+
+    const MIRRORED = ["displayName", "avatar", "photoThumbPath"] as const;
+    const changed = MIRRORED.some((f) => before.get(f) !== after.get(f));
+    if (!changed) return;
+
+    const uid = event.params.uid;
+    const friends: string[] = after.get("friends") ?? [];
+    if (friends.length === 0) return;
+
+    // `photoThumbPath` is absent for drawn avatars, and must be written as
+    // null rather than omitted — otherwise switching from a photo to a drawn
+    // avatar leaves the old path in place and the photo keeps rendering.
+    const patch = {
+      displayName: after.get("displayName") ?? null,
+      avatar: after.get("avatar") ?? null,
+      photoThumbPath: after.get("photoThumbPath") ?? null,
+    };
+
+    // Writing to a subcollection of users/{uid} does not re-trigger this
+    // function — the path matcher is exact on depth — so there is no loop.
+    const CHUNK = 400; // batch limit is 500; leave headroom
+    for (let i = 0; i < friends.length; i += CHUNK) {
+      const batch = db.batch();
+      for (const friendId of friends.slice(i, i + CHUNK)) {
+        batch.set(db.doc(`users/${friendId}/friends/${uid}`), patch, {
+          merge: true,
+        });
+      }
+      await batch.commit();
+    }
+  },
+);

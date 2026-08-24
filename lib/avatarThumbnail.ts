@@ -31,6 +31,13 @@ const diskKey = (uid: string) => `avatarInfo:${uid}`;
 
 const memory = new Map<string, Promise<ThumbInfo>>();
 
+/**
+ * What `memory` currently resolves to, readable without awaiting. Priming
+ * runs on every friends snapshot, and most of those change nothing — this is
+ * what lets it detect that and skip the write and the re-render.
+ */
+const cachedSnapshot = new Map<string, ThumbInfo>();
+
 /* ------------------------------------------------------------------ */
 /* Batched user-doc reads                                              */
 /* ------------------------------------------------------------------ */
@@ -87,6 +94,7 @@ async function flush() {
       for (const uid of chunk) {
         // A missing doc is a real answer: no photo. Cache it as such.
         const info = found.get(uid) ?? {};
+        cachedSnapshot.set(uid, info);
         writeDisk(uid, info);
         batch.get(uid)?.forEach((waiter) => waiter.resolve(info));
       }
@@ -153,6 +161,7 @@ function revalidate(uid: string, cached: ThumbInfo) {
       }
       // enqueue's flush already refreshed disk; this refreshes the session.
       memory.set(uid, Promise.resolve(fresh));
+      cachedSnapshot.set(uid, fresh);
       notify();
     })
     .catch(() => {
@@ -179,6 +188,7 @@ function infoForUid(uid: string): Promise<ThumbInfo> {
   const request = (async () => {
     const cached = await readDisk(uid);
     if (cached) {
+      cachedSnapshot.set(uid, cached);
       revalidate(uid, cached);
       return cached;
     }
@@ -226,8 +236,46 @@ function notify() {
  */
 async function forget(uid: string) {
   memory.delete(uid);
+  cachedSnapshot.delete(uid);
   revalidated.delete(uid);
   await AsyncStorage.removeItem(diskKey(uid)).catch(() => {});
+}
+
+/**
+ * Seed the cache from an authoritative live source — the friends
+ * subcollection, which a Cloud Function keeps in step with each user doc.
+ * Saves the read that invalidating would have cost, and updates every
+ * surface at once because they all resolve through this cache.
+ *
+ * Deliberately does not mark the uid revalidated: if the fan-out function
+ * is not deployed, the friend doc is the stale one, and the session check
+ * is what corrects it.
+ */
+export function primeAvatarInfo(uid: string, info: ThumbInfo) {
+  // Friend docs written before the fan-out existed carry `avatar` but no
+  // `photoThumbPath`. Priming from one would cache "has a photo, no path",
+  // which resolves to null and downgrades a real photo to initials. Treat an
+  // incomplete doc as no information and let the user-doc read answer.
+  if (info.avatar === "photo" && !info.photoThumbPath) return;
+
+  const incoming: ThumbInfo = {
+    avatar: info.avatar ?? null,
+    photoThumbPath: info.photoThumbPath,
+  };
+
+  const known = cachedSnapshot.get(uid);
+  if (
+    known &&
+    known.avatar === incoming.avatar &&
+    known.photoThumbPath === incoming.photoThumbPath
+  ) {
+    return;
+  }
+
+  cachedSnapshot.set(uid, incoming);
+  memory.set(uid, Promise.resolve(incoming));
+  writeDisk(uid, incoming);
+  notify();
 }
 
 /** Drop cached info for a user — call after they change their own avatar. */

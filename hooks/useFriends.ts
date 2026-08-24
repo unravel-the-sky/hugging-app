@@ -1,3 +1,4 @@
+import { primeAvatarInfo } from "@/lib/avatarThumbnail";
 import { db } from "@/lib/firebaseConfig";
 import { FriendshipRequest, UserFriend } from "@/lib/handleFriends";
 import {
@@ -51,7 +52,20 @@ export function useFriends() {
     console.log("fetching friends..");
 
     const unsub2 = onSnapshot(friendsRef, (snap) => {
-      setFriends(snap.docs.map((d) => d.data() as UserFriend));
+      const docs = snap.docs.map((d) => d.data() as UserFriend);
+
+      // A Cloud Function mirrors each friend's avatar into these docs, so this
+      // live snapshot is the fastest news we get of someone changing theirs.
+      // Feeding it to the avatar cache updates the hug list too — everything
+      // resolves through that one cache — with no extra reads.
+      for (const friend of docs) {
+        primeAvatarInfo(friend.id, {
+          avatar: friend.avatar,
+          photoThumbPath: friend.photoThumbPath,
+        });
+      }
+
+      setFriends(docs);
       setIsLoading(false);
     });
 
