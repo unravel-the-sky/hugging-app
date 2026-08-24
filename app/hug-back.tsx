@@ -1,20 +1,9 @@
-import { colors } from "@/components/ui/squish";
-import { useHugDraft } from "@/hooks/useHugDraft";
+import { PlushButton } from "@/components/ui/squish/PlushButton";
+import { TabBarContext } from "@/context/TabBarContext";
 import { sendHugBack } from "@/lib/handleHugs";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { use, useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import { TabBarContext } from "@/context/TabBarContext";
-import { PlushButton } from "@/components/ui/squish/PlushButton";
+import { use, useState } from "react";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 const QUICK_NOTES = [
   "good morning!",
