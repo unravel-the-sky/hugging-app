@@ -11,6 +11,7 @@ import {
   where,
 } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AppState } from "react-native";
 
 export type ThumbInfo = { avatar?: string | null; photoThumbPath?: string };
 
@@ -121,13 +122,66 @@ async function readDisk(uid: string): Promise<ThumbInfo | null> {
   }
 }
 
+/**
+ * Uids already revalidated this session. A friend's avatar can only reach us
+ * by re-reading their user doc — they cannot write into our friends
+ * subcollection (server-only, see firestore.rules) — so without this the disk
+ * cache is a dead end and their new avatar stays invisible for the full TTL,
+ * across restarts and list refreshes alike.
+ */
+const revalidated = new Set<string>();
+
+/**
+ * Stale-while-revalidate: serve the cached answer now, check it once per
+ * session in the background, and notify only if it actually changed.
+ *
+ * The check rides the same 10ms batching window as a cold read, so a list of
+ * 40 rows across 12 people costs one query per session — not one per person,
+ * and not one per render.
+ */
+function revalidate(uid: string, cached: ThumbInfo) {
+  if (revalidated.has(uid)) return;
+  revalidated.add(uid);
+
+  enqueue(uid)
+    .then((fresh) => {
+      if (
+        fresh.avatar === cached.avatar &&
+        fresh.photoThumbPath === cached.photoThumbPath
+      ) {
+        return;
+      }
+      // enqueue's flush already refreshed disk; this refreshes the session.
+      memory.set(uid, Promise.resolve(fresh));
+      notify();
+    })
+    .catch(() => {
+      // Offline, most likely. Let a later mount try again.
+      revalidated.delete(uid);
+    });
+}
+
+/**
+ * Coming back from the background starts a fresh round of checks. Without
+ * this, "session" means the whole lifetime of the process — someone who
+ * leaves the app open for days would keep serving the same stale answer,
+ * and the obvious way to test this fix (change avatar on one phone, reopen
+ * the app on the other) would appear not to work.
+ */
+AppState.addEventListener("change", (state) => {
+  if (state === "active") revalidated.clear();
+});
+
 function infoForUid(uid: string): Promise<ThumbInfo> {
   const hit = memory.get(uid);
   if (hit) return hit;
 
   const request = (async () => {
     const cached = await readDisk(uid);
-    if (cached) return cached;
+    if (cached) {
+      revalidate(uid, cached);
+      return cached;
+    }
     return enqueue(uid);
   })().catch((err) => {
     memory.delete(uid);
@@ -142,16 +196,51 @@ function infoForUid(uid: string): Promise<ThumbInfo> {
 /* Public API — unchanged signatures                                   */
 /* ------------------------------------------------------------------ */
 
-/** Drop cached info for a user — call after they change their own avatar. */
-export function invalidateAvatar(uid: string) {
+/**
+ * Invalidation has to reach components that already resolved a URL: nothing
+ * re-reads this cache on its own, so dropping the entry alone would leave
+ * every mounted avatar showing the old thumb until it remounted. Bumping a
+ * version and notifying is what turns a cache drop into a visible refresh.
+ */
+const listeners = new Set<() => void>();
+let version = 0;
+
+export function subscribeToAvatarChanges(onChange: () => void) {
+  listeners.add(onChange);
+  return () => {
+    listeners.delete(onChange);
+  };
+}
+
+export const getAvatarCacheVersion = () => version;
+
+function notify() {
+  version += 1;
+  for (const listener of listeners) listener();
+}
+
+/**
+ * Drop both cache layers for a user. Awaits the disk removal before
+ * notifying — a listener that refetched while the stale record was still on
+ * disk would just cache it straight back.
+ */
+async function forget(uid: string) {
   memory.delete(uid);
-  AsyncStorage.removeItem(diskKey(uid)).catch(() => {});
+  revalidated.delete(uid);
+  await AsyncStorage.removeItem(diskKey(uid)).catch(() => {});
+}
+
+/** Drop cached info for a user — call after they change their own avatar. */
+export async function invalidateAvatar(uid: string) {
+  await forget(uid);
+  notify();
 }
 
 /** Also forget the resolved URL — use when the thumb file itself changed. */
 export async function invalidateAvatarPhoto(uid: string, path?: string) {
-  invalidateAvatar(uid);
+  await forget(uid);
   if (path) await invalidateStorageUrl(path);
+  notify();
 }
 
 /**

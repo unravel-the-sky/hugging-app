@@ -6,6 +6,7 @@
  * exactly which two objects exist per photo.
  */
 
+import { invalidateAvatarPhoto } from "@/lib/avatarThumbnail";
 import { auth, db, storage } from "@/lib/firebaseConfig";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
@@ -105,6 +106,12 @@ export async function saveAvatarPhoto(
     photoThumbPath,
     photoUpdatedAt: ts,
   });
+
+  // The thumb cache still points at the old path, and nothing else clears
+  // it — without this the new avatar stays invisible in every list until the
+  // 6h TTL lapses. Done here rather than at the call sites so neither the
+  // camera route nor the library picker can forget it.
+  await invalidateAvatarPhoto(uid, previous?.photoThumbPath);
 
   // Replace = delete the old pair, best effort. Orphans are also caught
   // by the account-deletion function's prefix delete.

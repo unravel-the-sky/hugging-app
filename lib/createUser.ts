@@ -8,6 +8,7 @@ import {
   setDoc,
   updateDoc,
 } from "firebase/firestore";
+import { invalidateAvatar } from "@/lib/avatarThumbnail";
 import { auth, db } from "./firebaseConfig";
 import { normalizeUsername } from "./util";
 
@@ -123,6 +124,10 @@ export async function updateUserAvatar(avatar: AvatarType) {
   if (!currentUserRef) return;
 
   await updateDoc(currentUserRef, { avatar });
+
+  // Switching to (or away from) a drawn avatar changes what the lists should
+  // render, and the thumb cache holds the old answer.
+  await invalidateAvatar(currentUser.uid);
 
   return true;
 }
