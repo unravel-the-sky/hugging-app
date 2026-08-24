@@ -4,7 +4,7 @@ import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { colors, font, radius, spacing } from "@/components/ui/squish/theme";
 
 /** Keeps the notes list from pushing the sheet off-screen on small phones. */
-const NOTES_MAX_HEIGHT = 320;
+const NOTES_MAX_HEIGHT = 300;
 
 /**
  * What's new in this release. Hardcoded on purpose — bump the version and
@@ -24,6 +24,10 @@ export const RELEASE = {
     {
       title: "Hugging experience changes",
       body: "Added some physics on the arms when dragging down. Just try it!",
+    },
+    {
+      title: "Backend fixes and improvements - for geeks",
+      body: "Using zustand for caching user and friends info",
     },
   ],
 };
