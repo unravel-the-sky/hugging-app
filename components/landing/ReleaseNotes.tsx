@@ -1,76 +1,74 @@
-import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import {
-  colors,
-  font,
-  radius,
-  shadow,
-  spacing,
-} from "@/components/ui/squish/theme";
+import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
+import { colors, font, radius, spacing } from "@/components/ui/squish/theme";
 
-/** How tall the release-notes card is, list scrolling included. */
-const CARD_HEIGHT = 190;
+/** Keeps the notes list from pushing the sheet off-screen on small phones. */
+const NOTES_MAX_HEIGHT = 320;
 
 /**
  * What's new in this release. Hardcoded on purpose — bump the version and
  * rewrite the bullets whenever a new build goes out.
  */
 export const RELEASE = {
-  version: 18,
+  version: 19,
   notes: [
     {
-      title: "More messages (3) per hugback",
-      body: "You can send several notes back instead of just one, woo! Go ahead and test it!",
+      title: "New hugs in their own tab",
+      body: "Hugs you haven't opened yet get their own tab, so nothing gets lost further down the list.",
     },
     {
-      title: "Pull to refresh",
-      body: "Pull the hugs list down and it fetches the fresh ones!",
+      title: "Hugs grouped by friend",
+      body: "The list now bundles hugs per person instead of one long stream.",
     },
     {
-      title: "Postcard background",
-      body: "Tap on the background when making postcard to change background and hearts' color",
-    },
-    {
-      title: "A logo that tilts",
-      body: "Touch and drag the logo to strech it, just for fun",
+      title: "Hugging experience changes",
+      body: "Added some physics on the arms when dragging down. Just try it!",
     },
   ],
 };
 
+/**
+ * The version chip that lives next to the app title. Tapping it is the only
+ * way into the release notes now — they no longer sit on the landing page.
+ */
+export function VersionBadge({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel={`Version ${RELEASE.version}. Opens what's new.`}
+      style={({ pressed }) => [styles.badge, pressed && styles.badgePressed]}
+    >
+      <Text style={styles.badgeText}>v{RELEASE.version}</Text>
+    </Pressable>
+  );
+}
+
 /** Renders nothing for a release with no bullets, so callers can render it
  * unconditionally. */
-export function ReleaseNotes({ onClose }: { onClose: () => void }) {
+export function ReleaseNotesModal({
+  isVisible,
+  onClose,
+}: {
+  isVisible: boolean;
+  onClose: () => void;
+}) {
   if (RELEASE.notes.length === 0) return null;
 
   return (
-    <View style={styles.card}>
-      <View style={styles.header}>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>v{RELEASE.version}</Text>
-        </View>
-        <Text style={styles.heading}>
-          Welcome to version {RELEASE.version}!
-        </Text>
-        <Pressable
-          onPress={onClose}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Dismiss the release notes"
-          style={({ pressed }) => [
-            styles.close,
-            pressed && styles.closePressed,
-          ]}
-        >
-          <Ionicons name="close" size={16} color={colors.softInk} />
-        </Pressable>
-      </View>
-      <Text style={styles.intro}>In this version, I&apos;ve done:</Text>
+    <ConfirmationModal
+      isVisible={isVisible}
+      title={`What's new in v${RELEASE.version}`}
+      confirmButtonLabel="Got it"
+      onConfirm={onClose}
+      onRequestClose={onClose}
+    >
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        nestedScrollEnabled
       >
         {RELEASE.notes.map((note) => (
           <View key={note.title} style={styles.item}>
@@ -82,64 +80,30 @@ export function ReleaseNotes({ onClose }: { onClose: () => void }) {
           </View>
         ))}
       </ScrollView>
-    </View>
+    </ConfirmationModal>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    height: CARD_HEIGHT,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    gap: 4,
-    marginTop: spacing.sm,
-    ...shadow,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: spacing.sm,
-  },
-  close: {
-    width: 26,
-    height: 26,
-    borderRadius: radius.pill,
-    backgroundColor: colors.mistBg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  closePressed: {
-    backgroundColor: colors.soft,
-  },
   badge: {
     backgroundColor: colors.soft,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
   },
+  badgePressed: {
+    backgroundColor: colors.lilac,
+  },
   badgeText: {
     fontFamily: font.displayBold,
     fontSize: 13,
     color: colors.primary,
   },
-  heading: {
-    flex: 1,
-    fontFamily: font.display,
-    fontSize: 15,
-    color: colors.plumInk,
-  },
-  intro: {
-    fontFamily: font.ui,
-    fontSize: 13,
-    color: colors.softInk,
-  },
   scroll: {
-    flex: 1,
+    maxHeight: NOTES_MAX_HEIGHT,
   },
   scrollContent: {
-    gap: spacing.sm,
-    paddingBottom: spacing.xs,
+    gap: spacing.md,
   },
   item: {
     flexDirection: "row",
