@@ -50,7 +50,6 @@ admin.initializeApp();
 const db = admin.firestore();
 
 const BOT_UID = "bot-nope";
-const BOT_NAME = "nope";
 
 /* ------------------------------------------------------------------ */
 /* Blocking                                                            */
@@ -118,7 +117,7 @@ export const onHugCreated = onDocumentCreated("hugs/{hugId}", async (event) => {
   // introducing the BOT here
   // do not process hugs that are sent by the
   if (hug.to === BOT_UID && hug.from !== BOT_UID) {
-    await sendBotReply(hug);
+    await sendBotReply(snap.ref, hug);
     return;
   }
 
@@ -192,6 +191,12 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** Keep in sync with lib/hugs/thread.ts. */
 const MAX_HUG_BACKS = 6;
 
+/** Keep in sync with MAX_HUG_BACKS_PER_PERSON in lib/hugs/thread.ts. */
+const MAX_HUG_BACKS_PER_PERSON = MAX_HUG_BACKS / 2;
+
+/** Keep in sync with MAX_LEN in lib/handleHugs.ts. */
+const MAX_HUG_BACK_LEN = 140;
+
 type HugBackItem = {
   from: string;
   note: string;
@@ -224,6 +229,14 @@ export const onHugBack = onDocumentUpdated("hugs/{hugId}", async (event) => {
   // and it must not reach the person who blocked them.
   if (await isBlockedEitherWay(backFrom, backTo)) {
     console.log("Hug-back dropped, pair is blocked", event.params.hugId);
+    return;
+  }
+
+  // The bot keeps the thread going: it answers every turn addressed to it,
+  // until it runs out of turns. Its own reply comes back through here as a
+  // turn from the bot, which takes the normal path below (stats, push).
+  if (backTo === BOT_UID && backFrom !== BOT_UID) {
+    await sendBotHugBack(event.data!.after.ref, afterThread);
     return;
   }
 
@@ -288,10 +301,8 @@ export const onHugBack = onDocumentUpdated("hugs/{hugId}", async (event) => {
   });
 });
 
-const sendBotReply = async (originalHug: FirebaseFirestore.DocumentData) => {
-  console.log(`🤖 Bot replying to ${originalHug.from}`);
-
-  // get response from no-as-a-service endpoint here
+/** A fresh "no" from no-as-a-service, trimmed to fit a hug-back note. */
+const fetchNoReason = async (): Promise<string> => {
   let reason = "NO!";
   try {
     const res = await fetch("https://naas.isalman.dev/no");
@@ -302,16 +313,63 @@ const sendBotReply = async (originalHug: FirebaseFirestore.DocumentData) => {
   } catch (err) {
     console.error("Failed to fetch from naas with error: ", err);
   }
+  return reason.slice(0, MAX_HUG_BACK_LEN);
+};
 
-  // now use that reason
-  await db.collection("hugs").add({
-    from: BOT_UID,
-    fromName: BOT_NAME,
-    to: originalHug.from,
-    toName: originalHug.fromName,
-    note: reason,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+/**
+ * Appends the bot's turn to a hug's thread and marks the thread read for it.
+ *
+ * Read-modify-write in a transaction, like `sendHugBack` on the client: the
+ * turn is re-checked against the thread as it stands at write time, so a
+ * reply that raced in can't be overwritten.
+ */
+const sendBotHugBack = async (
+  hugRef: FirebaseFirestore.DocumentReference,
+  seenThread: HugBackItem[],
+  extra: FirebaseFirestore.UpdateData<FirebaseFirestore.DocumentData> = {},
+) => {
+  // Both caps: the thread's total, and the bot's own share of it.
+  const used = seenThread.filter((item) => item.from === BOT_UID).length;
+  if (seenThread.length >= MAX_HUG_BACKS || used >= MAX_HUG_BACKS_PER_PERSON) {
+    console.log("🤖 Bot is out of turns", hugRef.id);
+    return;
+  }
+
+  const reason = await fetchNoReason();
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(hugRef);
+    if (!snap.exists) return;
+
+    const thread = threadOf(snap.data()!);
+    const last = thread[thread.length - 1];
+    // Not the bot's turn any more: the thread filled up or moved on while
+    // the "no" was in flight.
+    if (thread.length >= MAX_HUG_BACKS) return;
+    if (last && last.from === BOT_UID) return;
+
+    const now = admin.firestore.Timestamp.now();
+    const item: HugBackItem = { from: BOT_UID, note: reason, createdAt: now };
+
+    tx.update(hugRef, {
+      ...extra,
+      [`seenAtBy.${BOT_UID}`]: now,
+      hugBacks: [...thread, item],
+    });
   });
+};
+
+const sendBotReply = async (
+  hugRef: FirebaseFirestore.DocumentReference,
+  originalHug: FirebaseFirestore.DocumentData,
+) => {
+  console.log(`🤖 Bot replying to ${originalHug.from}`);
+
+  // The bot answers in the hug's own thread — a hug back, not a fresh hug —
+  // so it opens the thread the same way a real recipient would. Opening the
+  // hug rides along with that first turn: `onHugBack` measures the turn from
+  // `seenAt`, so it has to be there by the time the thread grows.
+  await sendBotHugBack(hugRef, [], { seenAt: admin.firestore.Timestamp.now() });
 };
 
 const sendPushNotification = async (
@@ -439,13 +497,6 @@ export const onInviteStatusChanged = onValueUpdated(
     } else if (after.status === "declined") {
       await entry.update({ status: "declined", sessionState: "ended" });
     }
-
-    // // remove the invitation after handled
-    // if (after.status === "accepted" || after.status === "declined") {
-    //   await getDatabase()
-    //     .ref(`userInvites/${after.to}/${event.params.roomId}`)
-    //     .remove();
-    // }
   },
 );
 
@@ -468,6 +519,9 @@ export const onFriendshipRequestCreated = onDocumentCreated(
 
     if (req.to === BOT_UID && req.from !== BOT_UID) {
       await linkFriends(req.to, req.from);
+      // Same as `acceptFriendRequest`: an accepted request is a deleted one.
+      // Left in place it keeps showing as pending on the sender's side.
+      await event.data?.ref.delete();
       return;
     }
 
