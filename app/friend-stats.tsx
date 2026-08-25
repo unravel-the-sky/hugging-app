@@ -51,25 +51,47 @@ export default function FriendStatsModal() {
   const [deleteHistory, setDeleteHistory] = useState(false);
   const [blockState, setBlockState] = useState<BlockState>("idle");
 
+  const [friendNote, setFriendNote] = useState("");
+
   const refreshBlocks = useBlocks((s) => s.refresh);
 
   useEffect(() => {
     const me = auth.currentUser;
     if (!me) return;
 
+    // Reads in flight when the modal switches friends (or closes) must not
+    // land on the next one's screen.
+    let cancelled = false;
+
     // viewer's own subcollection -> numbers are from MY perspective
     const ref = doc(db, "users", me.uid, "friends", friendId);
 
     getDoc(ref)
       .then((snap) => {
+        if (cancelled) return;
         if (snap.exists()) {
           setFriend(snap.data() as UserFriend);
         } else {
           setNotFound(true);
         }
       })
-      .catch(() => setNotFound(true))
-      .finally(() => setLoading(false));
+      .catch(() => !cancelled && setNotFound(true))
+      .finally(() => !cancelled && setLoading(false));
+
+    // the friend's own profile, for the note they wrote about themselves
+    const userRef = doc(db, "users", friendId);
+
+    getDoc(userRef)
+      .then((snap) => {
+        if (cancelled || !snap.exists()) return;
+        setFriendNote(snap.data().note ?? "");
+      })
+      // the note is decoration: a failed read just leaves it out
+      .catch((err) => console.log("friend note read failed", err));
+
+    return () => {
+      cancelled = true;
+    };
   }, [friendId]);
 
   const handleRemoveFriend = async () => {
@@ -152,6 +174,7 @@ export default function FriendStatsModal() {
             photoUri={photoUri ?? undefined}
           />
           <Text style={styles.name}>{friend.displayName}</Text>
+          {!!friendNote && <Text style={styles.totalSub}>{friendNote}</Text>}
         </View>
 
         {/* relationship total */}
@@ -353,7 +376,6 @@ const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: colors.mistBg },
   container: {
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
     paddingBottom: spacing.xl * 1.6,
     gap: spacing.md,
   },
@@ -371,7 +393,11 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingVertical: spacing.sm,
   },
-  name: { fontSize: 30, fontFamily: font.displayBold, color: colors.plumInk },
+  name: {
+    fontSize: 30,
+    fontFamily: font.displayBold,
+    color: colors.plumInk,
+  },
 
   totalCard: {
     flexDirection: "row",

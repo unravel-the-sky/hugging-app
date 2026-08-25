@@ -356,7 +356,7 @@ export default function HugRevealerImage({
             styles.stage,
             {
               paddingBottom: bottomInset,
-              justifyContent: cardAnchor === "bottom" ? "flex-end" : "center",
+              justifyContent: "center",
             },
           ]}
           pointerEvents="none"

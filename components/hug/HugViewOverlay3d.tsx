@@ -266,7 +266,13 @@ export default function HugViewOverlay({
 
           {/* Everything below the card: the note stacks on the buttons rather
             than floating over them at its own absolute offset. */}
-          <View style={styles.footer} pointerEvents="box-none">
+          <View
+            style={[
+              styles.footer,
+              { height: hug.imagePath ? FOOTER_HEIGHT : FOOTER_HEIGHT + 200 },
+            ]}
+            pointerEvents="box-none"
+          >
             <LinearGradient
               colors={[
                 "rgba(246,243,251,0.85)",
@@ -376,7 +382,7 @@ const styles = StyleSheet.create({
   // full — so the button keeps its place however many turns a hug collects.
   footer: {
     position: "absolute",
-    height: FOOTER_HEIGHT,
+    // height: FOOTER_HEIGHT,
     left: 0,
     right: 0,
     bottom: 0,

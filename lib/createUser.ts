@@ -26,6 +26,7 @@ export type UserDoc = {
   photoPath?: string; // storage paths, kept so replace/delete can clean up
   photoThumbPath?: string;
   photoUpdatedAt?: number; // ms epoch — same ts as the filenames
+  note?: string; // personal note people can enter
 
   createdAt?: FieldValue;
   pushToken?: string;
