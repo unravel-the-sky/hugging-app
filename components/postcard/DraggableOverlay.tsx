@@ -113,11 +113,21 @@ export default function DraggableOverlay({
           <Animated.View style={boxStyle}>
             <View style={selected ? styles.selectedPad : styles.pad}>
               <Text
+                allowFontScaling={false}
                 style={{
                   fontFamily: fontFamilyFor(overlay.fontKey),
                   fontSize: overlay.size,
                   color: overlay.color,
-                  textAlign: "auto",
+                  // Script/italic faces (Caveat) draw ink past the advance
+                  // width and outside the em box, so the view RN measures is
+                  // narrower/shorter than the glyphs. Pad by a fraction of the
+                  // font size so ascenders, descenders and the trailing
+                  // letter's overhang stay inside the box at any size. -- says claude :)
+                  lineHeight: overlay.size * 1.45,
+                  paddingHorizontal: overlay.size * 0.18,
+                  paddingVertical: overlay.size * 0.12,
+                  includeFontPadding: true,
+                  textAlignVertical: "center",
                   ...shadow,
                   shadowOpacity: 0.05,
                 }}
@@ -153,6 +163,8 @@ const styles = StyleSheet.create({
     padding: 6,
     alignItems: "center",
     justifyContent: "center",
+    width: "auto",
+    overflow: "visible",
   },
   selectedPad: {
     padding: 6,
@@ -162,6 +174,8 @@ const styles = StyleSheet.create({
     borderColor: colors.mint,
     borderStyle: "dashed",
     borderRadius: 10,
+    width: "auto",
+    overflow: "visible",
   },
   deleteWrap: {
     position: "absolute",
