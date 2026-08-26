@@ -23,6 +23,7 @@ import {
   coverSize,
   newOverlayId,
   Overlay,
+  SWATCHES,
 } from "@/constants/postcardEditorConstants";
 
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -68,6 +69,7 @@ export default function Media({
     frameTopPadding,
     photoWidth,
     photoHeight,
+    captionOffsetY,
   } = usePolaroidFrameCalc();
 
   // ---- filters ---------------------------------------------------------
@@ -109,9 +111,9 @@ export default function Media({
     setSelectedId(null);
     setEditing({
       text: "",
-      fontKey: "fredoka",
+      fontKey: "caveat",
       size: 40,
-      color: colors.softInk,
+      color: textSwatches[0],
     });
   };
 
@@ -131,27 +133,44 @@ export default function Media({
         ),
       );
     } else {
+      const id = newOverlayId();
       setOverlays((list) => [
         ...list,
         {
-          id: newOverlayId(),
+          id,
           kind: "text",
           text: draft.text,
           fontKey: draft.fontKey,
           size: draft.size,
           color: draft.color,
           x: 0,
-          y: 0,
+          // A polaroid's caption goes on the white strip, not across the
+          // photo. Overlays are positioned from the canvas centre, which sits
+          // in the middle of the picture, so a new one starts one offset down.
+          y: captionOffsetY,
           scale: 1,
           rotation: 0,
         },
       ]);
+      // Land it selected: the dashed box and × are the only thing that says
+      // the text can be dragged at all, and a caption that appears inert is
+      // one nobody tries to move.
+      setSelectedId(id);
     }
     setEditing(null);
   };
 
   const onOverlayTap = (o: Overlay) => {
-    setSelectedId(o.id);
+    // Two taps, two jobs. The first selects — showing the handles, and handing
+    // the canvas to this overlay so it can be pinched and rotated from
+    // anywhere. Only a tap on something already selected opens the editor,
+    // which is what used to happen on the very first tap and left the whole
+    // move/resize half of the tool undiscovered.
+    if (selectedId !== o.id) {
+      setSelectedId(o.id);
+      return;
+    }
+
     setEditing({
       id: o.id,
       text: o.text,
@@ -290,6 +309,27 @@ export default function Media({
     return unique.length ? unique : [FALLBACK_BG];
   }, [imageColors]);
 
+  // Text swatches: the photo's own four colours lead, then the fixed palette.
+  // A caption drawn from the picture sits on it without being picked out of a
+  // list. Deduped case-insensitively — a photo colour that happens to match a
+  // theme swatch would otherwise appear twice and collide on the list key.
+  const textSwatches = useMemo(() => {
+    const fromImage = [
+      imageColors?.colorOne?.value,
+      imageColors?.colorTwo?.value,
+      imageColors?.colorThree?.value,
+      imageColors?.colorFour?.value,
+    ].filter((c): c is string => !!c);
+
+    const seen = new Set<string>();
+    return [...fromImage, ...SWATCHES].filter((c) => {
+      const key = c.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [imageColors]);
+
   const bg = bgOptions[bgIndex % bgOptions.length];
   const cycleBackground = () => setBgIndex((i) => i + 1);
 
@@ -374,6 +414,7 @@ export default function Media({
               overlay={o}
               selected={selectedId === o.id}
               onTap={onOverlayTap}
+              onDeselect={() => setSelectedId(null)}
               onChange={updateOverlay}
               onDelete={deleteOverlay}
             />
@@ -436,6 +477,7 @@ export default function Media({
       {editing && (
         <TextEditorOverlay
           draft={editing}
+          swatches={textSwatches}
           onCancel={() => setEditing(null)}
           onDone={editorDone}
         />

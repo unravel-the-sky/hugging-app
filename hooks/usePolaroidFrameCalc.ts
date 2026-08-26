@@ -16,15 +16,27 @@ export default function usePolaroidFrameCalc() {
   const canvasWidth = frameWidth + canvasPadding * 2;
   const canvasHeight = frameHeight + canvasPadding * 2;
 
+  // Middle of the polaroid's white caption strip, as an offset from the canvas
+  // centre — which is the origin overlays position themselves against.
+  //
+  //   caption centre = canvasPadding + frameTopPadding + photoHeight
+  //                    + frameBottomPadding / 2
+  //   canvas centre  = canvasHeight / 2
+  //
+  // The paddings cancel down to this, independent of screen size.
+  const captionOffsetY = (frameTopPadding + photoHeight) / 2;
+
   return {
     canvasWidth,
     canvasHeight,
     canvasPadding,
     frameHorizontalPadding,
     frameTopPadding,
+    frameBottomPadding,
     frameWidth,
     frameHeight,
     photoHeight,
     photoWidth,
+    captionOffsetY,
   };
 }

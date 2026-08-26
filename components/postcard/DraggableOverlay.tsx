@@ -15,6 +15,8 @@ type Props = {
   overlay: Overlay;
   selected: boolean;
   onTap: (overlay: Overlay) => void;
+  /** Tap landed on the canvas away from this overlay: drop the selection. */
+  onDeselect: () => void;
   onChange: (
     id: string,
     next: { x: number; y: number; scale: number; rotation: number },
@@ -31,6 +33,7 @@ export default function DraggableOverlay({
   overlay,
   selected,
   onTap,
+  onDeselect,
   onChange,
   onDelete,
 }: Props) {
@@ -63,23 +66,31 @@ export default function DraggableOverlay({
     })
     .onEnd(() => runOnJS(commit)());
 
-  const pinch = Gesture.Pinch()
-    .onStart(() => {
-      startScale.value = scale.value;
-    })
-    .onUpdate((e) => {
-      scale.value = clampW(startScale.value * e.scale, 0.4, 6);
-    })
-    .onEnd(() => runOnJS(commit)());
+  // Built by factory rather than declared once: a gesture instance can only be
+  // attached to a single detector, and pinch/rotate run on two of them — the
+  // text box itself and the full-canvas surface below.
+  const makePinch = () =>
+    Gesture.Pinch()
+      .onStart(() => {
+        startScale.value = scale.value;
+      })
+      .onUpdate((e) => {
+        scale.value = clampW(startScale.value * e.scale, 0.4, 6);
+      })
+      .onEnd(() => runOnJS(commit)());
 
-  const rotation = Gesture.Rotation()
-    .onStart(() => {
-      startRot.value = rot.value;
-    })
-    .onUpdate((e) => {
-      rot.value = startRot.value + e.rotation;
-    })
-    .onEnd(() => runOnJS(commit)());
+  const makeRotation = () =>
+    Gesture.Rotation()
+      .onStart(() => {
+        startRot.value = rot.value;
+      })
+      .onUpdate((e) => {
+        rot.value = startRot.value + e.rotation;
+      })
+      .onEnd(() => runOnJS(commit)());
+
+  const pinch = makePinch();
+  const rotation = makeRotation();
 
   const deleteTap = Gesture.Tap()
     .maxDuration(250)
@@ -91,6 +102,22 @@ export default function DraggableOverlay({
     .onEnd(() => runOnJS(onTap)(overlay));
 
   const gesture = Gesture.Race(tap, Gesture.Simultaneous(pan, pinch, rotation));
+
+  // Pinching a short word used to mean landing both fingers inside a box the
+  // size of the word — "yes" at the default size is barely 70pt wide, so the
+  // gesture only started from an awkward near-pinch. While this overlay is
+  // selected the whole canvas drives it instead, so the fingers can start as
+  // far apart as the postcard allows. A single tap on that same surface is
+  // what drops the selection and gives the canvas back to the photo.
+  const surfaceTap = Gesture.Tap()
+    .maxDuration(250)
+    .onEnd(() => runOnJS(onDeselect)());
+
+  const surfaceGesture = Gesture.Simultaneous(
+    surfaceTap,
+    makePinch(),
+    makeRotation(),
+  );
 
   const boxStyle = useAnimatedStyle(() => ({
     transform: [
@@ -108,6 +135,13 @@ export default function DraggableOverlay({
 
   return (
     <View style={styles.fill} pointerEvents="box-none">
+      {selected && (
+        <GestureDetector gesture={surfaceGesture}>
+          <View style={styles.fill} />
+        </GestureDetector>
+      )}
+
+      {/* above the surface, so taps on the text and the × still reach them */}
       <View style={styles.center} pointerEvents="box-none">
         <GestureDetector gesture={gesture}>
           <Animated.View style={boxStyle}>
