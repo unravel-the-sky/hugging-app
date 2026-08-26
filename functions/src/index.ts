@@ -49,8 +49,21 @@ setGlobalOptions({ maxInstances: 10 });
 admin.initializeApp();
 const db = admin.firestore();
 
-const BOT_UID = "bot-nope";
-const BOT_NAME = "nope";
+/**
+ * The bots. Each one is a real user doc (`users/{uid}`, with a displayName)
+ * that answers hugs automatically: it accepts any friend request, opens
+ * every hug it gets, and answers in the hug's own thread until the thread's
+ * turns run out.
+ *
+ * A bot is entirely defined by its note source, so adding one is a user doc
+ * plus an entry here.
+ */
+const BOTS: Record<string, () => Promise<string | null>> = {
+  "bot-nope": fetchNoReason,
+  "bot-zen": fetchZenQuote,
+};
+
+const isBot = (uid: string) => uid in BOTS;
 
 /* ------------------------------------------------------------------ */
 /* Blocking                                                            */
@@ -115,10 +128,10 @@ export const onHugCreated = onDocumentCreated("hugs/{hugId}", async (event) => {
   const hug = snap.data();
   if (!hug?.to) return;
 
-  // introducing the BOT here
-  // do not process hugs that are sent by the
-  if (hug.to === BOT_UID && hug.from !== BOT_UID) {
-    await sendBotReply(hug);
+  // introducing the BOTs here
+  // do not process hugs that a bot sent itself
+  if (isBot(hug.to) && !isBot(hug.from)) {
+    await sendBotReply(snap.ref, hug);
     return;
   }
 
@@ -192,6 +205,12 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** Keep in sync with lib/hugs/thread.ts. */
 const MAX_HUG_BACKS = 6;
 
+/** Keep in sync with MAX_HUG_BACKS_PER_PERSON in lib/hugs/thread.ts. */
+const MAX_HUG_BACKS_PER_PERSON = MAX_HUG_BACKS / 2;
+
+/** Keep in sync with MAX_LEN in lib/handleHugs.ts. */
+const MAX_HUG_BACK_LEN = 140;
+
 type HugBackItem = {
   from: string;
   note: string;
@@ -224,6 +243,14 @@ export const onHugBack = onDocumentUpdated("hugs/{hugId}", async (event) => {
   // and it must not reach the person who blocked them.
   if (await isBlockedEitherWay(backFrom, backTo)) {
     console.log("Hug-back dropped, pair is blocked", event.params.hugId);
+    return;
+  }
+
+  // A bot keeps the thread going: it answers every turn addressed to it,
+  // until it runs out of turns. Its own reply comes back through here as a
+  // turn from the bot, which takes the normal path below (stats, push).
+  if (isBot(backTo) && !isBot(backFrom)) {
+    await sendBotHugBack(event.data!.after.ref, backTo, afterThread);
     return;
   }
 
@@ -288,10 +315,12 @@ export const onHugBack = onDocumentUpdated("hugs/{hugId}", async (event) => {
   });
 });
 
-const sendBotReply = async (originalHug: FirebaseFirestore.DocumentData) => {
-  console.log(`🤖 Bot replying to ${originalHug.from}`);
+/* ------------------------------------------------------------------ */
+/* Bot note sources                                                     */
+/* ------------------------------------------------------------------ */
 
-  // get response from no-as-a-service endpoint here
+/** A fresh "no" from no-as-a-service. */
+async function fetchNoReason(): Promise<string> {
   let reason = "NO!";
   try {
     const res = await fetch("https://naas.isalman.dev/no");
@@ -302,15 +331,126 @@ const sendBotReply = async (originalHug: FirebaseFirestore.DocumentData) => {
   } catch (err) {
     console.error("Failed to fetch from naas with error: ", err);
   }
+  return reason.slice(0, MAX_HUG_BACK_LEN);
+}
 
-  // now use that reason
-  await db.collection("hugs").add({
-    from: BOT_UID,
-    fromName: BOT_NAME,
-    to: originalHug.from,
-    toName: originalHug.fromName,
-    note: reason,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+type ZenQuote = { q?: string; a?: string };
+
+/**
+ * ZenQuotes allows 5 calls per 30s per IP, and answers an exceeded limit
+ * with HTTP 200 and a quote-shaped body — so a per-hug call would quietly
+ * start sending "Too many requests" as a hug back. Instead one batch of 50
+ * is fetched at most hourly and served from memory, as their docs ask.
+ *
+ * The cache lives on the instance: a cold start re-fetches, and several warm
+ * instances each keep their own. That is still one call per instance-hour,
+ * far below the limit.
+ */
+const ZEN_TTL_MS = 60 * 60 * 1000;
+let zenCache: string[] = [];
+let zenFetchedAt = 0;
+
+/** A quote as a note, formatted and short enough to fit. */
+const zenNote = (quote: ZenQuote): string | null => {
+  const q = quote.q?.trim();
+  // The rate-limit body is a well-formed quote attributed to the service.
+  if (!q || quote.a === "zenquotes.io") return null;
+  const note = quote.a ? `“${q}” — ${quote.a}` : `“${q}”`;
+  // Long quotes are dropped rather than cut off mid-sentence: a batch of 50
+  // always leaves plenty that fit.
+  return note.length <= MAX_HUG_BACK_LEN ? note : null;
+};
+
+async function fetchZenQuote(): Promise<string | null> {
+  if (!zenCache.length || Date.now() - zenFetchedAt > ZEN_TTL_MS) {
+    try {
+      const res = await fetch("https://zenquotes.io/api/quotes");
+      if (res.ok) {
+        const data = (await res.json()) as ZenQuote[];
+        const notes = Array.isArray(data)
+          ? data.map(zenNote).filter((note): note is string => !!note)
+          : [];
+        // An empty batch means rate-limited or malformed: keep whatever is
+        // cached, stale as it may be, rather than going silent.
+        if (notes.length) {
+          zenCache = notes;
+          zenFetchedAt = Date.now();
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch from zenquotes with error: ", err);
+    }
+  }
+
+  if (!zenCache.length) return null;
+  return zenCache[Math.floor(Math.random() * zenCache.length)];
+}
+
+/* ------------------------------------------------------------------ */
+/* Bot replies                                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Appends a bot's turn to a hug's thread and marks the thread read for it.
+ *
+ * Read-modify-write in a transaction, like `sendHugBack` on the client: the
+ * turn is re-checked against the thread as it stands at write time, so a
+ * reply that raced in can't be overwritten.
+ */
+const sendBotHugBack = async (
+  hugRef: FirebaseFirestore.DocumentReference,
+  botUid: string,
+  seenThread: HugBackItem[],
+  extra: FirebaseFirestore.UpdateData<FirebaseFirestore.DocumentData> = {},
+) => {
+  // Both caps: the thread's total, and the bot's own share of it.
+  const used = seenThread.filter((item) => item.from === botUid).length;
+  if (seenThread.length >= MAX_HUG_BACKS || used >= MAX_HUG_BACKS_PER_PERSON) {
+    console.log(`🤖 ${botUid} is out of turns`, hugRef.id);
+    return;
+  }
+
+  const note = await BOTS[botUid]();
+  // No note to send: better to stay quiet than to answer with an error.
+  if (!note) {
+    console.error(`🤖 ${botUid} had no note to send`, hugRef.id);
+    return;
+  }
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(hugRef);
+    if (!snap.exists) return;
+
+    const thread = threadOf(snap.data()!);
+    const last = thread[thread.length - 1];
+    // Not the bot's turn any more: the thread filled up or moved on while
+    // the note was in flight.
+    if (thread.length >= MAX_HUG_BACKS) return;
+    if (last && last.from === botUid) return;
+
+    const now = admin.firestore.Timestamp.now();
+    const item: HugBackItem = { from: botUid, note, createdAt: now };
+
+    tx.update(hugRef, {
+      ...extra,
+      [`seenAtBy.${botUid}`]: now,
+      hugBacks: [...thread, item],
+    });
+  });
+};
+
+const sendBotReply = async (
+  hugRef: FirebaseFirestore.DocumentReference,
+  originalHug: FirebaseFirestore.DocumentData,
+) => {
+  console.log(`🤖 ${originalHug.to} replying to ${originalHug.from}`);
+
+  // The bot answers in the hug's own thread — a hug back, not a fresh hug —
+  // so it opens the thread the same way a real recipient would. Opening the
+  // hug rides along with that first turn: `onHugBack` measures the turn from
+  // `seenAt`, so it has to be there by the time the thread grows.
+  await sendBotHugBack(hugRef, originalHug.to, [], {
+    seenAt: admin.firestore.Timestamp.now(),
   });
 };
 
@@ -439,13 +579,6 @@ export const onInviteStatusChanged = onValueUpdated(
     } else if (after.status === "declined") {
       await entry.update({ status: "declined", sessionState: "ended" });
     }
-
-    // // remove the invitation after handled
-    // if (after.status === "accepted" || after.status === "declined") {
-    //   await getDatabase()
-    //     .ref(`userInvites/${after.to}/${event.params.roomId}`)
-    //     .remove();
-    // }
   },
 );
 
@@ -466,8 +599,11 @@ export const onFriendshipRequestCreated = onDocumentCreated(
     const req = event.data?.data();
     if (!req || req.status !== "pending") return;
 
-    if (req.to === BOT_UID && req.from !== BOT_UID) {
+    if (isBot(req.to) && !isBot(req.from)) {
       await linkFriends(req.to, req.from);
+      // Same as `acceptFriendRequest`: an accepted request is a deleted one.
+      // Left in place it keeps showing as pending on the sender's side.
+      await event.data?.ref.delete();
       return;
     }
 
