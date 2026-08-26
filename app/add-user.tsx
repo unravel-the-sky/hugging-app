@@ -1,7 +1,9 @@
 import { colors, font, radius, shadow, spacing } from "@/components/ui/squish";
 import { FriendAvatar } from "@/components/ui/squish/FriendAvatar";
 import { PlushButton } from "@/components/ui/squish/PlushButton";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useFriends } from "@/hooks/useFriends";
+import { shareInvite } from "@/lib/invite";
 import { getPendingOutgoingUids, sendFriendRequest } from "@/lib/handleFriends";
 import {
   searchUsersByPrefix,
@@ -29,6 +31,7 @@ export default function AddUserScreen() {
   const [searching, setSearching] = useState(false);
   const [sent, setSent] = useState<SentState>({});
   const { friends } = useFriends();
+  const { user } = useCurrentUser();
 
   // tracks the latest query so out-of-order responses get discarded
   const latestTerm = useRef("");
@@ -92,7 +95,14 @@ export default function AddUserScreen() {
       style={styles.container}
     >
       <View style={styles.header}>
-        <Text style={styles.title}>Add a friend</Text>
+        <View style={styles.titleWrap}>
+          <Text style={styles.title}>Add a friend</Text>
+          {/* Username is the only way to find anyone here — search matches
+              nothing else — so say so before they try their friend's name. */}
+          <Text style={styles.subtitle}>
+            Add your friends by their username.
+          </Text>
+        </View>
 
         <View style={styles.searchWrapper}>
           <Ionicons name="search" size={20} color={colors.softInk} />
@@ -158,6 +168,20 @@ export default function AddUserScreen() {
             </View>
           ) : null
         }
+        // Sits below whatever the list is showing — results, "No user found",
+        // or nothing typed yet. Someone who came here to add a friend and
+        // can't is exactly who has a reason to send an invite.
+        ListFooterComponent={
+          <View style={styles.inviteFooter}>
+            <Text style={styles.inviteHint}>cannot find your friend?</Text>
+            <PlushButton
+              label="invite a friend"
+              variant="soft"
+              height={44}
+              onPress={() => shareInvite(user?.displayName)}
+            />
+          </View>
+        }
       />
     </KeyboardAvoidingView>
   );
@@ -171,7 +195,14 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     gap: spacing.lg,
   },
+  titleWrap: { gap: spacing.xs },
   title: { fontSize: 26, fontFamily: font.displayBold, color: colors.plumInk },
+  subtitle: {
+    fontSize: 15,
+    lineHeight: 21,
+    fontFamily: font.ui,
+    color: colors.softInk,
+  },
 
   searchWrapper: {
     flexDirection: "row",
@@ -192,6 +223,17 @@ const styles = StyleSheet.create({
   },
 
   listContent: { padding: spacing.xl, gap: spacing.md },
+
+  inviteFooter: {
+    alignItems: "center",
+    gap: spacing.md,
+    paddingTop: spacing.xl,
+  },
+  inviteHint: {
+    fontFamily: font.ui,
+    fontSize: 15,
+    color: colors.softInk,
+  },
 
   row: {
     flexDirection: "row",

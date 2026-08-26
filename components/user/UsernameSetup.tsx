@@ -4,6 +4,7 @@ import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
 import { AppText } from "../ui/AppText";
 import { colors, font } from "../ui/squish";
 import { PlushButton } from "../ui/squish/PlushButton";
+import { APP_NAME } from "@/constants";
 
 interface UsernameSetupProps {
   onUsernameSet: (userId: string, username: string) => void;
@@ -55,7 +56,7 @@ export default function UsernameSetup({ onUsernameSet }: UsernameSetupProps) {
   return (
     <View style={styles.content}>
       <View style={styles.header}>
-        <AppText variant="title">Hugging app</AppText>
+        <AppText variant="title">{APP_NAME}</AppText>
         <Text style={styles.subtitle}>Choose a username to get started</Text>
       </View>
 
