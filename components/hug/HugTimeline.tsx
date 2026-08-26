@@ -84,8 +84,9 @@ export const HugTimeline = ({
   // rows this filter would keep". On New that's nearly always true and
   // nearly always fruitless — every older hug has been read — so the button
   // would sit under a single unread hug forever, paging a whole history to
-  // reveal nothing. Anything unread lives at the top of the window we
-  // already hold, which is the same window the tab badge counts.
+  // reveal nothing. Everything unread is already inside the window we hold,
+  // which is the same window the tab badge counts, so the two agree with no
+  // paging: New is exempt from the watermark for exactly that reason.
   const canLoadMore = hasMore && filter !== "new";
   const { isExpanded, toggle, overrides } = useCollapsibleDays(days);
   const { user } = useCurrentUser();

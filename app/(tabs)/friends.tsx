@@ -320,8 +320,17 @@ export default function FriendsListScreen() {
           ListEmptyComponent={
             <View style={styles.empty}>
               <Text style={styles.emptyTitle}>
-                {search ? "no matches.." : "no friends, yet!"}
+                {search ? "no matches.." : "no friends here."}
               </Text>
+
+              {/* Only the genuinely-empty list gets the pitch. A search that
+                  found nothing is a different problem, and telling someone
+                  with 40 friends to go add some reads as broken. */}
+              {!search && (
+                <Text style={styles.emptyHint}>
+                  Tap the + button to search for your friends.
+                </Text>
+              )}
             </View>
           }
         />
@@ -406,11 +415,19 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  empty: { alignItems: "center", paddingTop: 80 },
+  empty: { alignItems: "center", paddingTop: 80, paddingHorizontal: spacing.xl },
   emptyTitle: {
     fontFamily: font.displayBold,
     fontSize: 22,
     color: colors.plumInk,
+  },
+  emptyHint: {
+    fontFamily: font.ui,
+    fontSize: 15,
+    lineHeight: 21,
+    color: colors.softInk,
+    textAlign: "center",
+    marginTop: spacing.sm,
   },
 
   // top hugger greieieieiei — ListRow's `standalone` handles the corners

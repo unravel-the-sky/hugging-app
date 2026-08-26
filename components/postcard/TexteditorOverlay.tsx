@@ -31,10 +31,17 @@ export type TextDraft = {
 
 export default function TextEditorOverlay({
   draft,
+  swatches = SWATCHES,
   onCancel,
   onDone,
 }: {
   draft: TextDraft;
+  /**
+   * Colour choices, in the order they're shown. The editor takes them from the
+   * caller rather than reading `SWATCHES` itself, so the postcard can put the
+   * photo's own colours at the front of the row.
+   */
+  swatches?: string[];
   onCancel: () => void;
   onDone: (draft: TextDraft) => void;
 }) {
@@ -133,7 +140,7 @@ export default function TextEditorOverlay({
             keyboardShouldPersistTaps="always"
             contentContainerStyle={styles.swatchRow}
           >
-            {SWATCHES.map((c) => {
+            {swatches.map((c) => {
               const active = c === color;
               return (
                 <Pressable

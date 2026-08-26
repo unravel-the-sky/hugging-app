@@ -891,7 +891,10 @@ export const searchUsers = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "Sign in");
 
-  const term = (request.data?.term ?? "").trim();
+  // Lowercased here as well as on the client: usernames are stored
+  // normalised, the range query below is byte-ordered, and this is the only
+  // side that every caller has to go through.
+  const term = (request.data?.term ?? "").trim().toLowerCase();
   if (term.length < 3) return { users: [] };
 
   const snap = await db

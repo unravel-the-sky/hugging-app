@@ -95,7 +95,10 @@ export async function createUserWithUsername(
     }
 
     const newUser: UserDoc = {
-      displayName,
+      // the normalised form, matching the `usernames/{normalized}` doc that
+      // reserves it — search reads this field, and a stored capital would
+      // make the account unfindable
+      displayName: normalized,
       createdAt: serverTimestamp(),
       friends: [],
       stats: {

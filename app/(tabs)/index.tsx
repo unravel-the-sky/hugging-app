@@ -15,6 +15,7 @@ import {
   initialWindowMetrics,
 } from "react-native-safe-area-context";
 import { colors, font, spacing } from "../../components/ui/squish/theme";
+import { APP_NAME } from "@/constants";
 
 const TAB_BAR_HEIGHT = 52;
 /** Home indicator. Read once at startup, so it is available synchronously. */
@@ -40,7 +41,7 @@ export default function HomeScreen() {
       <DriftingAvatars count={5} intensity={90} />
       <View style={styles.page}>
         <View style={styles.titleRow}>
-          <AppText variant="title">Hugging app</AppText>
+          <AppText variant="title">{APP_NAME}</AppText>
           <Text style={styles.titleDash}>—</Text>
           <VersionBadge onPress={() => setShowRelease(true)} />
         </View>

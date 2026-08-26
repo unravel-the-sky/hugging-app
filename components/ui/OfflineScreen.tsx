@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, font, spacing } from "./squish";
 import { PlushButton } from "./squish/PlushButton";
+import { APP_NAME } from "@/constants";
 
 export interface OfflineScreenProps {
   /** Re-checks connectivity. May be async — the button shows a pending state. */
@@ -30,7 +31,7 @@ const MIN_FEEDBACK_MS = 700;
 export default function OfflineScreen({
   onRetry,
   title = "no connection",
-  message = "hugging app needs the internet to send and receive hugs. please check your connection and try again.",
+  message = `${APP_NAME} needs the internet to send and receive hugs. please check your connection and try again.`,
   caption = "",
 }: OfflineScreenProps) {
   const insets = useSafeAreaInsets();

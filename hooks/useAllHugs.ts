@@ -11,8 +11,21 @@ const oldest = (hugs: Hug[]) => (hugs.length ? Math.min(...hugs.map(ms)) : 0);
 
 export type HugFilter = "all" | "new" | "received" | "sent" | "pending";
 
-/** Filters that interleave both streams, and so need the watermark. */
-const READS_BOTH: ReadonlySet<HugFilter> = new Set<HugFilter>(["all", "new"]);
+/**
+ * Filters that need the watermark.
+ *
+ * Only `all` does. It's a continuous interleaved timeline, so without a cutoff
+ * it would show received hugs back to March beside sent hugs back only to
+ * June — a history with a silent hole in it.
+ *
+ * `new` reads both streams too, but it's a *set*, not a timeline: there's no
+ * continuity to protect, so a cutoff there only hides unread hugs. It also has
+ * to stay out, because the watermark keys off `createdAt` while unreadness
+ * doesn't — a hug back on a hug you sent months ago is unread *now* but sorts
+ * old, so the cutoff would drop it while the badge kept counting it, leaving a
+ * New tab that says "all caught up" under a badge that won't clear.
+ */
+const NEEDS_WATERMARK: ReadonlySet<HugFilter> = new Set<HugFilter>(["all"]);
 
 /**
  * How many hugs are waiting on me. Same rule as the list's NEW pill: a hug I
@@ -45,10 +58,10 @@ export function useAllHugs(filter: HugFilter) {
   const { user } = useCurrentUser();
   const uid = user?.uid;
 
-  // Only the interleaved view needs the watermark; a single-direction filter
-  // reads one stream and can safely show everything it has loaded.
+  // Only the interleaved timeline needs the watermark; every other filter can
+  // safely show everything it has loaded. See `NEEDS_WATERMARK`.
   const watermark = useMemo(() => {
-    if (!READS_BOTH.has(filter)) return 0;
+    if (!NEEDS_WATERMARK.has(filter)) return 0;
     const cuts: number[] = [];
     if (incoming.hasMore) cuts.push(oldest(incoming.hugs));
     if (outgoing.hasMore) cuts.push(oldest(outgoing.hugs));
