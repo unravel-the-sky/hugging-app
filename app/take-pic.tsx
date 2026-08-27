@@ -5,7 +5,14 @@ import {
   useCameraPermissions,
 } from "expo-camera";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Button, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Button,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   Easing,
@@ -41,6 +48,15 @@ const FLASH_OUT = 240;
  * preview that settles in front of you than one stuck behind a white screen.
  */
 const READY_TIMEOUT = 2500;
+
+/** Viewport height as a multiple of screen width — a 3:4 sensor frame. */
+const VIEWPORT_ASPECT = 4 / 3;
+/**
+ * Floor for the control bar. On a short screen the viewport gives up height
+ * before the shutter does; a camera you can't press is worse than a cropped
+ * preview.
+ */
+const MIN_CONTROLS_HEIGHT = 150;
 
 type Phase = "idle" | "capturing" | "preview";
 
@@ -144,6 +160,7 @@ export default function TakePicture({
   };
 
   const insets = useSafeAreaInsets();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   const doubleTap = Gesture.Tap()
     .numberOfTaps(2)
@@ -215,112 +232,88 @@ export default function TakePicture({
   };
 
   const renderCamera = () => {
+    // A full-bleed 3:4 viewport. The old layout inset the preview by 24pt and
+    // let flex divide the leftovers, which framed the camera like a card on a
+    // page; a camera should own the screen and hold a real sensor ratio.
+    const viewportHeight = Math.min(
+      screenWidth * VIEWPORT_ASPECT,
+      screenHeight - MIN_CONTROLS_HEIGHT - insets.top - insets.bottom,
+    );
+
     return (
       <GestureDetector gesture={doubleTap}>
-        <SafeAreaView
-          style={{
-            ...StyleSheet.absoluteFill,
-            paddingHorizontal: 24,
-            // paddingVertical: 26,
-            marginTop: 40,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.2,
-            shadowRadius: 4,
-            elevation: 2,
-          }}
-        >
-          <View style={{ flex: 1 }}>
-            <View style={styles.header} pointerEvents="box-none">
-              <Pressable
-                onPress={() => router.back()}
-                style={styles.headerBtn}
-                hitSlop={8}
-              >
-                <Ionicons name="arrow-back" size={24} color={colors.plumInk} />
-              </Pressable>
-            </View>
-            <View
-              style={{
-                flex: 3,
-                overflow: "hidden",
-                borderRadius: 12,
-              }}
+        <View style={styles.cameraScreen}>
+          <View
+            style={[styles.cameraHeader, { paddingTop: insets.top + 8 }]}
+            pointerEvents="box-none"
+          >
+            <Pressable
+              onPress={() => router.back()}
+              style={styles.headerBtn}
+              hitSlop={8}
             >
-              <CameraView
-                style={styles.camera}
-                ref={ref}
-                mode={mode}
-                facing={facing}
-                mute={false}
-                mirror={true}
-                responsiveOrientationWhenOrientationLocked
-              />
-              {circularGuide && (
-                <View
-                  style={styles.circleGuide}
-                  pointerEvents="none"
-                  accessibilityElementsHidden
-                />
-              )}
-            </View>
-            <View
-              style={{
-                flex: 2,
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              <View
-                style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  margin: 40,
-                }}
-              >
-                <IconButton
-                  variant="surface"
-                  size={50}
-                  accessibilityLabel="pick from device"
-                  icon={<Ionicons name="image-outline" size={30} />}
-                  onPress={pickImageFromMobileAsync}
-                />
-
-                <Pressable onPress={takePic}>
-                  {({ pressed }) => (
-                    <View
-                      style={[
-                        styles.shutterBtn,
-                        {
-                          opacity: pressed ? 0.5 : 1,
-                        },
-                      ]}
-                    >
-                      <View
-                        style={[
-                          styles.shutterBtnInner,
-                          {
-                            backgroundColor:
-                              mode === "picture" ? colors.deep : "red",
-                          },
-                        ]}
-                      />
-                    </View>
-                  )}
-                </Pressable>
-                <IconButton
-                  variant="surface"
-                  size={50}
-                  accessibilityLabel="toggle camera"
-                  icon={<Ionicons name="camera-reverse-outline" size={30} />}
-                  onPress={toggleCameraFacing}
-                />
-              </View>
-            </View>
+              <Ionicons name="arrow-back" size={24} color="#fff" />
+            </Pressable>
           </View>
-        </SafeAreaView>
+
+          <View style={{ width: screenWidth, height: viewportHeight }}>
+            <CameraView
+              style={styles.camera}
+              ref={ref}
+              mode={mode}
+              facing={facing}
+              mute={false}
+              mirror={true}
+              responsiveOrientationWhenOrientationLocked
+            />
+            {circularGuide && (
+              <View style={styles.guideWrap} pointerEvents="none">
+                <View style={styles.circleGuide} accessibilityElementsHidden />
+              </View>
+            )}
+          </View>
+
+          <View
+            style={[
+              styles.controls,
+              { paddingBottom: Math.max(insets.bottom, 16) },
+            ]}
+          >
+            <IconButton
+              variant="surface"
+              size={50}
+              accessibilityLabel="pick from device"
+              icon={<Ionicons name="image-outline" size={30} />}
+              onPress={pickImageFromMobileAsync}
+            />
+
+            <Pressable onPress={takePic} disabled={phase !== "idle"}>
+              {({ pressed }) => (
+                <View
+                  style={[styles.shutterBtn, { opacity: pressed ? 0.5 : 1 }]}
+                >
+                  <View
+                    style={[
+                      styles.shutterBtnInner,
+                      {
+                        backgroundColor:
+                          mode === "picture" ? colors.deep : "red",
+                      },
+                    ]}
+                  />
+                </View>
+              )}
+            </Pressable>
+
+            <IconButton
+              variant="surface"
+              size={50}
+              accessibilityLabel="toggle camera"
+              icon={<Ionicons name="camera-reverse-outline" size={30} />}
+              onPress={toggleCameraFacing}
+            />
+          </View>
+        </View>
       </GestureDetector>
     );
   };
@@ -343,33 +336,58 @@ export default function TakePicture({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    // Black, not white: it is the surround for the camera viewport, and it is
+    // also what a preview that hasn't painted yet shows through.
+    backgroundColor: "#000",
     alignItems: "center",
     justifyContent: "center",
+  },
+  cameraScreen: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#000",
+    alignItems: "center",
+  },
+  cameraHeader: {
+    alignSelf: "stretch",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  controls: {
+    flex: 1,
+    alignSelf: "stretch",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 36,
   },
   flash: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "#fff",
   },
-  header: {
-    flex: 0.5,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
   headerBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.7)",
+    backgroundColor: "rgba(255,255,255,0.18)",
     alignItems: "center",
     justifyContent: "center",
   },
   cameraContainer: StyleSheet.absoluteFill,
   camera: StyleSheet.absoluteFill,
+  // Centred in the viewport with a margin of its own, rather than stretched
+  // to it — full-bleed the circle would run edge to edge and read as a crop
+  // marker instead of a face guide.
+  guideWrap: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 32,
+  },
   circleGuide: {
-    ...StyleSheet.absoluteFill,
-    margin: "auto",
+    width: "100%",
     aspectRatio: 1,
     borderRadius: 9999,
     borderWidth: 3,
@@ -403,6 +421,8 @@ const styles = StyleSheet.create({
   message: {
     textAlign: "center",
     paddingBottom: 10,
+    // The container behind this is black now.
+    color: "#fff",
   },
   buttonContainer: {
     position: "absolute",
