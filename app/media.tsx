@@ -1,15 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Alert,
-  Image,
-  InteractionManager,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { useMemo, useRef, useState } from "react";
+import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
 
 import * as ImageManipulator from "expo-image-manipulator";
@@ -357,18 +349,6 @@ export default function Media({
 
   const { ref: tiltRef, x: tiltX, y: tiltY } = useTiltNew();
 
-  // Each filter swatch is its own Skia canvas sampling the full-size photo.
-  // Mounting all of them in the first frame competes with the polaroid for
-  // the exact moment the screen is meant to feel instant, so they come in a
-  // beat later, into boxes already holding their space.
-  const [previewsReady, setPreviewsReady] = useState(false);
-  useEffect(() => {
-    const task = InteractionManager.runAfterInteractions(() =>
-      setPreviewsReady(true),
-    );
-    return () => task.cancel();
-  }, []);
-
   // No decoded photo yet means the standalone path is still loading. Paint the
   // backdrop rather than nothing — a white frame between screens reads as a
   // stall, an empty coloured one reads as the screen arriving.
@@ -497,11 +477,7 @@ export default function Media({
                     isSelected && styles.filterBoxSelected,
                   ]}
                 >
-                  {previewsReady ? (
-                    <FilterPreview image={image} matrix={FILTERS[key].matrix} />
-                  ) : (
-                    <View style={styles.filterBoxPlaceholder} />
-                  )}
+                  <FilterPreview image={image} matrix={FILTERS[key].matrix} />
                   <Text
                     style={[
                       styles.filterText,
@@ -592,14 +568,6 @@ const styles = StyleSheet.create({
   },
   filterBoxSelected: {
     backgroundColor: "white",
-  },
-  // Same 48×48 as FilterPreview's canvas, so swatches appearing costs no
-  // layout shift.
-  filterBoxPlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 6,
-    backgroundColor: "rgba(255,255,255,0.45)",
   },
   filterText: {
     color: colors.plumInk,
