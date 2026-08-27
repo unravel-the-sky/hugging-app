@@ -28,7 +28,7 @@ import {
 
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useHugDraft } from "@/hooks/useHugDraft";
-import { useImageColors } from "@/hooks/useImageColors";
+import { ImagePalette, useImageColors } from "@/hooks/useImageColors";
 import usePhotoTransform from "@/hooks/usePhotoTransform";
 import usePolaroidFrameCalc from "@/hooks/usePolaroidFrameCalc";
 
@@ -36,7 +36,7 @@ import { HeartsGridSkia } from "@/components/hug/HeartGridSkia";
 import { useTiltNew } from "@/hooks/useTilt";
 import { auth, storage } from "@/lib/firebaseConfig";
 import { contrastingTint, readableText } from "@/lib/util";
-import { useImage } from "@shopify/react-native-skia";
+import { SkImage, useImage } from "@shopify/react-native-skia";
 import { ref, uploadBytes } from "firebase/storage";
 
 const FALLBACK_BG = "#D7C2B2";
@@ -49,11 +49,24 @@ const getPixelSize = (uri: string) =>
 export default function Media({
   media,
   onBack,
+  image: preloadedImage,
+  palette,
 }: {
   media: string;
   onBack: () => void;
+  /**
+   * A photo the caller already decoded, and the palette it already extracted.
+   * Both are slow, and both used to run on mount — which is why this screen
+   * used to arrive blank, then flash from the fallback colour to the real one
+   * as each landed. The capture flow now does the work behind its shutter
+   * flash and hands the results over, so we open already settled.
+   */
+  image?: SkImage | null;
+  palette?: ImagePalette;
 }) {
-  const image = useImage(media);
+  // `null` skips the decode; only the standalone path pays for it.
+  const ownImage = useImage(preloadedImage ? null : media);
+  const image = preloadedImage ?? ownImage;
   const imageRef = useRef(null);
   const setPhoto = useHugDraft((s) => s.setPhotoUri);
   const setBackgroundColor = useHugDraft((s) => s.setBackgroundColor);
@@ -295,7 +308,8 @@ export default function Media({
   // The four swatches the photo yields, deduped. colorThree leads so the
   // untouched postcard looks the way it always has; tapping the backdrop
   // walks through the rest.
-  const { colors: imageColors } = useImageColors(media);
+  const { colors: ownColors } = useImageColors(palette ? null : media);
+  const imageColors = palette ?? ownColors;
 
   const bgOptions = useMemo(() => {
     const candidates = [
@@ -335,7 +349,12 @@ export default function Media({
 
   const { ref: tiltRef, x: tiltX, y: tiltY } = useTiltNew();
 
-  if (!image) return null;
+  // No decoded photo yet means the standalone path is still loading. Paint the
+  // backdrop rather than nothing — a white frame between screens reads as a
+  // stall, an empty coloured one reads as the screen arriving.
+  if (!image) {
+    return <View style={[styles.container, { backgroundColor: bg }]} />;
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: bg }]}>
@@ -383,6 +402,7 @@ export default function Media({
         >
           <PostImage
             media={media}
+            image={image}
             selected={selected}
             photoTransform={photoTransform}
             drawWidth={drawn.width}

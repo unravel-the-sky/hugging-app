@@ -11,6 +11,7 @@ import {
   Group,
   Image,
   Rect,
+  SkImage,
   Transforms3d,
   useCanvasRef,
   useImage,
@@ -27,12 +28,20 @@ import {
 
 export default function PostImage({
   media,
+  image: preloaded,
   selected,
   photoTransform,
   drawWidth,
   drawHeight,
 }: {
   media: string;
+  /**
+   * An already-decoded photo. Decoding a full-frame capture is the slowest
+   * step on the way to this screen, so the capture flow does it once up front
+   * and hands the result down. Without it we decode `media` ourselves, which
+   * is the standalone path.
+   */
+  image?: SkImage | null;
   selected: FilterKey;
   /** pan/pinch/rotate applied to the photo inside the polaroid window */
   photoTransform?: SharedValue<Transforms3d>;
@@ -43,7 +52,10 @@ export default function PostImage({
   drawWidth?: number;
   drawHeight?: number;
 }) {
-  const image = useImage(media);
+  // Only decode when nobody handed us a decoded image — passing `null` to
+  // `useImage` skips the load rather than starting a second one.
+  const ownImage = useImage(preloaded ? null : media);
+  const image = preloaded ?? ownImage;
 
   const dropProgress = useSharedValue(0);
   const developProgress = useSharedValue(0);
