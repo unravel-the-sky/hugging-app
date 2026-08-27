@@ -4,20 +4,45 @@ import {
   CameraView,
   useCameraPermissions,
 } from "expo-camera";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Pressable, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from "react-native-reanimated";
 import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 
-import { colors, IconButton, spacing } from "@/components/ui/squish";
+import { colors, IconButton } from "@/components/ui/squish";
+import { useImageColors } from "@/hooks/useImageColors";
 import { Ionicons } from "@expo/vector-icons";
+import { useImage } from "@shopify/react-native-skia";
+import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import Media from "./media";
 import { router } from "expo-router";
+
+/** White-out, in ms. Short enough to read as a shutter, not a fade. */
+const FLASH_IN = 80;
+/** How long the white sits at full before we start revealing. */
+const FLASH_HOLD = 60;
+/** The reveal. The next screen is already warm underneath by now. */
+const FLASH_OUT = 240;
+/**
+ * Ceiling on how long the flash will wait for the photo to decode and its
+ * colours to come back. A slow device must still get its picture — better a
+ * preview that settles in front of you than one stuck behind a white screen.
+ */
+const READY_TIMEOUT = 2500;
+
+type Phase = "idle" | "capturing" | "preview";
 
 export interface TakePictureProps {
   renderPreview?: (uri: string, onRetake: () => void) => React.ReactNode;
@@ -36,14 +61,86 @@ export default function TakePicture({
   const ref = useRef<CameraView>(null);
   const [uri, setUri] = useState<string | null>(null);
   const [mode, setMode] = useState<CameraMode>("picture");
+  const [phase, setPhase] = useState<Phase>("idle");
+
+  // Only the postcard editor needs a decoded photo and a palette. A custom
+  // preview (the avatar flow) renders a plain <Image>, so doing either would
+  // be pure delay.
+  const needsPostcard = !renderPreview;
+
+  const flash = useSharedValue(0);
+  const flashStyle = useAnimatedStyle(() => ({ opacity: flash.value }));
+
+  // The two slow steps, moved off the preview's mount and behind the flash.
+  const preloaded = useImage(needsPostcard ? uri : null);
+  const { colors: palette, ready: paletteReady } = useImageColors(
+    needsPostcard ? uri : null,
+  );
+
+  const assetsReady = needsPostcard ? !!preloaded && paletteReady : true;
+
+  // Reveal once the next screen can paint itself in one go — or once we have
+  // waited long enough that holding the white costs more than it hides.
+  useEffect(() => {
+    if (phase !== "capturing" || !uri) return;
+
+    const reveal = () => {
+      setPhase("preview");
+      flash.value = withDelay(
+        FLASH_HOLD,
+        withTiming(0, { duration: FLASH_OUT, easing: Easing.out(Easing.quad) }),
+      );
+    };
+
+    if (assetsReady) {
+      reveal();
+      return;
+    }
+
+    const timer = setTimeout(reveal, READY_TIMEOUT);
+    return () => clearTimeout(timer);
+  }, [phase, uri, assetsReady, flash]);
+
+  const abortCapture = useCallback(() => {
+    setPhase("idle");
+    flash.value = withTiming(0, { duration: 180 });
+  }, [flash]);
 
   const toggleCameraFacing = useCallback(() => {
     setFacing((current) => (current === "back" ? "front" : "back"));
   }, []);
 
   const takePic = async () => {
-    const photo = await ref.current?.takePictureAsync();
-    if (photo?.uri) setUri(photo.uri);
+    if (phase !== "idle") return;
+
+    // Everything here is synchronous and happens before the await: the whole
+    // point is that the tap has already produced light and a thump by the time
+    // the native capture starts blocking.
+    setPhase("capturing");
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    flash.value = withTiming(1, {
+      duration: FLASH_IN,
+      easing: Easing.out(Easing.quad),
+    });
+
+    try {
+      // Unqualified, this hands back a full-resolution frame that then gets
+      // decoded again by Skia, by the colour extractor and by every filter
+      // swatch. Asking for less here is the single biggest win on this path.
+      const photo = await ref.current?.takePictureAsync({
+        quality: 0.7,
+        exif: false,
+        shutterSound: false,
+      });
+      if (photo?.uri) {
+        setUri(photo.uri);
+        return;
+      }
+      abortCapture();
+    } catch (err) {
+      console.error("Taking the picture failed, error ", err);
+      abortCapture();
+    }
   };
 
   const insets = useSafeAreaInsets();
@@ -55,13 +152,22 @@ export default function TakePicture({
     });
 
   const pickImageFromMobileAsync = async () => {
+    if (phase !== "idle") return;
+
     try {
       const res = await ImagePicker.launchImageLibraryAsync({
         allowsEditing: true,
         quality: 1,
       });
 
-      if (!res.canceled && res.assets[0].uri) setUri(res.assets[0].uri);
+      if (!res.canceled && res.assets[0].uri) {
+        // No shutter here — nothing was captured — but the picked photo needs
+        // the same warm-up, so it goes behind the same curtain. Straight to
+        // opaque rather than a pop.
+        setPhase("capturing");
+        flash.value = withTiming(1, { duration: 120 });
+        setUri(res.assets[0].uri);
+      }
     } catch (err) {
       console.error(
         "Erro happened while getting pictures from library, error ",
@@ -85,13 +191,24 @@ export default function TakePicture({
     );
   }
 
+  const retake = () => {
+    setUri(null);
+    setPhase("idle");
+    flash.value = 0;
+  };
+
   const renderPicture = (pictureUri: string) => {
     return (
       <SafeAreaView style={styles.cameraContainer} edges={["top"]}>
         {renderPreview ? (
-          renderPreview(pictureUri, () => setUri(null))
+          renderPreview(pictureUri, retake)
         ) : (
-          <Media media={pictureUri} onBack={() => setUri(null)} />
+          <Media
+            media={pictureUri}
+            onBack={retake}
+            image={preloaded}
+            palette={palette}
+          />
         )}
       </SafeAreaView>
     );
@@ -209,13 +326,16 @@ export default function TakePicture({
   };
 
   return (
-    <View
-      style={[
-        styles.container,
-        { paddingTop: Math.max(insets.top, spacing.lg) },
-      ]}
-    >
+    <View style={styles.container}>
       {uri ? renderPicture(uri) : renderCamera()}
+
+      {/* The shutter flash, and the curtain the next screen loads behind.
+          It stays opaque while the photo decodes, so what fades away reveals
+          a preview that is already finished rather than one still arriving. */}
+      <Animated.View
+        style={[styles.flash, flashStyle]}
+        pointerEvents={phase === "capturing" ? "auto" : "none"}
+      />
     </View>
   );
 }
@@ -226,6 +346,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
+  },
+  flash: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#fff",
   },
   header: {
     flex: 0.5,
