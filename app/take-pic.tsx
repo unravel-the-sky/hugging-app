@@ -15,16 +15,16 @@ import {
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
+  cancelAnimation,
   Easing,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
+  withRepeat,
+  withSequence,
   withTiming,
 } from "react-native-reanimated";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 
 import { colors, IconButton } from "@/components/ui/squish";
@@ -32,6 +32,7 @@ import { useImageColors } from "@/hooks/useImageColors";
 import { Ionicons } from "@expo/vector-icons";
 import { useImage } from "@shopify/react-native-skia";
 import * as Haptics from "expo-haptics";
+import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import Media from "./media";
 import { router } from "expo-router";
@@ -57,6 +58,16 @@ const VIEWPORT_ASPECT = 4 / 3;
  * preview.
  */
 const MIN_CONTROLS_HEIGHT = 150;
+
+/**
+ * How long the white sits empty before the logo joins it. A capture that
+ * finishes quickly should be a flash and nothing more — a mark that appears
+ * and vanishes inside 200ms is a flicker, not a loading state.
+ */
+const LOGO_DELAY = 260 * 1.2;
+const LOGO_SIZE = 104 * 1.2;
+
+const LOGO = require("@/assets/images/splash-icon-mine-trans.png");
 
 type Phase = "idle" | "capturing" | "preview";
 
@@ -87,6 +98,45 @@ export default function TakePicture({
   const flash = useSharedValue(0);
   const flashStyle = useAnimatedStyle(() => ({ opacity: flash.value }));
 
+  // The logo waiting inside the flash. Its own opacity, so it can arrive late
+  // and only when there is actually a wait to fill.
+  const logoOpacity = useSharedValue(1);
+  const logoScale = useSharedValue(1);
+  const logoStyle = useAnimatedStyle(() => ({
+    opacity: logoOpacity.value,
+    transform: [{ scale: logoScale.value }],
+  }));
+
+  const startWaiting = useCallback(() => {
+    logoOpacity.value = withDelay(LOGO_DELAY, withTiming(1, { duration: 10 }));
+    // lub-dub, then rest. Two uneven beats read as a pulse; one even one
+    // reads as breathing.
+    logoScale.value = withDelay(
+      LOGO_DELAY,
+
+      withRepeat(
+        withSequence(
+          withTiming(1.0, { duration: 260, easing: Easing.in(Easing.quad) }),
+          withTiming(1.0, { duration: 320 }),
+          withTiming(1.16, {
+            duration: 150,
+            easing: Easing.out(Easing.quad),
+          }),
+          withTiming(1.02, { duration: 150, easing: Easing.in(Easing.quad) }),
+        ),
+        -1,
+        false,
+      ),
+    );
+  }, [logoOpacity, logoScale]);
+
+  const stopWaiting = useCallback(() => {
+    cancelAnimation(logoScale);
+    cancelAnimation(logoOpacity);
+    logoScale.value = withTiming(1, { duration: 120 });
+    logoOpacity.value = withTiming(0, { duration: 120 });
+  }, [logoOpacity, logoScale]);
+
   // The two slow steps, moved off the preview's mount and behind the flash.
   const preloaded = useImage(needsPostcard ? uri : null);
   const { colors: palette, ready: paletteReady } = useImageColors(
@@ -102,6 +152,7 @@ export default function TakePicture({
 
     const reveal = () => {
       setPhase("preview");
+      stopWaiting();
       flash.value = withDelay(
         FLASH_HOLD,
         withTiming(0, { duration: FLASH_OUT, easing: Easing.out(Easing.quad) }),
@@ -115,12 +166,13 @@ export default function TakePicture({
 
     const timer = setTimeout(reveal, READY_TIMEOUT);
     return () => clearTimeout(timer);
-  }, [phase, uri, assetsReady, flash]);
+  }, [phase, uri, assetsReady, flash, stopWaiting]);
 
   const abortCapture = useCallback(() => {
     setPhase("idle");
+    stopWaiting();
     flash.value = withTiming(0, { duration: 180 });
-  }, [flash]);
+  }, [flash, stopWaiting]);
 
   const toggleCameraFacing = useCallback(() => {
     setFacing((current) => (current === "back" ? "front" : "back"));
@@ -138,6 +190,7 @@ export default function TakePicture({
       duration: FLASH_IN,
       easing: Easing.out(Easing.quad),
     });
+    startWaiting();
 
     try {
       // Unqualified, this hands back a full-resolution frame that then gets
@@ -182,7 +235,10 @@ export default function TakePicture({
         // the same warm-up, so it goes behind the same curtain. Straight to
         // opaque rather than a pop.
         setPhase("capturing");
-        flash.value = withTiming(1, { duration: 120 });
+        flash.value = withTiming(1, {
+          duration: 60,
+          easing: Easing.inOut(Easing.quad),
+        });
         setUri(res.assets[0].uri);
       }
     } catch (err) {
@@ -211,12 +267,16 @@ export default function TakePicture({
   const retake = () => {
     setUri(null);
     setPhase("idle");
+    cancelAnimation(logoScale);
+    cancelAnimation(logoOpacity);
+    logoScale.value = 1;
+    logoOpacity.value = 0;
     flash.value = 0;
   };
 
   const renderPicture = (pictureUri: string) => {
     return (
-      <SafeAreaView style={styles.cameraContainer} edges={["top"]}>
+      <View style={styles.cameraContainer}>
         {renderPreview ? (
           renderPreview(pictureUri, retake)
         ) : (
@@ -227,7 +287,7 @@ export default function TakePicture({
             palette={palette}
           />
         )}
-      </SafeAreaView>
+      </View>
     );
   };
 
@@ -328,7 +388,15 @@ export default function TakePicture({
       <Animated.View
         style={[styles.flash, flashStyle]}
         pointerEvents={phase === "capturing" ? "auto" : "none"}
-      />
+      >
+        <Animated.View style={logoStyle}>
+          <Image
+            source={LOGO}
+            style={{ width: LOGO_SIZE, height: LOGO_SIZE }}
+            contentFit="contain"
+          />
+        </Animated.View>
+      </Animated.View>
     </View>
   );
 }
@@ -366,6 +434,8 @@ const styles = StyleSheet.create({
   flash: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerBtn: {
     width: 40,
