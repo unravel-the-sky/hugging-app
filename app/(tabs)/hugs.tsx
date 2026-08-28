@@ -44,6 +44,14 @@ export default function HugsListScreen() {
     );
   }, [selection, incoming.hugs, outgoing.hugs]);
 
+  // Reporting from inside the overlay can block the sender. The fallback above
+  // keeps handing back the snapshot the list opened with, so their hug would
+  // otherwise stay on screen after they were blocked — close it instead.
+  useEffect(() => {
+    if (selection && blockedUids.has(selection.hug.from))
+      setSelection(undefined);
+  }, [blockedUids, selection]);
+
   // deep link from a push notification always points at a received hug.
   const { hugId } = useLocalSearchParams();
   useEffect(() => {

@@ -42,6 +42,19 @@ service cloud.firestore {
       allow read, write: if false;   // server-only; clients go through callables
     }
 
+    // Reports carry a snapshot of the reported content, which means they hold
+    // other people's hugs. Server-only, like blocks: the reportContent
+    // callable is the only way in, and nothing reads these from the app.
+    match /reports/{reportId} {
+      allow read, write: if false;
+    }
+
+    // How many reports each account has filed today. Server-only so the cap
+    // can't be reset from a client.
+    match /reportQuota/{uid} {
+      allow read, write: if false;
+    }
+
     match /hugs/{hugId} {
       function isParticipant() {
         return request.auth != null && (

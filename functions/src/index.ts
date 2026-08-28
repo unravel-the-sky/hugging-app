@@ -18,6 +18,7 @@ import {
   onValueUpdated,
 } from "firebase-functions/database";
 import { HttpsError, onCall } from "firebase-functions/https";
+import { defineSecret, defineString } from "firebase-functions/params";
 import {
   onDocumentCreated,
   onDocumentUpdated,
@@ -847,6 +848,309 @@ export const blockUser = onCall(async (request) => {
 
   return { ok: true };
 });
+
+/* -------------------------------------------------------------------- */
+/* Reporting                                                            */
+/* -------------------------------------------------------------------- */
+
+/**
+ * The reasons a report may carry. Kept in lockstep with `REPORT_REASONS` in
+ * `lib/handleReports.ts` — the client sends one of these strings and anything
+ * else is refused.
+ */
+const REPORT_REASONS = [
+  "harassment",
+  "sexual",
+  "hate",
+  "spam",
+  "other",
+] as const;
+type ReportReason = (typeof REPORT_REASONS)[number];
+
+const MAX_REPORT_NOTE = 500;
+
+/**
+ * Reports one account may file per day. Reporting is a way to reach a human,
+ * so it is also a way to flood one; the cap is high enough that no honest
+ * reporter will meet it.
+ */
+const REPORT_DAILY_LIMIT = 20;
+
+/** UTC day key, so the cap rolls over at a fixed time rather than per-user. */
+const dayKey = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+
+/**
+ * Counts one report against the caller's daily allowance, throwing once they
+ * are over it. A counter document rather than a query over `reports`: the
+ * equality-plus-range query that would answer the same question needs a
+ * composite index, and this project ships no index file.
+ */
+async function consumeReportQuota(uid: string) {
+  const ref = db.doc(`reportQuota/${uid}`);
+  const today = dayKey(Date.now());
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const sameDay = snap.exists && snap.get("day") === today;
+    const count = sameDay ? (snap.get("count") as number) : 0;
+
+    if (count >= REPORT_DAILY_LIMIT) {
+      throw new HttpsError(
+        "resource-exhausted",
+        "Too many reports today. Please try again tomorrow.",
+      );
+    }
+
+    tx.set(ref, { day: today, count: count + 1 });
+  });
+}
+
+/**
+ * File a report against a user, optionally about one specific hug.
+ *
+ * The snapshot is the point of this function. `blockUser` purges every hug
+ * between the pair, and the flow that leads here almost always ends in a
+ * block — so the offending content is copied into the report while it still
+ * exists. Without that, every report would arrive pointing at a hug that had
+ * already been deleted, and there would be nothing to review.
+ */
+export const reportContent = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in");
+
+  const reportedId: string | undefined = request.data?.reportedId;
+  const hugId: string | undefined = request.data?.hugId;
+  const reason: string | undefined = request.data?.reason;
+  const rawNote: unknown = request.data?.note;
+
+  if (!reportedId)
+    throw new HttpsError("invalid-argument", "reportedId required");
+  if (reportedId === uid)
+    throw new HttpsError("invalid-argument", "Can't report yourself");
+  if (!reason || !REPORT_REASONS.includes(reason as ReportReason))
+    throw new HttpsError("invalid-argument", "Unknown reason");
+
+  const note =
+    typeof rawNote === "string"
+      ? rawNote.trim().slice(0, MAX_REPORT_NOTE) || null
+      : null;
+
+  const reportedSnap = await db.doc(`users/${reportedId}`).get();
+  if (!reportedSnap.exists) throw new HttpsError("not-found", "No such user");
+
+  await consumeReportQuota(uid);
+
+  let content: Record<string, unknown> | null = null;
+
+  if (hugId) {
+    const hugSnap = await db.doc(`hugs/${hugId}`).get();
+    if (!hugSnap.exists) throw new HttpsError("not-found", "No such hug");
+    const hug = hugSnap.data()!;
+
+    // Only a participant may report a hug. Without this check the callable
+    // would hand back the contents of any hug in the database to anyone who
+    // guessed an id.
+    if (hug.from !== uid && hug.to !== uid)
+      throw new HttpsError("permission-denied", "Not your hug");
+
+    // ...and the person being reported has to be the other end of it.
+    if (hug.from !== reportedId && hug.to !== reportedId)
+      throw new HttpsError(
+        "invalid-argument",
+        "That hug does not involve that user",
+      );
+
+    content = {
+      from: hug.from,
+      to: hug.to,
+      fromName: hug.fromName ?? null,
+      note: hug.note ?? null,
+      // The image itself lives in Storage, which the purge does not touch,
+      // so the path stays resolvable after the hug document is gone.
+      imagePath: hug.imagePath ?? null,
+      backgroundColor: hug.backgroundColor ?? null,
+      hugBacks: hug.hugBacks ?? [],
+      createdAt: hug.createdAt ?? null,
+    };
+  }
+
+  const ref = await db.collection("reports").add({
+    reporter: uid,
+    reported: reportedId,
+    // snapshotted so the report still reads well after a rename
+    reportedName: reportedSnap.get("displayName") ?? null,
+    reason,
+    note,
+    hugId: hugId ?? null,
+    content,
+    status: "open",
+    createdAt: FieldValue.serverTimestamp(),
+  });
+
+  return { ok: true, reportId: ref.id };
+});
+
+/* -------------------------------------------------------------------- */
+/* Report notification                                                  */
+/* -------------------------------------------------------------------- */
+
+/**
+ * Where report emails go, and who they come from.
+ *
+ * Sent through Resend's HTTP API rather than the Firebase Trigger Email
+ * extension: Firebase Extensions is deprecated and shuts down on
+ * 2027-03-31, so a moderation path that has to outlive that date can't
+ * depend on it.
+ *
+ * `REPORT_FROM_EMAIL` defaults to Resend's shared testing sender, which works
+ * with no domain set up but only delivers to the address that owns the Resend
+ * account. Point it at your own verified domain to send anywhere else.
+ */
+const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
+const REPORT_EMAIL = defineString("REPORT_EMAIL");
+const REPORT_FROM_EMAIL = defineString("REPORT_FROM_EMAIL", {
+  default: "Hugging reports <onboarding@resend.dev>",
+});
+
+/** Report content is written by users, and this ends up in an HTML email. */
+const escapeHtml = (value: unknown): string =>
+  String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+/**
+ * A link to the reported photo that works from an inbox. Seven days is the
+ * maximum a v4 signed URL allows, and is long enough to act well inside the
+ * 24 hours App Review expects for egregious content.
+ */
+async function signedImageUrl(imagePath: string): Promise<string | null> {
+  try {
+    const [url] = await getStorage()
+      .bucket()
+      .file(imagePath)
+      .getSignedUrl({
+        version: "v4",
+        action: "read",
+        expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
+      });
+    return url;
+  } catch (err) {
+    console.error("Could not sign reported image", imagePath, err);
+    return null;
+  }
+}
+
+/**
+ * Emails a new report to whoever moderates. The report document is already
+ * safely written by the time this runs, so a failure here is logged and
+ * swallowed: throwing would retry the send, not improve the record.
+ */
+export const onReportCreated = onDocumentCreated(
+  { document: "reports/{reportId}", secrets: [RESEND_API_KEY] },
+  async (event) => {
+    const snap = event.data;
+    if (!snap) return;
+
+    const to = REPORT_EMAIL.value();
+    if (!to) {
+      console.error("REPORT_EMAIL is unset — report email not sent");
+      return;
+    }
+
+    const report = snap.data();
+    const content = (report.content ?? null) as Record<string, any> | null;
+
+    const imageUrl = content?.imagePath
+      ? await signedImageUrl(content.imagePath as string)
+      : null;
+
+    const thread = Array.isArray(content?.hugBacks) ? content.hugBacks : [];
+
+    const html = `
+      <h2>New report: ${escapeHtml(report.reason)}</h2>
+      <table cellpadding="6" style="border-collapse:collapse">
+        <tr><td><b>Report</b></td><td>${escapeHtml(event.params.reportId)}</td></tr>
+        <tr><td><b>Reported</b></td><td>${escapeHtml(report.reportedName)} (${escapeHtml(report.reported)})</td></tr>
+        <tr><td><b>Reporter</b></td><td>${escapeHtml(report.reporter)}</td></tr>
+        <tr><td><b>Hug</b></td><td>${escapeHtml(report.hugId ?? "— reported the person, not a hug")}</td></tr>
+      </table>
+
+      ${
+        report.note
+          ? `<h3>What the reporter said</h3><p>${escapeHtml(report.note)}</p>`
+          : ""
+      }
+
+      ${
+        content
+          ? `<h3>Reported hug</h3>
+             <p><b>Note:</b> ${escapeHtml(content.note) || "<i>none</i>"}</p>
+             ${
+               imageUrl
+                 ? `<p><b>Photo</b> (link expires in 7 days):<br>
+                    <a href="${imageUrl}">${escapeHtml(content.imagePath)}</a><br>
+                    <img src="${imageUrl}" style="max-width:320px" alt=""></p>`
+                 : ""
+             }
+             ${
+               thread.length
+                 ? `<p><b>Thread:</b></p><ul>${thread
+                     .map(
+                       (t: any) =>
+                         `<li>${escapeHtml(t.from)}: ${escapeHtml(t.note)}</li>`,
+                     )
+                     .join("")}</ul>`
+                 : ""
+             }`
+          : "<p><i>No hug was attached to this report.</i></p>"
+      }
+
+      <hr>
+      <p style="color:#666;font-size:12px">
+        Act within 24 hours for anything egregious. Firestore →
+        <code>reports/${escapeHtml(event.params.reportId)}</code> → set
+        <code>status</code> to <code>actioned</code> or <code>dismissed</code>.
+      </p>
+    `;
+
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${RESEND_API_KEY.value()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: REPORT_FROM_EMAIL.value(),
+          to,
+          // The app dropped its reason picker, so nearly every report arrives
+          // as "other" and the subject would carry no signal. What the
+          // reporter wrote is the report — put a slice of it in the subject.
+          subject: `[report] ${report.reportedName ?? report.reported} — ${
+            report.note
+              ? String(report.note).replace(/\s+/g, " ").slice(0, 60)
+              : report.reason
+          }`,
+          html,
+        }),
+      });
+
+      if (!res.ok) {
+        console.error(
+          "Resend rejected the report email",
+          res.status,
+          await res.text(),
+        );
+      }
+    } catch (err) {
+      // The report is stored either way; losing the email must not lose it.
+      console.error("Could not send report email", err);
+    }
+  },
+);
 
 /** Lift a block. Does not restore the friendship — that has to be re-earned. */
 export const unblockUser = onCall(async (request) => {
