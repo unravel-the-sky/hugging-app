@@ -3,7 +3,7 @@ import { auth, db } from "@/lib/firebaseConfig";
 import { registerForPushNotifications } from "@/lib/registerForPushNotifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { User as FirebaseAuthUser, onAuthStateChanged } from "firebase/auth";
-import { doc, onSnapshot, updateDoc } from "firebase/firestore";
+import { deleteField, doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { create } from "zustand";
 
 const CACHE_KEY = "cached_user";
@@ -15,6 +15,25 @@ export const savePushTokenOnUser = async (userId: string) => {
   if (token) {
     console.log("token to be set into user is: ", token);
     await updateDoc(doc(db, "users", userId), { pushToken: token });
+  }
+};
+
+/**
+ * Drop this device's push token from the user doc, so the person who just
+ * signed out stops receiving hugs meant for whoever signs in next.
+ *
+ * `users/{uid}.pushToken` holds a single token, so a shared account can have
+ * another device's token stored here — we only clear it when it is ours.
+ * Must run *before* `signOut`, while the write is still authorised.
+ */
+export const clearPushTokenOnUser = async (userId: string) => {
+  try {
+    const token = await registerForPushNotifications();
+    const stored = getCurrentUser().user?.pushToken;
+    if (stored && token && stored !== token) return;
+    await updateDoc(doc(db, "users", userId), { pushToken: deleteField() });
+  } catch (err) {
+    console.error("Failed to clear push token:", err);
   }
 };
 

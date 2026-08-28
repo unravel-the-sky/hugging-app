@@ -58,7 +58,11 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (isHydrating) return;
-    if (!user) return;
+    // sign-out clears the stored token, so allow the next sign-in to re-register
+    if (!user) {
+      tokenRegisteredRef.current = false;
+      return;
+    }
     if (tokenRegisteredRef.current) return;
 
     tokenRegisteredRef.current = true;
