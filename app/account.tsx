@@ -1,5 +1,6 @@
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { colors, font, spacing } from "@/components/ui/squish";
+import { APP_NAME, PRIVACY_URL, SUPPORT_EMAIL, TERMS_URL } from "@/constants";
 import { PlushButton } from "@/components/ui/squish/PlushButton";
 import { clearPushTokenOnUser } from "@/hooks/useCurrentUser";
 import { useHugDraft } from "@/hooks/useHugDraft";
@@ -7,9 +8,10 @@ import { auth } from "@/lib/firebaseConfig";
 import { deleteAccountFn } from "@/lib/handleUser";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { router } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import { signOut } from "firebase/auth";
 import React, { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Linking, StyleSheet, Text, View } from "react-native";
 
 /**
  * The account actions, kept off the profile screen so they cannot be tapped by
@@ -91,6 +93,38 @@ export default function AccountScreen() {
         onPress={() => setShowDelete(true)}
       />
 
+      {/* The legal pages and a way to reach a human. They also sit on the
+          sign-in screen, but App Review needs them reachable once signed in
+          — the reviewer never sees the signed-out screen again. */}
+      <Text style={styles.legal}>
+        <Text
+          style={styles.legalLink}
+          onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL)}
+        >
+          privacy policy
+        </Text>
+        {"  ·  "}
+        <Text
+          style={styles.legalLink}
+          onPress={() => WebBrowser.openBrowserAsync(TERMS_URL)}
+        >
+          terms
+        </Text>
+        {"  ·  "}
+        <Text
+          style={styles.legalLink}
+          onPress={() =>
+            Linking.openURL(
+              `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
+                `${APP_NAME} support`,
+              )}`,
+            ).catch(() => {})
+          }
+        >
+          contact support
+        </Text>
+      </Text>
+
       {/* logout confirm */}
       <ConfirmationModal
         isVisible={showLogout}
@@ -155,6 +189,18 @@ const styles = StyleSheet.create({
     color: colors.plumInk,
     textAlign: "center",
     paddingBottom: spacing.sm,
+  },
+  legal: {
+    fontFamily: font.ui,
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.softInk,
+    textAlign: "center",
+    paddingTop: spacing.xs,
+  },
+  legalLink: {
+    color: colors.primary,
+    textDecorationLine: "underline",
   },
   sheetBody: {
     fontSize: 16,

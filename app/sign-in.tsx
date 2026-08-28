@@ -2,7 +2,7 @@ import { DriftingAvatars } from "@/components/landing/DriftingAvatars";
 import { Logo } from "@/components/ui/Logo";
 import { PlushButton } from "@/components/ui/squish/PlushButton";
 import { colors, font, radius } from "@/components/ui/squish/theme";
-import { APP_NAME } from "@/constants";
+import { APP_NAME, PRIVACY_URL, TERMS_URL } from "@/constants";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import { auth } from "@/lib/firebaseConfig";
 import {
@@ -23,13 +23,6 @@ import {
 import React, { useState } from "react";
 import { Alert, Platform, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-// TODO: point these at the real hosted pages before submitting to the stores.
-// App Review rejects under 5.1.1(i) if these are unreachable or placeholder.
-const TERMS_URL =
-  "https://doc-hosting.flycricket.io/hugger-terms-of-use/7a654a94-4d94-4a47-8dff-120ab2f6d2e8/terms";
-const PRIVACY_URL =
-  "https://doc-hosting.flycricket.io/hugger-privacy-policy/f20fe71c-72a2-460d-8414-11fdc17fc168/privacy";
 
 /** Mirrors PlushButton's default face height and its DEPTH constant. */
 const BUTTON_HEIGHT = 52;

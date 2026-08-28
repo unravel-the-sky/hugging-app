@@ -22,7 +22,7 @@ import fetch from "node-fetch";
 const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
 const REPORT_EMAIL = defineString("REPORT_EMAIL");
 const REPORT_FROM_EMAIL = defineString("REPORT_FROM_EMAIL", {
-  default: "Hugger reports <onboarding@resend.dev>",
+  default: "Huggers reports <onboarding@resend.dev>",
 });
 
 /** Report content is written by users, and this ends up in an HTML email. */
