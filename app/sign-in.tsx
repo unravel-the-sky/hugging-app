@@ -26,9 +26,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 // TODO: point these at the real hosted pages before submitting to the stores.
 // App Review rejects under 5.1.1(i) if these are unreachable or placeholder.
-const TERMS_URL = "https://example.com/terms";
+const TERMS_URL =
+  "https://doc-hosting.flycricket.io/hugger-terms-of-use/7a654a94-4d94-4a47-8dff-120ab2f6d2e8/terms";
 const PRIVACY_URL =
-  "https://www.termsfeed.com/live/370ee16f-dbb0-4794-b5b2-96b996bb7518";
+  "https://doc-hosting.flycricket.io/hugger-privacy-policy/f20fe71c-72a2-460d-8414-11fdc17fc168/privacy";
 
 /** Mirrors PlushButton's default face height and its DEPTH constant. */
 const BUTTON_HEIGHT = 52;

@@ -1,4 +1,4 @@
-# Hugging app 🫂
+# Hugger 🫂
 
 A small iOS/Android app for sending hugs to the people you love.
 

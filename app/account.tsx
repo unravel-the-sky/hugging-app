@@ -1,6 +1,7 @@
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { colors, font, spacing } from "@/components/ui/squish";
 import { PlushButton } from "@/components/ui/squish/PlushButton";
+import { clearPushTokenOnUser } from "@/hooks/useCurrentUser";
 import { useHugDraft } from "@/hooks/useHugDraft";
 import { auth } from "@/lib/firebaseConfig";
 import { deleteAccountFn } from "@/lib/handleUser";
@@ -26,6 +27,11 @@ export default function AccountScreen() {
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
+      // stop this device receiving the next hugs sent to this account.
+      // must happen while still signed in — the write needs auth.
+      const uid = auth.currentUser?.uid;
+      if (uid) await clearPushTokenOnUser(uid);
+
       // end the Google session too, so next sign-in shows the account picker
       try {
         if (GoogleSignin.hasPreviousSignIn()) {
