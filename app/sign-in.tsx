@@ -23,10 +23,6 @@ import React, { useState } from "react";
 import { Alert, Platform, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// TODO: point these at the real hosted pages before submitting to the stores.
-const TERMS_URL = "https://example.com/terms";
-const PRIVACY_URL = "https://example.com/privacy";
-
 /** Mirrors PlushButton's default face height and its DEPTH constant. */
 const BUTTON_HEIGHT = 52;
 const BUTTON_DEPTH = 5;
@@ -229,24 +225,6 @@ export default function SignInScreen() {
               />
             )}
           </View>
-
-          <Text style={styles.legal}>
-            by continuing you agree to our{" "}
-            <Text
-              style={styles.legalLink}
-              onPress={() => WebBrowser.openBrowserAsync(TERMS_URL)}
-            >
-              terms
-            </Text>{" "}
-            and{" "}
-            <Text
-              style={styles.legalLink}
-              onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL)}
-            >
-              privacy policy
-            </Text>
-            .
-          </Text>
         </View>
       </SafeAreaView>
     </View>

@@ -11,23 +11,23 @@ const NOTES_MAX_HEIGHT = 300;
  * rewrite the bullets whenever a new build goes out.
  */
 export const RELEASE = {
-  version: 19,
+  version: 20,
   notes: [
     {
-      title: "New hugs in their own tab",
-      body: "Hugs you haven't opened yet get their own tab, so nothing gets lost further down the list.",
+      title: "Camera takes the whole screen",
+      body: "Taking a picture is full-bleed now, and the hand-off into the editor animates instead of jumping.",
     },
     {
-      title: "Hugs grouped by friend",
-      body: "The list now bundles hugs per person instead of one long stream.",
+      title: "Text overlays behave",
+      body: "Dragging, editing and placing text on a hug is steadier.",
     },
     {
-      title: "Hugging experience changes",
-      body: "Added some physics on the arms when dragging down. Just try it!",
+      title: "Invite your friends",
+      body: "Share sheet invites that carry your username, plus fixes to searching for and adding people.",
     },
     {
-      title: "Backend fixes and improvements - for geeks",
-      body: "Using zustand for caching user and friends info",
+      title: "Zen bot",
+      body: "A new bot that hugs you back with a little wisdom. The other bots got smarter too.",
     },
   ],
 };
