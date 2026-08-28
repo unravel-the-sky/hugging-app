@@ -157,6 +157,13 @@ export default function HugViewOverlay({
     });
   };
 
+  const openReport = () => {
+    router.push({
+      pathname: "/report",
+      params: { reportedId: hug.from, name: senderName, hugId: hug.id },
+    });
+  };
+
   const { width: screenW } = useWindowDimensions();
   const dragX = useSharedValue(0);
   /** Only a drag that began at the screen edge dismisses. */
@@ -262,6 +269,25 @@ export default function HugViewOverlay({
                 )}
               </View>
             </Pressable>
+
+            {/* Reporting belongs on the content itself, not only in settings.
+                Only on hugs you received — there is nothing to report about
+                one you sent. */}
+            {!isSender && (
+              <Pressable
+                onPress={openReport}
+                style={styles.headerBtn}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={`Report this hug from ${senderName}`}
+              >
+                <Ionicons
+                  name="flag-outline"
+                  size={20}
+                  color={colors.plumInk}
+                />
+              </Pressable>
+            )}
           </View>
 
           {/* Everything below the card: the note stacks on the buttons rather

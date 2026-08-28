@@ -54,6 +54,13 @@ export default function FriendStatsModal() {
   const [friendNote, setFriendNote] = useState("");
 
   const refreshBlocks = useBlocks((s) => s.refresh);
+  const blockedUids = useBlocks((s) => s.blockedUids);
+
+  // Blocking from the /report sheet returns here, to the stats of someone who
+  // is no longer a friend. Leave rather than show a page about them.
+  useEffect(() => {
+    if (blockedUids.has(friendId)) router.back();
+  }, [blockedUids, friendId]);
 
   useEffect(() => {
     const me = auth.currentUser;
@@ -265,6 +272,21 @@ export default function FriendStatsModal() {
             label="block person"
             variant="soft"
             onPress={() => setBlockState("confirming")}
+          />
+        </View>
+
+        {/* report — blocking is for someone you'd rather not hear from,
+            reporting is for someone we should look at. */}
+        <View style={styles.removeWrap}>
+          <PlushButton
+            label="report person"
+            variant="soft"
+            onPress={() =>
+              router.push({
+                pathname: "/report",
+                params: { reportedId: friendId, name: friend.displayName },
+              })
+            }
           />
         </View>
       </ScrollView>

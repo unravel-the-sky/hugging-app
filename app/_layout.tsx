@@ -177,6 +177,17 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
+              name="report"
+              options={{
+                presentation: "formSheet",
+                sheetAllowedDetents: "fitToContents",
+                sheetGrabberVisible: true,
+                sheetCornerRadius: 28,
+                headerShown: false,
+                contentStyle: { backgroundColor: "#FFFFFF" },
+              }}
+            />
+            <Stack.Screen
               name="add-user"
               options={{
                 presentation: "modal",
