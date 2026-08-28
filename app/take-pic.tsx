@@ -6,7 +6,7 @@ import {
 } from "expo-camera";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Button,
+  Linking,
   Pressable,
   StyleSheet,
   Text,
@@ -27,7 +27,9 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 
-import { colors, IconButton } from "@/components/ui/squish";
+import { colors, font, IconButton } from "@/components/ui/squish";
+import { PlushButton } from "@/components/ui/squish/PlushButton";
+import { APP_NAME } from "@/constants";
 import { useImageColors } from "@/hooks/useImageColors";
 import { Ionicons } from "@expo/vector-icons";
 import { useImage } from "@shopify/react-native-skia";
@@ -255,11 +257,23 @@ export default function TakePicture({
   }
 
   if (!permission.granted) {
-    // camera permissions are not granted
+    // Camera permission is not granted. Once someone has denied it, iOS makes
+    // requestPermission a silent no-op forever — the only way back is Settings,
+    // so the button has to change with it rather than doing nothing on tap.
     return (
       <View style={styles.container}>
-        <Text style={styles.message}>You need to give permissions bro..</Text>
-        <Button onPress={requestPermission} title={"gimme permission"} />
+        <Text style={styles.permissionTitle}>Camera access needed</Text>
+        <Text style={styles.message}>
+          {permission.canAskAgain
+            ? `${APP_NAME} uses the camera to take the photo you send with your hug. The picture stays on your device until you choose to send it.`
+            : `Camera access is turned off for ${APP_NAME}. Open Settings and turn on Camera to take a photo for your hug.`}
+        </Text>
+        <PlushButton
+          label={permission.canAskAgain ? "Allow camera" : "Open Settings"}
+          onPress={
+            permission.canAskAgain ? requestPermission : Linking.openSettings
+          }
+        />
       </View>
     );
   }
@@ -488,11 +502,23 @@ const styles = StyleSheet.create({
     height: 70,
     borderRadius: 50,
   },
-  message: {
+  permissionTitle: {
+    fontFamily: font.displayBold,
+    fontSize: 22,
     textAlign: "center",
-    paddingBottom: 10,
+    paddingBottom: 8,
     // The container behind this is black now.
     color: "#fff",
+  },
+  message: {
+    fontFamily: font.ui,
+    fontSize: 15,
+    lineHeight: 21,
+    textAlign: "center",
+    paddingHorizontal: 32,
+    paddingBottom: 20,
+    // The container behind this is black now.
+    color: "rgba(255,255,255,0.75)",
   },
   buttonContainer: {
     position: "absolute",

@@ -7,7 +7,7 @@
  * name of the installed binary and Expo reads it before any of this, so that
  * one still has to be changed by hand alongside this.
  */
-export const APP_NAME = "Hugging app";
+export const APP_NAME = "Hugging";
 
 export const ARM_WIDTH = 140;
 export const FANCY_ARM_WIDTH = 100;

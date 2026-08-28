@@ -2,6 +2,7 @@ import { DriftingAvatars } from "@/components/landing/DriftingAvatars";
 import { Logo } from "@/components/ui/Logo";
 import { PlushButton } from "@/components/ui/squish/PlushButton";
 import { colors, font, radius } from "@/components/ui/squish/theme";
+import { APP_NAME } from "@/constants";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import { auth } from "@/lib/firebaseConfig";
 import {
@@ -22,6 +23,11 @@ import {
 import React, { useState } from "react";
 import { Alert, Platform, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+// TODO: point these at the real hosted pages before submitting to the stores.
+// App Review rejects under 5.1.1(i) if these are unreachable or placeholder.
+const TERMS_URL = "https://example.com/terms";
+const PRIVACY_URL = "https://example.com/privacy";
 
 /** Mirrors PlushButton's default face height and its DEPTH constant. */
 const BUTTON_HEIGHT = 52;
@@ -71,7 +77,7 @@ export default function SignInScreen() {
     if (error?.code === "auth/credential-already-in-use") {
       Alert.alert(
         "Account already exists",
-        "This Google account is already linked to another Hug.me account. Please contact support.",
+        `This Google account is already linked to another ${APP_NAME} account. Please contact support.`,
       );
       return;
     }
@@ -135,7 +141,7 @@ export default function SignInScreen() {
     if (error?.code === "auth/credential-already-in-use") {
       Alert.alert(
         "Account already exists",
-        "This Apple account is already linked to another Hug.me account. Please contact support.",
+        `This Apple account is already linked to another ${APP_NAME} account. Please contact support.`,
       );
       return;
     }
@@ -159,7 +165,7 @@ export default function SignInScreen() {
               contentFit="contain"
             />
             <View>
-              <Text style={styles.brandName}>Hugging</Text>
+              <Text style={styles.brandName}>{APP_NAME}</Text>
               <Text style={styles.brandTagline}>send a hug, share love!</Text>
             </View>
           </View>
@@ -225,6 +231,24 @@ export default function SignInScreen() {
               />
             )}
           </View>
+
+          <Text style={styles.legal}>
+            by continuing you agree to our{" "}
+            <Text
+              style={styles.legalLink}
+              onPress={() => WebBrowser.openBrowserAsync(TERMS_URL)}
+            >
+              terms
+            </Text>{" "}
+            and{" "}
+            <Text
+              style={styles.legalLink}
+              onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL)}
+            >
+              privacy policy
+            </Text>
+            .
+          </Text>
         </View>
       </SafeAreaView>
     </View>

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Hugging app",
+    "name": "Hugging",
     "slug": "hugging-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -61,7 +61,7 @@
       [
         "expo-media-library",
         {
-          "photosPermission": "Save your polaroids to your photo library.",
+          "photosPermission": "Choose a photo for your avatar or to send with a hug.",
           "savePhotosPermission": "Save your polaroids to your photo library."
         }
       ],
@@ -71,6 +71,12 @@
           "cameraPermission": "Take a photo to send with your hug.",
           "microphonePermission": false,
           "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Choose a photo for your avatar or to send with a hug."
         }
       ]
     ],
