@@ -11,9 +11,27 @@ service cloud.firestore {
                     && request.auth.uid == userId
                     && request.resource.data.keys().hasAll(['displayName', 'friends', 'stats']);
 
-      // TODO(security): currently any signed-in user can update any user doc.
-      // Tighten when friend-request flow is implemented.
-      allow update: if request.auth != null;
+      // Only the owner, and only the fields the app actually writes from the
+      // client. `displayName` is deliberately absent: it mirrors the immutable
+      // `usernames/{normalized}` doc that reserves it, so letting it change
+      // here would desync the two and allow impersonation. `friends` and
+      // `stats` are absent because Cloud Functions own them — the admin SDK
+      // bypasses these rules, so leaving them out costs the server nothing
+      // and stops a client from inventing its own hug count.
+      allow update: if request.auth != null
+                    && request.auth.uid == userId
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly([
+                           'avatar',
+                           'photoURL',
+                           'photoThumbURL',
+                           'photoPath',
+                           'photoThumbPath',
+                           'photoUpdatedAt',
+                           'note',
+                           'pushToken',
+                           'autoSavePostcard'
+                         ]);
 
       allow delete: if request.auth != null && request.auth.uid == userId;
 

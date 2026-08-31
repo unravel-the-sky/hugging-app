@@ -46,3 +46,11 @@ service-account*.json
 *-firebase-adminsdk-*.json
 # agent skills (installed via skills-lock.json)
 .claude/skills
+
+# editor swap files
+*.swp
+*.swo
+
+# emulator / tooling logs
+*-debug.log
+firebase-debug.*.log
